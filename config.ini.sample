@@ -1,0 +1,8 @@
+# create a copy config.ini
+[Credentials]
+api_key="xxxxxxxxxxxxxXXXXXXxxx"
+secret_key="XXxxxxx-xxxxxx-xXxxxx-xxxx"
+passphrase="xxxxxx"
+
+[Behaviour]
+interval_sec=2

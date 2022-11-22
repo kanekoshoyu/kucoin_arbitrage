@@ -2,7 +2,11 @@ extern crate kucoin_rs;
 
 use kucoin_rs::failure;
 use kucoin_rs::futures::TryStreamExt;
-use kucoin_rs::kucoin::websocket::KucoinWebsocket;
+use kucoin_rs::kucoin::{
+    client::{Credentials, Kucoin, KucoinEnv},
+    model::websocket::{KucoinWebsocketMsg, WSTopic, WSType},
+    websocket::KucoinWebsocket,
+};
 use kucoin_rs::tokio::{
     self,
     time::{sleep, Duration},
@@ -10,17 +14,13 @@ use kucoin_rs::tokio::{
 
 use chrono::Local;
 use env_logger::Builder;
-use kucoin_rs::kucoin::{
-    client::{Credentials, Kucoin, KucoinEnv},
-    model::websocket::{KucoinWebsocketMsg, WSTopic, WSType},
-};
 use log::*;
 use std::io::Write;
 use std::sync::{Arc, Mutex};
 
 // custom shared structs
-mod shared;
-use shared::*;
+
+use kucoin_arbitrage::shared::*;
 // provide eazy data
 extern crate lazy_static;
 use lazy_static::lazy_static;

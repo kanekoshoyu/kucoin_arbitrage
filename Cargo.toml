@@ -1,5 +1,5 @@
 [package]
-name = "kucoin"
+name = "kucoin_arbitrage"
 version = "0.1.0"
 edition = "2021"
 
@@ -12,3 +12,5 @@ chrono = "0.4"
 env_logger = "0.9.1"
 rust-ini = "0.18"
 lazy_static = "1.4"
+
+regex = "1.4"

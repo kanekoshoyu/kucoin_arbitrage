@@ -725,7 +725,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "kucoin"
+name = "kucoin_arbitrage"
 version = "0.1.0"
 dependencies = [
  "chrono",
@@ -733,6 +733,7 @@ dependencies = [
  "kucoin_rs",
  "lazy_static",
  "log",
+ "regex",
  "rust-ini",
 ]
 

@@ -14,6 +14,7 @@ use log::*;
 use regex::Regex;
 use std::collections::HashMap;
 use std::io::Write;
+use std::str::FromStr;
 
 #[tokio::main]
 async fn main() -> Result<(), failure::Error> {
@@ -47,15 +48,14 @@ async fn main() -> Result<(), failure::Error> {
         let t: Tick = ticker;
         let symbol = t.symbol;
         let (a, b) = symbol_to_tuple(symbol);
-        info!("{a}:{b}");
-        if quote_is_match(&mut dict, &a, &b){
+        // info!("{a}:{b}");
+        if quote_is_match(&mut dict, &a, &b) {
             // ticker a is the one
             info!("{:?}", a);
+            n += 1;
         }
-
-        n += 1;
     }
-
+    info!("Matched: {n}");
     Ok(())
 }
 
@@ -76,11 +76,12 @@ fn quote_is_match(dict: &mut HashMap<String, bool>, quote: &String, base: &Strin
     }
     // first match
     if dict.get(quote).is_none() {
-        dict.insert(*quote, false);
+        let quote_str = quote.as_str();
+        let quote = String::from_str(quote_str).unwrap();
+        dict.insert(quote, false);
         return false;
     }
     // second match
-    let x = dict.get(quote);
     *(dict.get_mut(quote).unwrap()) = true;
     return true;
 }

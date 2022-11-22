@@ -5,4 +5,4 @@ secret_key="XXxxxxx-xxxxxx-xXxxxx-xxxx"
 passphrase="xxxxxx"
 
 [Behaviour]
-interval_sec=2
+monitor_interval_sec=2

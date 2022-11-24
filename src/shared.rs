@@ -24,7 +24,6 @@ lazy_static! {
 
 // might require macro to load the filename
 pub fn load_ini() -> Config {
-    // TODO: complete this
     let interval_str = SEC_BEHV.get("monitor_interval_sec").unwrap();
     Config {
         monitor_interval_sec: interval_str.parse::<u64>().unwrap(),
@@ -32,4 +31,22 @@ pub fn load_ini() -> Config {
         secret_key: SEC_CRED.get("secret_key").unwrap(),
         passphrase: SEC_CRED.get("passphrase").unwrap(),
     }
+}
+
+use env_logger::Builder;
+use std::io::Write;
+
+pub fn log_init() {
+    Builder::new()
+        .format(|buf, record| {
+            writeln!(
+                buf,
+                "{} [{}]: {}",
+                chrono::Local::now().format("%m-%dT%H:%M:%S"),
+                record.level(),
+                record.args()
+            )
+        })
+        .filter(None, log::LevelFilter::Info)
+        .init();
 }

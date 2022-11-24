@@ -4,33 +4,20 @@ use kucoin_rs::failure;
 use kucoin_rs::kucoin::model::market::Tick;
 use kucoin_rs::tokio::{self};
 
-use env_logger::Builder;
 use kucoin_rs::kucoin::client::{Kucoin, KucoinEnv};
 
 // provide eazy data
 extern crate lazy_static;
-use chrono::Local;
+
 use log::*;
 use regex::Regex;
 use std::collections::HashMap;
-use std::io::Write;
+
 use std::str::FromStr;
 
 #[tokio::main]
 async fn main() -> Result<(), failure::Error> {
-    Builder::new()
-        .format(|buf, record| {
-            writeln!(
-                buf,
-                "{} [{}]: {}",
-                Local::now().format("%m-%dT%H:%M:%S"),
-                record.level(),
-                record.args()
-            )
-        })
-        .filter(None, LevelFilter::Info)
-        .init();
-
+    kucoin_arbitrage::shared::log_init();
     let api = Kucoin::new(KucoinEnv::Live, None)?;
     let res = api.get_all_tickers().await?;
     info!("Hello world");

@@ -10,10 +10,11 @@ use kucoin_rs::kucoin::client::{Kucoin, KucoinEnv};
 extern crate lazy_static;
 
 use log::*;
-use regex::Regex;
 use std::collections::HashMap;
 
 use std::str::FromStr;
+
+use kucoin_arbitrage::shared::*;
 
 #[tokio::main]
 async fn main() -> Result<(), failure::Error> {
@@ -34,7 +35,7 @@ async fn main() -> Result<(), failure::Error> {
     for ticker in tickers.into_iter() {
         let t: Tick = ticker;
         let symbol = t.symbol;
-        let (a, b) = symbol_to_tuple(symbol);
+        let (a, b) = ticker_to_tuple(symbol).expect("wrong format");
         // info!("{a}:{b}");
         if quote_is_match(&mut dict, &a, &b) {
             // ticker a is the one
@@ -71,16 +72,4 @@ fn quote_is_match(dict: &mut HashMap<String, bool>, quote: &String, base: &Strin
     // second match
     *(dict.get_mut(quote).unwrap()) = true;
     return true;
-}
-
-fn symbol_to_tuple(text: String) -> (String, String) {
-    // regex to divide the tickers
-    let splitter = Regex::new(r"[-]").unwrap();
-    // info!("{text}");
-    let txt: &str = &text[..];
-    let splits: Vec<_> = splitter.split(txt).into_iter().collect();
-    if 2 != splits.len() {
-        panic!("invalid format {splits:?}")
-    }
-    (splits[0].to_string(), splits[1].to_string())
 }

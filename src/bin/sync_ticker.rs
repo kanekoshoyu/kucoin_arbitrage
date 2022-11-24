@@ -89,6 +89,8 @@ fn report_status(
     Ok(())
 }
 
+use kucoin_arbitrage::shared::topic_to_ticker;
+
 async fn sync_tickers(
     mut ws: KucoinWebsocket,
     perf: Arc<Mutex<Performance>>,
@@ -104,11 +106,10 @@ async fn sync_tickers(
                     continue;
                 }
                 // get the ticker name
-                let ticker_name = get_ticker_string(msg.topic).expect("wrong ticker format");
+                let ticker_name = topic_to_ticker(msg.topic).expect("wrong ticker format");
                 info!("Ticker received: {ticker_name}");
                 info!("{:?}", msg.data);
 
-                // check if the ticker already exists in the map
                 // check if the ticker already exists in the map
                 let x = ticker_name.clone();
                 {
@@ -137,17 +138,6 @@ async fn sync_tickers(
     Ok(())
 }
 
-fn get_ticker_string(topic: String) -> Option<String> {
-    let n = topic.find(":");
-    if n.is_none() {
-        return None;
-    }
-    let n = n.unwrap() + 1; //add 1 after ":"
-    let x = topic.as_str();
-    let x = &x[n..];
-    let x = String::from(x);
-    Some(x)
-}
 #[cfg(test)]
 mod tests {
     #[test]
@@ -167,7 +157,7 @@ mod tests {
     fn test_get_ticker_string() {
         let topic = String::from("/market/ticker:ETH-BTC");
         let wanted = "ETH-BTC";
-        let slice = crate::get_ticker_string(topic).unwrap();
+        let slice = crate::topic_to_ticker(topic).unwrap();
         assert_eq!(wanted, slice);
     }
 }

@@ -9,7 +9,7 @@ lazy_static! {
     pub static ref MIRROR: Arc<Mutex<Map>> = Arc::new(Mutex::new(HashMap::new()));
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct TickerInfo {
     pub symbol: SymbolTicker,
     pub last_update: DateTime<Utc>,
@@ -39,6 +39,29 @@ impl TickerInfo {
             symbol,
             last_update: chrono::offset::Utc::now(),
         }
+    }
+
+    // return price and size
+    pub fn get_bid(&self) -> (f64, f64) {
+        let float_err = "float deparse error";
+        let p = self.symbol.best_bid.parse::<f64>().expect(float_err);
+        let v = self.symbol.best_bid_size.parse::<f64>().expect(float_err);
+        return (p, v);
+    }
+
+    // return price and size
+    pub fn get_ask(&self) -> (f64, f64) {
+        let float_err = "float deparse error";
+        let p = self.symbol.best_ask.parse::<f64>().expect(float_err);
+        let v = self.symbol.best_ask_size.parse::<f64>().expect(float_err);
+        return (p, v);
+    }
+
+    // merged so no copy twice
+    pub fn get_askbid(&self) -> ((f64, f64), (f64, f64)) {
+        let ask = self.get_ask();
+        let bid = self.get_bid();
+        return (ask, bid);
     }
 }
 

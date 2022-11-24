@@ -50,3 +50,70 @@ pub fn log_init() {
         .filter(None, log::LevelFilter::Info)
         .init();
 }
+
+pub fn topic_to_ticker(topic: String) -> Option<String> {
+    // from the websocket ticker topic
+    let n = topic.find(":");
+    if n.is_none() {
+        return None;
+    }
+    let n = n.unwrap() + 1; //add 1 after ":"
+    let x = topic.as_str();
+    let x = &x[n..];
+    let x = String::from(x);
+    Some(x)
+}
+
+pub fn ticker_to_tuple(text: String) -> Option<(String, String)> {
+    // regex to divide the tickers
+    let res = text.as_str();
+    if res.find("-").is_none() {
+        return None;
+    }
+    let n = res.find("-").unwrap();
+    Some(((&res[..n]).to_string(), (&res[(n + 1)..]).to_string()))
+    // let r2 = &res[(n + 1)..];
+
+    // let splitter = Regex::new(r"[-]").unwrap();
+    // // info!("{text}");
+    // let txt: &str = &text[..];
+    // let splits: Vec<_> = splitter.split(txt).into_iter().collect();
+    // if 2 != splits.len() {
+    //     panic!("invalid format {splits:?}")
+    // }
+    // (splits[0].to_string(), splits[1].to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_ticker_read() {
+        let topic = "/market/ticker:ETH-BTC";
+        let wanted = "ETH-BTC";
+        let n = topic.find(":");
+        if n.is_none() {
+            panic!(": not found");
+        }
+        let n = n.unwrap() + 1; //add 1 after ":"
+        let slice = &topic[n..];
+        assert_eq!(wanted, slice);
+    }
+
+    #[test]
+    fn test_get_ticker_string() {
+        let topic = String::from("/market/ticker:ETH-BTC");
+        let wanted = "ETH-BTC";
+        let slice = crate::shared::topic_to_ticker(topic).unwrap();
+        println!("slice: {slice:?}");
+        assert_eq!(wanted, slice);
+    }
+
+    #[test]
+    fn test_symbol_to_tuple() {
+        let topic = String::from("ETH-BTC");
+        let slice = crate::shared::ticker_to_tuple(topic);
+        let slice = slice.expect("wrong format");
+        println!("slice: {slice:?}");
+        assert_eq!(slice, (String::from("ETH"), String::from("BTC")));
+    }
+}

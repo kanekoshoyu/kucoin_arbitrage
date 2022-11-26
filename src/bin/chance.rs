@@ -42,6 +42,7 @@ async fn main() -> Result<(), failure::Error> {
     let url = api.get_socket_endpoint(WSType::Public).await?;
     let mut ws = api.websocket();
 
+    // fill in the arbitrage list automatically
     let subs = vec![WSTopic::Ticker(vec![
         "ETH-BTC".to_string(),
         "BTC-USDT".to_string(),
@@ -110,6 +111,7 @@ async fn sync_tickers(
                     let mut m = mirror.lock().unwrap();
                     let tickers: &mut Map = &mut (*m);
                     if let Some(data) = tickers.get_mut(&ticker_clone) {
+                        // TODO: some sort of a delta function to reduce the time we keep rewriting. 
                         data.symbol = msg.data;
                     } else {
                         tickers.insert(ticker_clone, TickerInfo::new(msg.data));
@@ -164,10 +166,13 @@ async fn sync_tickers(
 
                 // TODO: conduct the analysis
                 let res = chance(tb, ta, ab);
-                if let Some(_sequence) = res {
+                if let Some(sequence) = res {
                     // TODO: calculate the profit ratio
-                    info!("found arbitrage chance");
-                    // info!("found arbitrage chance: {sequence:#?}");
+                    let profit_ratio = profit_percentage(sequence);
+                    let profit_percentage = format!("{:.5}", profit_ratio*100f64);
+                    info!("found arbitrage chance, profit {}%",profit_percentage);
+                    // info!("{sequence:#?}");
+
                 }
 
                 {
@@ -203,6 +208,20 @@ pub struct ActionInfo {
 // sequence in ascending order
 type ActionSequence = [ActionInfo; 3];
 
+fn profit_percentage(seq: ActionSequence) -> f64 {
+    let [x, y, z] = seq;
+    if y.action.eq(&Action::Sell) {
+        // BSS
+        let high = x.ticker.get_ask().0;
+        let low = y.ticker.get_bid().0 * z.ticker.get_bid().0;
+        return (high - low) / high;
+    } else {
+        // BBS
+        let high = x.ticker.get_ask().0 * y.ticker.get_ask().0;
+        let low = z.ticker.get_bid().0;
+        return (high - low) / high;
+    }
+}
 fn chance(
     ticker_target_base: TickerInfo,
     ticker_target_alt: TickerInfo,

@@ -1,50 +1,43 @@
 extern crate kucoin_rs;
 
 use kucoin_rs::failure;
-use kucoin_rs::kucoin::model::market::Tick;
-use kucoin_rs::tokio::{self};
-
 use kucoin_rs::kucoin::client::{Kucoin, KucoinEnv};
-
-// provide eazy data
+use kucoin_rs::tokio::{self};
 extern crate lazy_static;
-
+use kucoin_arbitrage::shared::*;
 use log::*;
 use std::collections::HashMap;
-
-use std::str::FromStr;
-
-use kucoin_arbitrage::shared::*;
 
 #[tokio::main]
 async fn main() -> Result<(), failure::Error> {
     kucoin_arbitrage::shared::log_init();
     let api = Kucoin::new(KucoinEnv::Live, None)?;
-    let res = api.get_all_tickers().await?;
-    info!("Hello world");
+    let res = ticker_list_with_btc_usdt(api).await?;
+    let n = res.len();
+    info!("Matched: {n}");
+    // info!("res: {res:#?}");
+    Ok(())
+}
 
+pub async fn ticker_list_with_btc_usdt(api: Kucoin) -> Result<Vec<String>, failure::Error> {
+    let res = api.get_all_tickers().await?;
     let all_ticker = res.data.expect("connection failure");
-    info!("Time: {:#?}", all_ticker.time);
+    // info!("Time: {:#?}", all_ticker.time);
     let tickers = all_ticker.ticker;
     let total = tickers.len();
-    info!("Total: {:#?}", total); //1299
+    info!("Total Tickers: {:#?}", total); //1300
 
     let mut dict: HashMap<String, bool> = HashMap::new();
-
-    let mut n = 0;
+    let mut vec: Vec<String> = Vec::new();
     for ticker in tickers.into_iter() {
-        let t: Tick = ticker;
-        let symbol = t.symbol;
+        let symbol = ticker.symbol;
         let (a, b) = ticker_to_tuple(symbol).expect("wrong format");
         // info!("{a}:{b}");
         if quote_is_match(&mut dict, &a, &b) {
-            // ticker a is the one
-            info!("{:?}", a);
-            n += 1;
+            vec.push(a);
         }
     }
-    info!("Matched: {n}");
-    Ok(())
+    Ok(vec)
 }
 
 /*
@@ -57,19 +50,17 @@ async fn main() -> Result<(), failure::Error> {
 // rough way of reading.
 fn quote_is_match(dict: &mut HashMap<String, bool>, quote: &String, base: &String) -> bool {
     // no match
-    let base1 = "BTC";
-    let base2 = "USDT";
-    if base.ne(base1) && base.ne(base2) {
+    let bases = ("BTC", "USDT");
+    if base.ne(bases.0) && base.ne(bases.1) {
         return false;
     }
     // first match
     if dict.get(quote).is_none() {
-        let quote_str = quote.as_str();
-        let quote = String::from_str(quote_str).unwrap();
-        dict.insert(quote, false);
-        return false;
+        dict.insert(quote.to_owned(), false);
+        false
+    } else {
+        // second match
+        *(dict.get_mut(quote).unwrap()) = true;
+        true
     }
-    // second match
-    *(dict.get_mut(quote).unwrap()) = true;
-    return true;
 }

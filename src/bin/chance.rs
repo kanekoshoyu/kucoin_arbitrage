@@ -39,15 +39,15 @@ async fn main() -> Result<(), failure::Error> {
 
     info!("{credentials:#?}");
     let api = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
+    let api_clone = api.clone();
     let url = api.get_socket_endpoint(WSType::Public).await?;
+    let ticker_list = ticker_list_arbitrage(api_clone).await?;
+
     let mut ws = api.websocket();
 
     // fill in the arbitrage list automatically
-    let subs = vec![WSTopic::Ticker(vec![
-        "ETH-BTC".to_string(),
-        "BTC-USDT".to_string(),
-        "ETH-USDT".to_string(),
-    ])];
+
+    let subs = vec![WSTopic::Ticker(ticker_list)];
     ws.subscribe(url, subs).await?;
 
     info!("Async polling");
@@ -111,7 +111,7 @@ async fn sync_tickers(
                     let mut m = mirror.lock().unwrap();
                     let tickers: &mut Map = &mut (*m);
                     if let Some(data) = tickers.get_mut(&ticker_clone) {
-                        // TODO: some sort of a delta function to reduce the time we keep rewriting. 
+                        // TODO: some sort of a delta function to reduce the time we keep rewriting.
                         data.symbol = msg.data;
                     } else {
                         tickers.insert(ticker_clone, TickerInfo::new(msg.data));
@@ -169,10 +169,9 @@ async fn sync_tickers(
                 if let Some(sequence) = res {
                     // TODO: calculate the profit ratio
                     let profit_ratio = profit_percentage(sequence);
-                    let profit_percentage = format!("{:.5}", profit_ratio*100f64);
-                    info!("found arbitrage chance, profit {}%",profit_percentage);
+                    let profit_percentage = format!("{:.5}", profit_ratio * 100f64);
+                    info!("found arbitrage chance, profit {}%", profit_percentage);
                     // info!("{sequence:#?}");
-
                 }
 
                 {

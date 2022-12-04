@@ -70,7 +70,7 @@ mod tests {
     fn test_get_ticker_string() {
         let topic = String::from("/market/ticker:ETH-BTC");
         let wanted = "ETH-BTC";
-        let slice = crate::strings::topic_to_ticker(topic).unwrap();
+        let slice = crate::strings::topic_to_symbol(topic).unwrap();
         println!("slice: {slice:?}");
         assert_eq!(wanted, slice);
     }
@@ -78,7 +78,7 @@ mod tests {
     #[test]
     fn test_symbol_to_tuple() {
         let topic = "ETH-BTC";
-        let slice = crate::strings::ticker_to_tuple(topic);
+        let slice = crate::strings::symbol_to_tuple(topic);
         let slice = slice.expect("wrong format");
         println!("slice: {slice:?}");
         assert_eq!(slice, ("ETH", "BTC"));

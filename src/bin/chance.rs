@@ -109,10 +109,10 @@ async fn sync_tickers(
                 }
                 // if the updated data is greater than the ex
                 // TODO: optimize the cloning mess here.
-                let ticker = topic_to_ticker(msg.topic).expect("wrong topic format");
+                let ticker = topic_to_symbol(msg.topic).expect("wrong topic format");
                 let ticker_clone = ticker.clone();
                 let (coin1, _coin2) =
-                    ticker_to_tuple(ticker_clone.as_str()).expect("wrong ticker format");
+                    symbol_to_tuple(ticker_clone.as_str()).expect("wrong ticker format");
                 let ticker_clone = ticker.clone();
                 {
                     // update the map

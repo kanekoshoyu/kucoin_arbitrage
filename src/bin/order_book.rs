@@ -89,7 +89,7 @@ fn report_status(
     Ok(())
 }
 
-use kucoin_arbitrage::strings::topic_to_ticker;
+use kucoin_arbitrage::strings::topic_to_symbol;
 
 async fn sync_tickers_rt(
     mut ws: KucoinWebsocket,
@@ -128,7 +128,7 @@ fn order_message_received(msg: WSResp<Level2>, mirror: Arc<Mutex<Map>>) {
         return;
     }
     // get the ticker name
-    let ticker_name = topic_to_ticker(msg.topic).expect("wrong ticker format");
+    let ticker_name = topic_to_symbol(msg.topic).expect("wrong ticker format");
     // info!("Ticker received: {ticker_name}");
     let data = msg.data;
     // info!("{:#?}", data);
@@ -176,7 +176,7 @@ mod tests {
     fn test_get_ticker_string() {
         let topic = String::from("/market/ticker:ETH-BTC");
         let wanted = "ETH-BTC";
-        let slice = crate::topic_to_ticker(topic).unwrap();
+        let slice = crate::topic_to_symbol(topic).unwrap();
         assert_eq!(wanted, slice);
     }
 }

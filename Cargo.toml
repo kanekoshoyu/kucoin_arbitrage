@@ -12,5 +12,3 @@ chrono = "0.4"
 env_logger = "0.9.1"
 rust-ini = "0.18"
 lazy_static = "1.4"
-
-regex = "1.4"

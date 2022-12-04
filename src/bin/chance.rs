@@ -30,6 +30,7 @@ lazy_static! {
 async fn main() -> Result<(), failure::Error> {
     // provide logging format
     kucoin_arbitrage::shared::log_init();
+    use kucoin_arbitrage::tickers::symbol_whitelist;
     info!("Hello world");
 
     let c = CONFIG.clone();
@@ -41,7 +42,7 @@ async fn main() -> Result<(), failure::Error> {
     let api = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
     let api_clone = api.clone();
     let url = api.get_socket_endpoint(WSType::Public).await?;
-    let ticker_list = ticker_list_arbitrage(api_clone).await?;
+    let ticker_list = symbol_whitelist(api_clone, "BTC", "USDT").await?;
 
     let mut ws = api.websocket();
 
@@ -90,21 +91,28 @@ fn report_status(
 }
 
 use kucoin_arbitrage::mirror::Map;
-use kucoin_arbitrage::shared::topic_to_ticker;
+use kucoin_arbitrage::strings::*;
 
 async fn sync_tickers(
     mut ws: KucoinWebsocket,
     perf: Arc<Mutex<Performance>>,
     mirror: Arc<Mutex<Map>>,
 ) -> Result<(), failure::Error> {
+    let base1 = "BTC";
+    let base2 = "USDT";
     while let Some(msg) = ws.try_next().await? {
         match msg {
             KucoinWebsocketMsg::TickerMsg(msg) => {
+                {
+                    let mut p = perf.lock().unwrap();
+                    (*p).data_count += 1;
+                }
                 // if the updated data is greater than the ex
                 // TODO: optimize the cloning mess here.
                 let ticker = topic_to_ticker(msg.topic).expect("wrong topic format");
                 let ticker_clone = ticker.clone();
-                let (coin1, _coin2) = ticker_to_tuple(ticker_clone).expect("wrong ticker format");
+                let (coin1, _coin2) =
+                    ticker_to_tuple(ticker_clone.as_str()).expect("wrong ticker format");
                 let ticker_clone = ticker.clone();
                 {
                     // update the map
@@ -117,25 +125,23 @@ async fn sync_tickers(
                         tickers.insert(ticker_clone, TickerInfo::new(msg.data));
                     }
                 }
-                let ab = "BTC-USDT";
-                if ticker.eq(ab) {
+                // lambda function
+                let append = |a: &str, b: &str| {
+                    let mut res = String::from(a);
+                    res.push('-');
+                    res.push_str(b);
+                    res
+                };
+
+                let ab = append(base1, base2); //BTC-USDT
+                if ticker.eq(ab.as_str()) {
                     // skip when it is a btc-usdt pair (i.e. ab)
                     continue;
                 }
-                // either ETC-BTC or ETH-USDT
-                let tb = {
-                    let mut res = coin1.clone();
-                    res.push_str("-USDT");
-                    res
-                };
-                let ta = {
-                    let mut res = coin1.clone();
-                    res.push_str("-BTC");
-                    res
-                };
-                let ab = ab.to_string();
+                let ta = append(coin1, base1); //ETH-BTC
+                let tb = append(coin1, base2); //ETH-USDT
 
-                info!("studying Triangle: {tb}, {ta}, {ab}");
+                // info!("studying Triangle: {tb}, {ta}, {ab}");
 
                 let triangle: Option<[TickerInfo; 3]> = {
                     // update the map
@@ -164,19 +170,25 @@ async fn sync_tickers(
                 let ta = triangle.get(1).unwrap().to_owned();
                 let ab = triangle.get(2).unwrap().to_owned();
 
-                // TODO: conduct the analysis
+                // conduct the analysis
                 let res = chance(tb, ta, ab);
                 if let Some(sequence) = res {
-                    // TODO: calculate the profit ratio
-                    let profit_ratio = profit_percentage(sequence);
-                    let profit_percentage = format!("{:.5}", profit_ratio * 100f64);
-                    info!("found arbitrage chance, profit {}%", profit_percentage);
+                    // TODO: calculate the profit ratio accutately
+                    let sc = sequence.clone();
+                    let profit_percentage = profit_percentage(sequence) * 100f64;
+                    // TODO: chance this brute threshold into something more quantitative
+                    if profit_percentage < 1.5 {
+                        continue;
+                    }
+                    let profit_percentage = format!("{:.5}", profit_percentage);
+                    let i = sc.get(1).unwrap();
+                    info!("Found arbitrage at {coin1:?}");
+                    if i.action.eq(&Action::Buy) {
+                        info!("BBS, profit {}%", profit_percentage);
+                    } else {
+                        info!("BSS, profit {}%", profit_percentage);
+                    }
                     // info!("{sequence:#?}");
-                }
-
-                {
-                    let mut p = perf.lock().unwrap();
-                    (*p).data_count += 1;
                 }
             }
             KucoinWebsocketMsg::PongMsg(_msg) => {}
@@ -207,6 +219,11 @@ pub struct ActionInfo {
 // sequence in ascending order
 type ActionSequence = [ActionInfo; 3];
 
+// TODO: profit in USDT
+fn profit_usdt(_seq: ActionSequence) {
+    unimplemented!();
+}
+
 fn profit_percentage(seq: ActionSequence) -> f64 {
     let [x, y, z] = seq;
     if y.action.eq(&Action::Sell) {
@@ -228,6 +245,7 @@ fn chance(
 ) -> Option<ActionSequence> {
     // get both prices
     let tb = ticker_target_base.clone();
+    // info!("{tb:#?}");
     let ta = ticker_target_alt.clone();
     let ab = ticker_alt_base.clone();
     let ((tb_ap, _tb_av), (tb_bp, _tb_bv)) = tb.get_askbid(); //BSS buy, BBS sell
@@ -414,9 +432,9 @@ mod tests {
     fn test_bbs_chance() {
         use crate::{Action, TickerInfo};
 
-        let b1 = (1.6f64, 100f64);
-        let b2 = (82f64, 80f64);
-        let s = (128f64, 50f64);
+        let _b1 = (1.6f64, 100f64);
+        let _b2 = (82f64, 80f64);
+        let _s = (128f64, 50f64);
 
         let b1 = {
             let mut t = TickerInfo::default();

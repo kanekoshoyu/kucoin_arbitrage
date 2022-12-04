@@ -12,7 +12,7 @@ use kucoin_rs::tokio::{
     time::{sleep, Duration},
 };
 
-use kucoin_arbitrage::mirror::{Map, TickerInfo, MIRROR};
+use kucoin_arbitrage::mirror::{Map, MIRROR};
 use kucoin_arbitrage::shared::*;
 use lazy_static::lazy_static;
 use log::*;
@@ -43,7 +43,7 @@ async fn main() -> Result<(), failure::Error> {
     let mut ws = api.websocket();
 
     // TODO: link the list_ticker to here and subscribe for all the tickers with BTC/USDT (Triangle)
-    let subs = vec![WSTopic::Ticker(vec!["ETH-BTC".to_string()])];
+    let subs = vec![WSTopic::OrderBook(vec!["ETH-BTC".to_string()])];
     ws.subscribe(url, subs).await?;
 
     info!("Async polling");
@@ -51,7 +51,7 @@ async fn main() -> Result<(), failure::Error> {
 
     let perf = PERFORMANCE.clone();
     let mirr = MIRROR.clone();
-    tokio::spawn(async move { sync_tickers(ws, perf, mirr).await });
+    tokio::spawn(async move { sync_tickers_rt(ws, perf, mirr).await });
 
     let monitor_delay = {
         let c = CONFIG.clone();
@@ -91,7 +91,7 @@ fn report_status(
 
 use kucoin_arbitrage::strings::topic_to_ticker;
 
-async fn sync_tickers(
+async fn sync_tickers_rt(
     mut ws: KucoinWebsocket,
     perf: Arc<Mutex<Performance>>,
     mirror: Arc<Mutex<Map>>,
@@ -99,34 +99,10 @@ async fn sync_tickers(
     while let Some(msg) = ws.try_next().await? {
         // add matches for multi-subscribed sockets handling
         match msg {
-            KucoinWebsocketMsg::TickerMsg(msg) => {
+            KucoinWebsocketMsg::OrderBookMsg(msg) => {
+                increment_data_counter(perf.to_owned());
+                order_message_received(msg, mirror.to_owned());
                 // info!("{:#?}", msg);
-                if msg.subject.ne("trade.ticker") {
-                    error!("unrecognised subject: {:?}", msg.subject);
-                    continue;
-                }
-                // get the ticker name
-                let ticker_name = topic_to_ticker(msg.topic).expect("wrong ticker format");
-                info!("Ticker received: {ticker_name}");
-                info!("{:?}", msg.data);
-
-                // check if the ticker already exists in the map
-                let x = ticker_name.clone();
-                {
-                    let mut m = mirror.lock().unwrap();
-                    let tickers: &mut Map = &mut (*m);
-                    if let Some(data) = tickers.get_mut(&x) {
-                        // unimplemented!("found");
-                        data.symbol = msg.data;
-                    } else {
-                        tickers.insert(x, TickerInfo::new(msg.data));
-                    }
-                }
-
-                {
-                    let mut p = perf.lock().unwrap();
-                    (*p).data_count += 1;
-                }
             }
             KucoinWebsocketMsg::PongMsg(_msg) => {}
             KucoinWebsocketMsg::WelcomeMsg(_msg) => {}
@@ -138,6 +114,49 @@ async fn sync_tickers(
     Ok(())
 }
 
+use kucoin_rs::kucoin::model::websocket::{Level2, WSResp};
+
+fn increment_data_counter(perf: Arc<Mutex<Performance>>) {
+    {
+        let mut p = perf.lock().unwrap();
+        (*p).data_count += 1;
+    }
+}
+fn order_message_received(msg: WSResp<Level2>, mirror: Arc<Mutex<Map>>) {
+    if msg.subject.ne("trade.l2update") {
+        error!("unrecognised subject: {:?}", msg.subject);
+        return;
+    }
+    // get the ticker name
+    let ticker_name = topic_to_ticker(msg.topic).expect("wrong ticker format");
+    // info!("Ticker received: {ticker_name}");
+    let data = msg.data;
+    // info!("{:#?}", data);
+    let asks = data.changes.asks;
+    let bids = data.changes.bids;
+    for ask in asks.into_iter() {
+        if ask.len().ne(&3) {
+            panic!("wrong format");
+        }
+    }
+    for bids in bids.into_iter() {
+        if bids.len().ne(&3) {
+            panic!("wrong format");
+        }
+    }
+    // check if the ticker already exists in the map
+    // let x = ticker_name.clone();
+    // {
+    //     let mut m = mirror.lock().unwrap();
+    //     let tickers: &mut Map = &mut (*m);
+    //     if let Some(data) = tickers.get_mut(&x) {
+    //         // unimplemented!("found");
+    //         data.symbol = msg.data;
+    //     } else {
+    //         tickers.insert(x, TickerInfo::new(msg.data));
+    //     }
+    // }
+}
 #[cfg(test)]
 mod tests {
     #[test]

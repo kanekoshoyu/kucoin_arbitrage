@@ -733,7 +733,6 @@ dependencies = [
  "kucoin_rs",
  "lazy_static",
  "log",
- "regex",
  "rust-ini",
 ]
 

@@ -4,8 +4,6 @@ use kucoin_rs::kucoin::client::Kucoin;
 use kucoin_rs::kucoin::model::market::SymbolList;
 use std::collections::HashMap;
 
-// pub async fn tickers(api: &str, :&str) -> Result<Vec<String>, failure::Error> {
-
 pub async fn bases_with_quotes(
     api: Kucoin,
     quote1: &str,
@@ -19,7 +17,7 @@ pub async fn bases_with_quotes(
     let mut dict: HashMap<String, bool> = HashMap::new();
     let mut vec: Vec<String> = Vec::new();
     for tick in tickers.into_iter() {
-        log::info!("{tick:#?}");
+        // log::info!("{tick:#?}");
         let symbol = tick.symbol.as_str();
         if symbol_is_match(&mut dict, symbol, quote1, quote2) {
             let (a, _b) = symbol_to_tuple(symbol).expect("wrong format");
@@ -29,20 +27,29 @@ pub async fn bases_with_quotes(
     Ok(vec)
 }
 
-pub type Map = HashMap<String, SymbolList>;
-
+pub type SymbolMap = HashMap<String, SymbolList>;
+use log::info;
 pub async fn symbols_selected(
     api: Kucoin,
     list_str_symbol: Vec<String>,
-) -> Result<Map, failure::Error> {
+) -> Result<SymbolMap, failure::Error> {
     let res = api.get_symbol_list(None).await?;
     let lists_symbol = res.data.expect("connection failure");
-    let mut res: Map = HashMap::new();
+    let mut res: SymbolMap = HashMap::new();
     for list_symbol in lists_symbol.into_iter() {
         let symbol = list_symbol.symbol.to_owned();
-        if list_str_symbol.contains(&symbol) {
-            res.insert(symbol, list_symbol);
+        // info!("symbol:{symbol:#?}");
+
+        for base in list_str_symbol.to_owned().into_iter() {
+
+            // if symbol.contains(&base) {
+            //     res.insert(symbol, list_symbol);
+            // }
         }
+
+        // if list_str_symbol.contains(&symbol) {
+        //     res.insert(symbol, list_symbol);
+        // }
     }
     Ok(res)
 }
@@ -129,25 +136,27 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn xxx() {
-        use crate::shared::*;
+    async fn test_geneate_whitelist() {
         use crate::tickers::*;
         use kucoin_rs::kucoin::client::{Kucoin, KucoinEnv};
-        log_init();
+        use log::info;
+        crate::logger::log_init();
         let api = Kucoin::new(KucoinEnv::Live, None).unwrap();
+        let q1 = "BTC";
+        let q2 = "USDT";
+        let bases = bases_with_quotes(api.clone(), q1, q2).await;
+        let bases = bases.expect("err parsing bases_with_quotes");
+        info!("bases.len(): {:#?}", bases.len());
 
-        let res = bases_with_quotes(api.clone(), "BTC", "USDT").await;
-        if res.is_err() {
-            panic!("error: bases_with_quotes");
-        }
-        let res = res.unwrap();
-        let res = symbols_selected(api, res).await.unwrap();
-        println!("{res:#?}");
-        println!("size: {:?}", res.len());
+        let res = symbols_selected(api, bases)
+            .await
+            .expect("symbols_selected");
+        info!("symbols_selected: {res:#?}");
+        info!("size: {:?}", res.len());
 
         for (key, val) in &res {
             let quote = &val.quote_currency;
-            if quote.ne("BTC") || quote.ne("USDT") {
+            if quote.ne(q1) || quote.ne(q2) {
                 panic!("wrong value found with {key:?}");
             }
         }

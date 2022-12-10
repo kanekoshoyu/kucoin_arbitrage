@@ -3,40 +3,28 @@ extern crate kucoin_rs;
 use kucoin_rs::failure;
 use kucoin_rs::futures::TryStreamExt;
 use kucoin_rs::kucoin::{
-    client::{Credentials, Kucoin, KucoinEnv},
+    client::{Kucoin, KucoinEnv},
     model::websocket::{KucoinWebsocketMsg, WSTopic, WSType},
     websocket::KucoinWebsocket,
 };
-use kucoin_rs::tokio::{
-    self,
-    time::{sleep, Duration},
-};
+use kucoin_rs::tokio::{self};
 
 use kucoin_arbitrage::mirror::*;
-use kucoin_arbitrage::shared::*;
-use lazy_static::lazy_static;
 use log::*;
 use std::sync::{Arc, Mutex};
 
-// gets the jobs done
-// Arc has implicit 'static bound, so it cannot contain reference to local variable.
-lazy_static! {
-    static ref CONFIG: Arc<Mutex<Config>> = Arc::new(Mutex::new(load_ini()));
-    static ref PERFORMANCE: Arc<Mutex<Performance>> =
-        Arc::new(Mutex::new(Performance { data_count: 0 }));
-}
+use kucoin_arbitrage::globals::{config, performance};
+use kucoin_arbitrage::logger;
+use kucoin_arbitrage::tasks;
 
 #[tokio::main]
 async fn main() -> Result<(), failure::Error> {
     // provide logging format
-    kucoin_arbitrage::shared::log_init();
+    logger::log_init();
     use kucoin_arbitrage::tickers::symbol_whitelist;
     info!("Hello world");
 
-    let c = CONFIG.clone();
-    let mg = c.lock().unwrap();
-    let credentials = Credentials::new((*mg).api_key, (*mg).secret_key, (*mg).passphrase);
-    drop(mg);
+    let credentials = config::credentials();
 
     info!("{credentials:#?}");
     let api = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
@@ -52,42 +40,13 @@ async fn main() -> Result<(), failure::Error> {
     ws.subscribe(url, subs).await?;
 
     info!("Async polling");
-    let perf = PERFORMANCE.clone();
     let mir = MIRROR.clone();
-    tokio::spawn(async move { sync_tickers(ws, perf, mir).await });
+    tokio::spawn(async move { sync_tickers(ws, mir).await });
 
-    let monitor_delay = {
-        let c = CONFIG.clone();
-        let mg = c.lock().unwrap();
-        let interval_sec: u64 = (*mg).monitor_interval_sec;
-        drop(mg);
-        Duration::from_secs(interval_sec)
-    };
-    loop {
-        sleep(monitor_delay).await;
-        report_status(PERFORMANCE.clone(), CONFIG.clone()).expect("report status error");
-    }
-}
-
-fn report_status(
-    perf: Arc<Mutex<Performance>>,
-    conf: Arc<Mutex<Config>>,
-) -> Result<(), failure::Error> {
-    info!("reporting");
-    let p = perf.lock().unwrap();
-    let c = conf.lock().unwrap();
-    let data_rate = (*p).data_count / (*c).monitor_interval_sec;
-    drop(p);
-    drop(c);
-
-    info!("Data rate: {data_rate:?} points/sec");
-    // clear the data
-    {
-        let mut p = perf.lock().unwrap();
-        (*p).data_count = 0;
-    }
-
-    Ok(())
+    // loop {
+    //     report_status().expect("report status error");
+    // }
+    tasks::background_routine().await
 }
 
 use kucoin_arbitrage::mirror::Map;
@@ -95,7 +54,6 @@ use kucoin_arbitrage::strings::*;
 
 async fn sync_tickers(
     mut ws: KucoinWebsocket,
-    perf: Arc<Mutex<Performance>>,
     mirror: Arc<Mutex<Map>>,
 ) -> Result<(), failure::Error> {
     let base1 = "BTC";
@@ -103,10 +61,7 @@ async fn sync_tickers(
     while let Some(msg) = ws.try_next().await? {
         match msg {
             KucoinWebsocketMsg::TickerMsg(msg) => {
-                {
-                    let mut p = perf.lock().unwrap();
-                    (*p).data_count += 1;
-                }
+                performance::increment();
                 // if the updated data is greater than the ex
                 // TODO: optimize the cloning mess here.
                 let ticker = topic_to_symbol(msg.topic).expect("wrong topic format");

@@ -9,7 +9,9 @@ https://github.com/kanekoshoyu/Kucoin-Triangular-Arbitrage
 - It didn't count the actual size of the arbitrage order, which meant that the script kept buying some shitcoin and could not sell properly.
 
 ## How to run
-cargo run --bin XXX
+cargo run --bin XXX  
+*/bin* and *main.rs* are the executable source code  
+*/globals* has the lazy_statics that is used across the code. Technically it is better to pass Arc and Mutex around the functions instead of using global statics, but I just wanted the code to be a bit more readable with this way.  
 
 ## Major Improvements
 - Use precompiled Rust and websocket which subscribes to the latest market data in real time.

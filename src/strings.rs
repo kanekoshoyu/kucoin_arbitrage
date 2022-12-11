@@ -1,20 +1,20 @@
+// append "BTC" and "USDT" as "BTC-USDT"
+pub fn symbol_string(base: &str, quote: &str) -> String {
+    let mut n = String::from(base);
+    n.push('-');
+    n.push_str(quote);
+    return n;
+}
+
+// get "BTC-USDT" from websocket topic name
 pub fn topic_to_symbol(topic: String) -> Option<String> {
-    // from the websocket ticker topic
-    let n = topic.find(":");
-    if n.is_none() {
-        return None;
-    }
-    let n = n.unwrap() + 1; //add 1 after ":"
+    let n = topic.find(":")? + 1;
     let x = topic.as_str();
     Some(String::from(&x[n..]))
 }
 
+// turn "BTC-USDT" into ("BTC", "USDT")
 pub fn symbol_to_tuple(ticker: &str) -> Option<(&str, &str)> {
-    // regex to divide the tickers
-    let n = ticker.find("-");
-    if n.is_none() {
-        return None;
-    }
-    let n = n.unwrap();
+    let n = ticker.find("-")?;
     Some(((&ticker[..n]), (&ticker[(n + 1)..])))
 }

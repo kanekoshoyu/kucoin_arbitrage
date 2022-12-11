@@ -1,5 +1,9 @@
 extern crate kucoin_rs;
 
+use kucoin_arbitrage::globals::{config, performance};
+use kucoin_arbitrage::logger;
+use kucoin_arbitrage::mirror::*;
+use kucoin_arbitrage::tasks;
 use kucoin_rs::failure;
 use kucoin_rs::futures::TryStreamExt;
 use kucoin_rs::kucoin::{
@@ -7,35 +11,25 @@ use kucoin_rs::kucoin::{
     model::websocket::{KucoinWebsocketMsg, WSTopic, WSType},
     websocket::KucoinWebsocket,
 };
-use kucoin_rs::tokio::{self};
-
-use kucoin_arbitrage::mirror::*;
+use kucoin_rs::tokio;
 use log::*;
 use std::sync::{Arc, Mutex};
-
-use kucoin_arbitrage::globals::{config, performance};
-use kucoin_arbitrage::logger;
-use kucoin_arbitrage::tasks;
 
 #[tokio::main]
 async fn main() -> Result<(), failure::Error> {
     // provide logging format
     logger::log_init();
-    use kucoin_arbitrage::tickers::symbol_whitelist;
+    use kucoin_arbitrage::tickers::symbol_whitelisted;
     info!("Hello world");
 
     let credentials = config::credentials();
 
     info!("{credentials:#?}");
     let api = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
-    let api_clone = api.clone();
     let url = api.get_socket_endpoint(WSType::Public).await?;
-    let ticker_list = symbol_whitelist(api_clone, "BTC", "USDT").await?;
+    let ticker_list = symbol_whitelisted(api.clone(), "BTC", "USDT").await?;
 
     let mut ws = api.websocket();
-
-    // fill in the arbitrage list automatically
-
     let subs = vec![WSTopic::Ticker(ticker_list)];
     ws.subscribe(url, subs).await?;
 

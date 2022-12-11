@@ -1,5 +1,5 @@
 extern crate lazy_static;
-use super::envionment::*;
+use ini::{Ini, Properties};
 use kucoin_rs::kucoin::client::Credentials;
 use std::sync::Arc;
 
@@ -12,6 +12,9 @@ pub struct Config {
 }
 
 lazy_static::lazy_static! {
+    static ref INI: Ini = Ini::load_from_file("config.ini").expect("config file not found");
+    pub static ref SEC_CRED: Properties = INI.section(Some("Credentials")).unwrap().clone();
+    pub static ref SEC_BEHV: Properties = INI.section(Some("Behaviour")).unwrap().clone();
     pub static ref CONFIG: Arc<Config> = Arc::new(load_ini());
 }
 

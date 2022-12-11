@@ -9,6 +9,16 @@ lazy_static! {
     pub static ref MIRROR: Arc<Mutex<Map>> = Arc::new(Mutex::new(HashMap::new()));
 }
 
+pub fn insert(ticker_name: String, ticker_info: TickerInfo) {
+    let mut mir = MIRROR.lock().unwrap();
+    (*mir).insert(ticker_name, ticker_info);
+}
+
+pub fn has(ticker_name: String) -> bool {
+    let mut mir = MIRROR.lock().unwrap();
+    (*mir).get_mut(&ticker_name).is_some()
+}
+
 #[derive(Debug, Clone)]
 pub struct TickerInfo {
     pub symbol: SymbolTicker,

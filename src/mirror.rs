@@ -36,10 +36,7 @@ impl Default for TickerInfo {
             best_ask_size: String::default(),
             best_bid: String::default(),
         };
-        TickerInfo {
-            symbol,
-            last_update: chrono::offset::Utc::now(),
-        }
+        TickerInfo::new(symbol)
     }
 }
 
@@ -77,29 +74,16 @@ impl TickerInfo {
 
 #[cfg(test)]
 mod tests {
+    use crate::mirror;
     use core::panic;
 
     #[test]
     fn test_insert_and_read() {
         let ticker_name = "BTC-USDT".to_string();
-        let def_ticker = crate::mirror::TickerInfo::default();
-        let ticker_name_clone = ticker_name.clone();
-
-        let mir = crate::mirror::MIRROR.clone();
-        {
-            let mut mir = mir.lock().unwrap();
-            let mir = &mut (*mir);
-            let cloned = def_ticker.clone();
-            mir.insert(ticker_name, cloned);
-        }
-        {
-            let mut mir = mir.lock().unwrap();
-            let mir = &mut (*mir);
-            if let Some(_data) = mir.get_mut(&ticker_name_clone) {
-                return; //value was inserted
-            } else {
-                panic!("not inserted");
-            }
+        let def_ticker = mirror::TickerInfo::default();
+        mirror::insert(ticker_name.clone(), def_ticker.clone());
+        if !mirror::has(ticker_name) {
+            panic!("not inserted");
         }
     }
 }

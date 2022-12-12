@@ -27,11 +27,11 @@ pub fn update_ws(symbol: String, l2: Level2, time: i64) -> Result<(), kucoin_rs:
     // get mutable reference to the specific ordebook for bids/asks
     let mut orderbook = (*p).get_mut(&symbol).unwrap();
 
+    // TODO: update the bids/asks in orderbook
     let end = l2.sequence_end.to_string();
-    let asks = l2.changes.asks;
-    let bid = l2.changes.bids;
-    // update the bids/asks in orderbook
-    // orderbook
+    let _asks = l2.changes.asks;
+    let _bid = l2.changes.bids;
+
     // update orderbook time and sequence
     orderbook.sequence = end;
     orderbook.time = time;
@@ -42,28 +42,12 @@ pub fn update_ws(symbol: String, l2: Level2, time: i64) -> Result<(), kucoin_rs:
 pub fn get_clone(symbol: String) -> Option<OrderBook> {
     // TODO: make it return none if it is actually none
     let mut p = ORDERMAP.lock().unwrap();
-    let x = (*p).get_mut(&symbol).unwrap();
-    let x = OrderBook {
-        sequence: x.sequence.clone(),
-        time: x.time,
-        bids: x.bids.clone(),
-        asks: x.asks.clone(),
+    let res = (*p).get_mut(&symbol).unwrap();
+    let res = OrderBook {
+        sequence: res.sequence.clone(),
+        time: res.time,
+        bids: res.bids.clone(),
+        asks: res.asks.clone(),
     };
-    Some(x)
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::globals::orderbook;
-    use core::panic;
-
-    #[test]
-    fn test_l2_format() {
-        let symbols = ["BTC-USDT", "ETH-USDT", "ETH-USDT"];
-
-        // TODO: finish
-        unimplemented!();
-        // let mir = orderbook::insert_book();
-
-    }
+    Some(res)
 }

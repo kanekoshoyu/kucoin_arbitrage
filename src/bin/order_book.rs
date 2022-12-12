@@ -1,27 +1,32 @@
 extern crate kucoin_rs;
 
-use kucoin_rs::failure;
-use kucoin_rs::futures::TryStreamExt;
+use kucoin_arbitrage::mirror::{Map, MIRROR};
 use kucoin_rs::kucoin::{
     client::{Kucoin, KucoinEnv},
+    model::market::OrderBookType,
     model::websocket::{KucoinWebsocketMsg, WSTopic, WSType},
     websocket::KucoinWebsocket,
 };
-use kucoin_rs::tokio::{self};
-
-use kucoin_arbitrage::mirror::{Map, MIRROR};
+use kucoin_rs::{futures::TryStreamExt, tokio};
 use log::*;
 use std::sync::{Arc, Mutex};
 
 #[tokio::main]
-async fn main() -> Result<(), failure::Error> {
+async fn main() -> Result<(), kucoin_rs::failure::Error> {
     // provide logging format
     kucoin_arbitrage::logger::log_init();
     info!("Hello world");
     let credentials = kucoin_arbitrage::globals::config::credentials();
     info!("{credentials:#?}");
-    // Initialize the Kucoin API struct
     let api = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
+
+    let res = api.get_orderbook("BTC-USDT", OrderBookType::Full).await;
+    let res = res.unwrap();
+
+    info!("{res:#?}");
+    let orderbook = res.data.unwrap();
+    // TODO: get all the order-book first
+    unimplemented!();
     let url = api.get_socket_endpoint(WSType::Public).await?;
     let mut ws = api.websocket();
 
@@ -42,7 +47,7 @@ use kucoin_arbitrage::strings::topic_to_symbol;
 async fn sync_tickers_rt(
     mut ws: KucoinWebsocket,
     mirror: Arc<Mutex<Map>>,
-) -> Result<(), failure::Error> {
+) -> Result<(), kucoin_rs::failure::Error> {
     while let Some(msg) = ws.try_next().await? {
         // add matches for multi-subscribed sockets handling
         match msg {
@@ -97,27 +102,4 @@ fn order_message_received(msg: WSResp<Level2>, mirror: Arc<Mutex<Map>>) {
     //         tickers.insert(x, TickerInfo::new(msg.data));
     //     }
     // }
-}
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn test_ticker_read() {
-        let topic = "/market/ticker:ETH-BTC";
-        let wanted = "ETH-BTC";
-        let n = topic.find(":");
-        if n.is_none() {
-            panic!(": not found");
-        }
-        let n = n.unwrap() + 1; //add 1 after ":"
-        let slice = &topic[n..];
-        assert_eq!(wanted, slice);
-    }
-
-    #[test]
-    fn test_get_ticker_string() {
-        let topic = String::from("/market/ticker:ETH-BTC");
-        let wanted = "ETH-BTC";
-        let slice = crate::topic_to_symbol(topic).unwrap();
-        assert_eq!(wanted, slice);
-    }
 }

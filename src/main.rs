@@ -10,26 +10,19 @@ use kucoin_rs::kucoin::{
 use kucoin_rs::tokio::{self};
 use log::*;
 
-// Arc has implicit 'static bound, so it cannot contain reference to local variable.
 #[tokio::main]
 async fn main() -> Result<(), failure::Error> {
-    // provide logging format
     kucoin_arbitrage::logger::log_init();
     info!("Hello world");
     let credentials = kucoin_arbitrage::globals::config::credentials();
     info!("{credentials:#?}");
     // Initialize the Kucoin API struct
     let api = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
-    // Generate the dynamic Public or Private websocket url and endpoint from Kucoin
-    // which includes a token required for connecting
+    // Generate the dynamic Public or Private websocket url and endpoint
     let url = api.get_socket_endpoint(WSType::Public).await?;
     // Initialize the websocket
     let mut ws = api.websocket();
-
     // Generate a Vec<WSTopic> of desired subs.
-    // Note they need to be public or private depending on the url
-
-    // TODO: link the list_ticker to here and subscribe for all the tickers with BTC/USDT (Triangle)
     let subs = vec![WSTopic::Ticker(vec![
         "ETH-BTC".to_string(),
         "BTC-USDT".to_string(),

@@ -152,7 +152,7 @@ mod tests {
                 vec.push(symbol);
             }
         }
-        if (vec.len()+res.len()).ne(&symbols.len()){
+        if (vec.len() + res.len()).ne(&symbols.len()) {
             panic!("Doesnt add up, {vec:#?}");
         }
     }

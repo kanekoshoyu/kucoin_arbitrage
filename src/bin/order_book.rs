@@ -47,7 +47,6 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
     let credentials = kucoin_arbitrage::globals::config::credentials();
     info!("{credentials:#?}");
     let api = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
-
     // generate symbol whitelist
     let quote1 = "BTC";
     let quote2 = "USDT";
@@ -94,7 +93,7 @@ async fn sync_tickers_rt(mut ws: KucoinWebsocket) -> Result<(), kucoin_rs::failu
             KucoinWebsocketMsg::OrderBookMsg(msg) => {
                 kucoin_arbitrage::globals::performance::increment();
                 order_message_received(msg);
-                // info!("{:#?}", msg);
+                // info!("MESSAGE: {msg:#?}");
             }
             KucoinWebsocketMsg::PongMsg(_msg) => {}
             KucoinWebsocketMsg::WelcomeMsg(_msg) => {}
@@ -113,20 +112,9 @@ fn order_message_received(msg: WSResp<Level2>) {
     }
     // info!("received");
     // get the ticker name
-    let _ticker_name = strings::topic_to_symbol(msg.topic).expect("wrong ticker format");
+    let ticker_name = strings::topic_to_symbol(msg.topic).expect("wrong ticker format");
     // info!("Ticker received: {ticker_name}");
     let data = msg.data;
     // info!("{:#?}", data);
-    let asks = data.changes.asks;
-    let bids = data.changes.bids;
-    for ask in asks.into_iter() {
-        if ask.len().ne(&3) {
-            panic!("wrong format");
-        }
-    }
-    for bids in bids.into_iter() {
-        if bids.len().ne(&3) {
-            panic!("wrong format");
-        }
-    }
+    orderbook::update_ws(ticker_name, data).expect("failed storing changes locally");
 }

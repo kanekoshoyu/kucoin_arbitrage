@@ -222,9 +222,7 @@ fn chance(
 
 fn bbs_action_sequence(sum: f64, ticker_info_bbs: [TickerInfo; 3]) -> ActionSequence {
     let err_msg = "ticker_info_bss error";
-    let b1 = ticker_info_bbs.get(0).expect(err_msg);
-    let b2 = ticker_info_bbs.get(1).expect(err_msg);
-    let s = ticker_info_bbs.get(2).expect(err_msg);
+    let [b1, b2, s] = ticker_info_bbs;
 
     let b1a = b1.get_ask();
     let b2a = b2.get_ask();
@@ -261,9 +259,7 @@ fn bbs_action_sequence(sum: f64, ticker_info_bbs: [TickerInfo; 3]) -> ActionSequ
 
 fn bss_action_sequence(sum: f64, ticker_info_bss: [TickerInfo; 3]) -> ActionSequence {
     let err_msg = "ticker_info_bss error";
-    let b = ticker_info_bss.get(0).expect(err_msg);
-    let s1 = ticker_info_bss.get(1).expect(err_msg);
-    let s2 = ticker_info_bss.get(2).expect(err_msg);
+    let [b, s1, s2] = ticker_info_bss;
 
     let ba = b.get_ask();
     let s1b = s1.get_bid();

@@ -1,7 +1,8 @@
+
 extern crate kucoin_rs;
 
 use kucoin_arbitrage::globals::{orderbook, symbol};
-use kucoin_arbitrage::{strings, tickers};
+use kucoin_arbitrage::{strings, tickers, strategy};
 use kucoin_rs::futures::future;
 use kucoin_rs::kucoin::{
     client::{Kucoin, KucoinEnv},
@@ -22,7 +23,7 @@ async fn insert_single_orderbook_from_api(
         panic!("OrderBook error: {:#?}", res.msg.unwrap());
     }
     // store globally
-    orderbook::insert_book(symbol_name, res.data.unwrap());
+    orderbook::store_orderbook(symbol_name, res.data.unwrap());
     Ok(())
 }
 
@@ -47,7 +48,6 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
     let credentials = kucoin_arbitrage::globals::config::credentials();
     info!("{credentials:#?}");
     let api = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
-
     // generate symbol whitelist
     let quote1 = "BTC";
     let quote2 = "USDT";
@@ -83,18 +83,19 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
     info!("Async polling");
     // TODO: arbitrage performance analysis, such as arbitrage chance per minute
 
-    tokio::spawn(async move { sync_tickers_rt(ws).await });
+    tokio::spawn(async move { websocket_runtime(ws).await });
     kucoin_arbitrage::tasks::background_routine().await
 }
 
-async fn sync_tickers_rt(mut ws: KucoinWebsocket) -> Result<(), kucoin_rs::failure::Error> {
+// websocket message runtime
+async fn websocket_runtime(mut ws: KucoinWebsocket) -> Result<(), kucoin_rs::failure::Error> {
     while let Some(msg) = ws.try_next().await? {
         // add matches for multi-subscribed sockets handling
         match msg {
             KucoinWebsocketMsg::OrderBookMsg(msg) => {
                 kucoin_arbitrage::globals::performance::increment();
-                order_message_received(msg);
-                // info!("{:#?}", msg);
+                on_order_message_received(msg);
+                // info!("MESSAGE: {msg:#?}");
             }
             KucoinWebsocketMsg::PongMsg(_msg) => {}
             KucoinWebsocketMsg::WelcomeMsg(_msg) => {}
@@ -106,27 +107,27 @@ async fn sync_tickers_rt(mut ws: KucoinWebsocket) -> Result<(), kucoin_rs::failu
     Ok(())
 }
 
-fn order_message_received(msg: WSResp<Level2>) {
+// This shuld go strategy
+fn on_order_message_received(msg: WSResp<Level2>) {
     if msg.subject.ne("trade.l2update") {
         error!("unrecognised subject: {:?}", msg.subject);
         return;
     }
     // info!("received");
     // get the ticker name
-    let _ticker_name = strings::topic_to_symbol(msg.topic).expect("wrong ticker format");
+    let ticker_name = strings::topic_to_symbol(msg.topic).expect("wrong ticker format");
     // info!("Ticker received: {ticker_name}");
     let data = msg.data;
+    let symbol = data.symbol.clone();
     // info!("{:#?}", data);
-    let asks = data.changes.asks;
-    let bids = data.changes.bids;
-    for ask in asks.into_iter() {
-        if ask.len().ne(&3) {
-            panic!("wrong format");
-        }
+    orderbook::store_orderbook_changes(&ticker_name, data);
+
+    // do analysis with the symbol
+    // TODO: shall we ditch the ticker_name and replace with the symbol?
+    if symbol.eq("BTC-USDT") {
+        return;
     }
-    for bids in bids.into_iter() {
-        if bids.len().ne(&3) {
-            panic!("wrong format");
-        }
-    }
+    // check the arbitrage
+    
+    
 }

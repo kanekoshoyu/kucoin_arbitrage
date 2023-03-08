@@ -1,6 +1,7 @@
 use crate::{globals, strings};
 use globals::orderbook::{self, get_local_asks, get_local_bids};
 use kucoin_rs::kucoin::model::websocket::{Level2, WSResp};
+use kucoin_rs::tokio::sync::broadcast;
 use log::*;
 use std::collections::HashMap;
 
@@ -84,3 +85,35 @@ fn on_order_message_received(msg: WSResp<Level2>) {
     }
     // check the arbitrage
 }
+
+// this function type is shared across different strategies
+pub fn accept_(msg: WSResp<Level2>) {}
+
+// this function type is shared across different strategies
+// pub async fn get_receiver(msg: WSResp<Level2>) {
+//     // get a receiver from BROADCAST, then make a copy 
+//     let (tx, rx) = broadcast::channel(32);
+//     let tx_clone = tx.clone();
+
+//     task::spawn(async move {
+//         for i in 0..10 {
+//             tx_clone.send(i).await.unwrap();
+//         }
+//     });
+
+//     // Spawn the subscriber tasks
+//     let mut rx1 = rx.subscribe();
+//     let mut rx2 = rx.subscribe();
+//     task::spawn(async move {
+//         while let Some(i) = rx1.recv().await {
+//             println!("Subscriber 1 received: {}", i);
+//         }
+//     });
+//     task::spawn(async move {
+//         while let Some(i) = rx2.recv().await {
+//             println!("Subscriber 2 received: {}", i);
+//         }
+//     });
+
+
+// }

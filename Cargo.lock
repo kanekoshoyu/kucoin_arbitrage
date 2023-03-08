@@ -730,6 +730,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "env_logger",
+ "futures",
  "kucoin_rs",
  "lazy_static",
  "log",

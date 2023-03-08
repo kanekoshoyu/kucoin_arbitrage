@@ -29,12 +29,12 @@ pub struct BookData {
 }
 pub type PartialBook = HashMap<String, BookData>; //Symbols to BookData
 
-use kucoin_rs::tokio::sync::broadcast;
+use kucoin_rs::tokio::sync::broadcast::{Sender, Receiver};
 
 lazy_static::lazy_static! {
     pub static ref ASKS: Arc<Mutex<PartialBook>> = Arc::new(Mutex::new(PartialBook::new()));
     pub static ref BIDS: Arc<Mutex<PartialBook>> = Arc::new(Mutex::new(PartialBook::new()));
-    pub static ref BROADCAST: Arc<Mutex<(broadcast::Sender<(String, BookData)>, broadcast::Receiver<(String, BookData)>)>> = Arc::new(Mutex::new(broadcast::channel(32))); //Each entry of partialbook
+    pub static ref BROADCAST: Arc<Mutex<(Sender<(String, BookData)>, Receiver<(String, BookData)>)>> = Arc::new(Mutex::new(broadcast::channel(32))); //Each entry of partialbook
 }
 
 // cannot use get(), since PartialBook is not copy-able

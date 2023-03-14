@@ -4,6 +4,7 @@ use core::panic;
 use kucoin_rs::kucoin::model::market::OrderBook; //http api
 use kucoin_rs::kucoin::model::websocket::Level2;
 //ws api
+use kucoin_rs::tokio::sync::broadcast;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
@@ -29,7 +30,7 @@ pub struct BookData {
 }
 pub type PartialBook = HashMap<String, BookData>; //Symbols to BookData
 
-use kucoin_rs::tokio::sync::broadcast::{Sender, Receiver};
+use kucoin_rs::tokio::sync::broadcast::{Receiver, Sender};
 
 lazy_static::lazy_static! {
     pub static ref ASKS: Arc<Mutex<PartialBook>> = Arc::new(Mutex::new(PartialBook::new()));

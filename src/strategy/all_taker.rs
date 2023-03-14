@@ -1,5 +1,5 @@
 use crate::{globals, strings};
-use globals::orderbook::{self, get_local_asks, get_local_bids};
+use globals::legacy::orderbook::{self, get_local_asks, get_local_bids};
 use kucoin_rs::kucoin::model::websocket::{Level2, WSResp};
 use kucoin_rs::tokio::sync::broadcast;
 use log::*;
@@ -91,7 +91,7 @@ pub fn accept_(msg: WSResp<Level2>) {}
 
 // this function type is shared across different strategies
 // pub async fn get_receiver(msg: WSResp<Level2>) {
-//     // get a receiver from BROADCAST, then make a copy 
+//     // get a receiver from BROADCAST, then make a copy
 //     let (tx, rx) = broadcast::channel(32);
 //     let tx_clone = tx.clone();
 
@@ -114,6 +114,5 @@ pub fn accept_(msg: WSResp<Level2>) {}
 //             println!("Subscriber 2 received: {}", i);
 //         }
 //     });
-
 
 // }

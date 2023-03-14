@@ -1,8 +1,7 @@
-
 extern crate kucoin_rs;
 
-use kucoin_arbitrage::globals::{orderbook, symbol};
-use kucoin_arbitrage::{strings, tickers, strategy};
+use kucoin_arbitrage::globals::legacy::{orderbook, symbol};
+use kucoin_arbitrage::{strategy, strings, tickers};
 use kucoin_rs::futures::future;
 use kucoin_rs::kucoin::{
     client::{Kucoin, KucoinEnv},
@@ -128,6 +127,4 @@ fn on_order_message_received(msg: WSResp<Level2>) {
         return;
     }
     // check the arbitrage
-    
-    
 }

@@ -1,15 +1,8 @@
 extern crate lazy_static;
+use crate::model::config::Config;
 use ini::{Ini, Properties};
 use kucoin_rs::kucoin::client::Credentials;
 use std::sync::Arc;
-
-#[derive(Debug, Default, Clone, Copy)]
-pub struct Config {
-    pub monitor_interval_sec: u64,
-    pub api_key: &'static str,
-    pub secret_key: &'static str,
-    pub passphrase: &'static str,
-}
 
 lazy_static::lazy_static! {
     static ref INI: Ini = Ini::load_from_file("config.ini").expect("config file not found");

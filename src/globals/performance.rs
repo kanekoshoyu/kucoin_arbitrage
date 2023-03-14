@@ -1,10 +1,9 @@
+/*
+    lazy statics: PERFORMANCE
+*/
 extern crate lazy_static;
+use crate::model::performance::Performance;
 use std::sync::{Arc, Mutex};
-
-#[derive(Debug, Default, Clone, Copy)]
-pub struct Performance {
-    pub data_count: u64,
-}
 
 // Arc is the smart pointer used when we want to share the ownership across async functions
 // Mutex is used when we want to ensure correctness of data with lock

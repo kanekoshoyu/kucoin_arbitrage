@@ -7,7 +7,7 @@ use kucoin_rs::kucoin::{
     model::websocket::{KucoinWebsocketMsg, WSTopic, WSType},
     websocket::KucoinWebsocket,
 };
-use kucoin_rs::tokio::{self};
+use kucoin_rs::tokio;
 use log::*;
 
 #[tokio::main]

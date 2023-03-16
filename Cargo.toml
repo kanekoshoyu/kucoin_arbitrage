@@ -1,9 +1,12 @@
 [package]
 name = "kucoin_arbitrage"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
+authors = ["Sho Kaneko <kanekoshoyu@gmail.com>"]
+description = "Kucoin Arbitrage Framework in Async Rust"
+repository = "https://github.com/kanekoshoyu/kucoin_arbitrage"
+license = "MIT"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 kucoin_rs = "0.4.4"

@@ -1,4 +1,4 @@
-use super::globals::{config, performance};
+use crate::globals::{config, performance};
 use kucoin_rs::tokio::time::{sleep, Duration};
 use log::*;
 

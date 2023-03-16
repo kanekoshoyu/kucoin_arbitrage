@@ -20,4 +20,21 @@ impl Orderbook {
             sequence: 0,
         }
     }
+
+    pub fn merge(&mut self, to_merge: Orderbook) -> Result<(), ()> {
+        if self.sequence > to_merge.sequence || self.time > to_merge.time {
+            return Err(());
+        }
+        // make sure that to_merge's PVMaps are already filtered such that
+        // it is all behind the starting sequence
+        self.sequence = to_merge.sequence;
+        self.time = to_merge.time;
+        for (price, volume) in to_merge.ask.into_iter() {
+            self.ask.insert(price, volume);
+        }
+        for (price, volume) in to_merge.bid.into_iter() {
+            self.bid.insert(price, volume);
+        }
+        Ok(())
+    }
 }

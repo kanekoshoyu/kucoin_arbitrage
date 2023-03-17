@@ -1,4 +1,4 @@
-# KuCoin Triangular Arbitrage Bot in Rust
+# KuCoin Triangular Arbitrage Bot in Event-Driven Async Rust
 Rust project to implement zero-risk crypto trinagular arbitrage, explore technical feasiblity of generating passsive income (i.e. sleep to earn!).  
 ## How the arbitrage works
 Say we hold USDT, it checks all the coins(e.g. ETH) that can trade against BTC and USDT, and compare the profit by either:  
@@ -21,23 +21,22 @@ cargo run --bin XXX
 **/globals** has the lazy_statics that is used across the code. Technically it is better to pass Arc and Mutex around the functions instead of using global statics, but I just wanted the code to be a bit more readable with this way.  
   
 ## Major Structural Improvements
-- Use compiled Rust code for neat, efficient and  proper code
+- Use compiled Rust code for neat, efficient and proper code
 - WebSocket subscription of real-time order books to get all the latest maker/taker ask/bid
 - Only take a taker position based on the latest best-bid/ask price/size
 - Implement both data bandwidth monitor and arbitrage performance monitor as tasks
-- Modularize the subscription sync and arbitrage strategy selections, to make it more generic
+- Abstraction and modularization of orderbook sync and arbitrage strategies using events and channel, for interoperability
   
 ## Feature Progress List
 | Feature                                                                                            | Status    |
 | -------------------------------------------------------------------------------------------------- | --------- |
 | Whitelist all coins that can trade against two other quote coins (e.g. ETH, for ETH-BTC, ETH-USDT) | Available |
 | Look for arbitrage chance based on best ask/bid price and calculate the profit in percentage       | Available |
-| Copy and sync local orderbook in real-time                                                         | Pending   |
+| Copy and sync local orderbook in real-time                                                         | Available |
 | Execute on the arbitrage                                                                           | Pending   |
 | Resort against trade execution that could not complete as anticipated                              | Pending   |
 | Structurally allow multiple strategies to run in pararrel                                          | Pending   |
   
 ## To-dos
 - Allow variants of triangular arbitrage to run concurrently. (e.g. all taker v.s. Maker-Taker-Taker with profit monitor, selection of multiple quote coins, spot vs futures)
-- Wrap the runtime as a local service which can talk with other components in the network
 - Add a Qt/WebAsssembly GUI which visualises the arbitrage situation

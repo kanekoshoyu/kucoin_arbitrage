@@ -1,6 +1,6 @@
 [package]
 name = "kucoin_arbitrage"
-version = "0.0.1"
+version = "0.0.2"
 edition = "2021"
 authors = ["Sho Kaneko <kanekoshoyu@gmail.com>"]
 description = "Kucoin Arbitrage Framework in Async Rust"

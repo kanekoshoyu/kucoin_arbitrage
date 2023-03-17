@@ -1,8 +1,5 @@
-use crate::{globals, strings};
-use globals::legacy::orderbook::{self, get_local_asks, get_local_bids};
-use kucoin_rs::kucoin::model::websocket::{Level2, WSResp};
-use kucoin_rs::tokio::sync::broadcast;
-use log::*;
+use crate::globals;
+use globals::legacy::orderbook::{get_local_asks, get_local_bids};
 use std::collections::HashMap;
 
 static ERROR_PARSE_F64: &str = "Failed to parse value as f64";
@@ -61,58 +58,3 @@ pub fn get_best_ask_bid(symbol: &String) -> ((f64, f64), (f64, f64)) {
         ),
     );
 }
-
-async fn check_arbitrage() {}
-
-// This shuld go strategy
-fn on_order_message_received(msg: WSResp<Level2>) {
-    if msg.subject.ne("trade.l2update") {
-        error!("unrecognised subject: {:?}", msg.subject);
-        return;
-    }
-    // info!("received");
-    // get the ticker name
-    let ticker_name = strings::topic_to_symbol(msg.topic).expect("wrong ticker format");
-    // info!("Ticker received: {ticker_name}");
-    let data = msg.data;
-    let symbol = data.symbol.clone();
-    // info!("{:#?}", data);
-    orderbook::store_orderbook_changes(&ticker_name, data);
-    // do analysis with the symbol
-    // TODO: shall we ditch the ticker_name and replace with the symbol?
-    if symbol.eq("BTC-USDT") {
-        return;
-    }
-    // check the arbitrage
-}
-
-// this function type is shared across different strategies
-pub fn accept_(msg: WSResp<Level2>) {}
-
-// this function type is shared across different strategies
-// pub async fn get_receiver(msg: WSResp<Level2>) {
-//     // get a receiver from BROADCAST, then make a copy
-//     let (tx, rx) = broadcast::channel(32);
-//     let tx_clone = tx.clone();
-
-//     task::spawn(async move {
-//         for i in 0..10 {
-//             tx_clone.send(i).await.unwrap();
-//         }
-//     });
-
-//     // Spawn the subscriber tasks
-//     let mut rx1 = rx.subscribe();
-//     let mut rx2 = rx.subscribe();
-//     task::spawn(async move {
-//         while let Some(i) = rx1.recv().await {
-//             println!("Subscriber 1 received: {}", i);
-//         }
-//     });
-//     task::spawn(async move {
-//         while let Some(i) = rx2.recv().await {
-//             println!("Subscriber 2 received: {}", i);
-//         }
-//     });
-
-// }

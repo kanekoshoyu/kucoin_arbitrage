@@ -20,7 +20,7 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
     let symbol_name = "BTC-USDT";
     let ob_type = OrderBookType::L20;
     let res = api.get_orderbook(symbol_name, ob_type).await?;
-    if let orderbook = res.data.unwrap() {
+    if let Some(orderbook) = res.data {
         info!("{orderbook:#?}");
     } else {
         info!("failed obtaining hte proper data")

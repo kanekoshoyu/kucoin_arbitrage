@@ -1,4 +1,6 @@
 use kucoin_arbitrage::event::api::ApiEvent;
+use kucoin_arbitrage::globals::performance;
+use kucoin_arbitrage::model::orderbook::FullOrderbook as InhouseFullOrderBook;
 use kucoin_arbitrage::translator::translator::OrderBookChangeTranslator;
 use kucoin_rs::futures::TryStreamExt;
 use kucoin_rs::kucoin::{
@@ -7,7 +9,7 @@ use kucoin_rs::kucoin::{
     websocket::KucoinWebsocket,
 };
 use kucoin_rs::tokio;
-use log::info;
+use log::{error, info};
 use std::sync::Arc;
 use tokio::sync::broadcast::{channel, Sender};
 
@@ -16,63 +18,92 @@ async fn broadcast_websocket_l2(
     sender: Arc<Sender<ApiEvent>>,
 ) -> Result<(), kucoin_rs::failure::Error> {
     let serial = 0;
-    loop{
-        if let Some(msg) = ws.try_next().await.unwrap() {
-            // add matches for multi-subscribed sockets handling
-            if let KucoinWebsocketMsg::OrderBookMsg(msg) = msg {
-                let l2 = msg.data;
-                let (str, data) = l2.to_internal(serial);
-                info!("L2 recceived {str:#?}");
-                let event = ApiEvent::OrderbookReceived(data);
-                sender.send(event).unwrap();
-                info!("{l2:#?}")
-            } else {
-                info!("Irrelevant Messages");
-                info!("{msg:#?}")
-            }
+    while let Some(msg) = ws.try_next().await? {
+        // add matches for multi-subscribed sockets handling
+        if let KucoinWebsocketMsg::OrderBookMsg(msg) = msg {
+            let (str, data) = msg.data.to_internal(serial);
+            // info!("L2 recceived {str:#?}\n{data:#?}");
+            let event = ApiEvent::OrderbookReceived((str, data));
+            sender.send(event).unwrap();
+        } else if let KucoinWebsocketMsg::TickerMsg(_msg) = msg {
+            // info!("{msg:#?}")
+        } else if let KucoinWebsocketMsg::OrderBookChangeMsg(_msg) = msg {
+            // info!("{msg:#?}")
+        } else if let KucoinWebsocketMsg::WelcomeMsg(_msg) = msg {
+            info!("Connection setup")
+        } else if let KucoinWebsocketMsg::PongMsg(_msg) = msg {
+            info!("Connection maintained")
+        } else {
+            info!("Irrelevant Messages");
+            info!("{msg:#?}")
         }
-        info!("Exiting sync_tickers");
     }
     Ok(())
-
 }
 
 #[tokio::main]
 async fn main() -> Result<(), kucoin_rs::failure::Error> {
     // provide logging format
     kucoin_arbitrage::logger::log_init();
-    info!("Hello world");
+    info!("Log setup");
+
+    // credentials
     let credentials = kucoin_arbitrage::globals::config::credentials();
-    // TODO fix API error here
-    // Initialize the Kucoin API struct
     let api = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
-    // Generate the dynamic Public or Private websocket url and endpoint
     let url = api.get_socket_endpoint(WSType::Public).await?;
+    info!("Credentials setup");
+
     // Initialize the websocket
     let mut ws = api.websocket();
-    let subs = vec![WSTopic::Ticker(vec![
-        "ETH-BTC".to_string(),
-        "BTC-USDT".to_string(),
-        "ETH-USDT".to_string(),
-    ])];
+    let subs = vec![
+        WSTopic::OrderBook(vec![
+            "ETH-BTC".to_string(),
+            "BTC-USDT".to_string(),
+            "ETH-USDT".to_string(),
+        ]),
+        // WSTopic::OrderBookChange(vec!["ETH-BTC".to_string(), "BTC-USDT".to_string()]),
+    ];
     ws.subscribe(url, subs).await?;
+    info!("Websocket subscription setup");
 
     // Create a broadcast channel.
-    let (sender, receiver) = channel(10);
-    // Convert the sender into an Arc pointer to share across tasks.
+    let (sender, receiver) = channel(256);
     let sender = Arc::new(sender);
-    tokio::task::spawn(async move { broadcast_websocket_l2(ws, sender).await });
+    info!("Channel setup");
+
+    tokio::spawn(async move { broadcast_websocket_l2(ws, sender).await });
+    // broadcast_websocket_l2(ws, sender).await;
+
     // Spawn multiple tasks to receive messages.
     let mut receivers = Vec::new();
     let mut receiver = receiver.resubscribe();
 
     let receiver_handle = tokio::task::spawn(async move {
+        let mut local_full_orderbook = InhouseFullOrderBook::new();
         loop {
-            let event = receiver.recv().await.unwrap();
-            println!("Received event: {event:?}");
+            let event_status = receiver.recv().await;
+            performance::increment();
+            if event_status.is_err() {
+                let e = event_status.unwrap_err();
+                info!("Detected {e}, try again");
+                continue;
+            }
+            let event = event_status.unwrap();
+            // println!("Received event: {event:?}");
+            if let ApiEvent::OrderbookReceived((symbol, orderbook_change)) = event {
+                // merge the local orderbook with this one
+                let status = local_full_orderbook.get_mut(&symbol);
+                if status.is_none() {
+                    local_full_orderbook.insert(symbol, orderbook_change);
+                } else {
+                    if let Err(()) = status.unwrap().merge(orderbook_change) {
+                        error!("Merge conflict")
+                    }
+                }
+            }
         }
     });
     receivers.push(receiver_handle);
     // }
-    Ok(())
+    kucoin_arbitrage::tasks::background_routine().await
 }

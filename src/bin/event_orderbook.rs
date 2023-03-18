@@ -1,4 +1,4 @@
-use kucoin_arbitrage::event::api::ApiEvent;
+use kucoin_arbitrage::event::orderbook::OrderbookEvent;
 use kucoin_arbitrage::globals::performance;
 use kucoin_arbitrage::model::orderbook::FullOrderbook as InhouseFullOrderBook;
 use kucoin_arbitrage::translator::translator::OrderBookChangeTranslator;
@@ -15,7 +15,7 @@ use tokio::sync::broadcast::{channel, Sender};
 
 async fn broadcast_websocket_l2(
     mut ws: KucoinWebsocket,
-    sender: Arc<Sender<ApiEvent>>,
+    sender: Arc<Sender<OrderbookEvent>>,
 ) -> Result<(), kucoin_rs::failure::Error> {
     let serial = 0;
     while let Some(msg) = ws.try_next().await? {
@@ -23,7 +23,7 @@ async fn broadcast_websocket_l2(
         if let KucoinWebsocketMsg::OrderBookMsg(msg) = msg {
             let (str, data) = msg.data.to_internal(serial);
             // info!("L2 recceived {str:#?}\n{data:#?}");
-            let event = ApiEvent::OrderbookReceived((str, data));
+            let event = OrderbookEvent::OrderbookReceived((str, data));
             sender.send(event).unwrap();
         } else if let KucoinWebsocketMsg::TickerMsg(_msg) = msg {
             // info!("{msg:#?}")
@@ -90,7 +90,7 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
             }
             let event = event_status.unwrap();
             // println!("Received event: {event:?}");
-            if let ApiEvent::OrderbookReceived((symbol, orderbook_change)) = event {
+            if let OrderbookEvent::OrderbookReceived((symbol, orderbook_change)) = event {
                 // merge the local orderbook with this one
                 let status = local_full_orderbook.get_mut(&symbol);
                 if status.is_none() {

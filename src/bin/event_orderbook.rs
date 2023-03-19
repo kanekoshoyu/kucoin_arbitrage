@@ -78,7 +78,7 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
     let mut receivers = Vec::new();
     let mut receiver = receiver.resubscribe();
 
-    let receiver_handle = tokio::task::spawn(async move {
+    let receiver_handle = tokio::spawn(async move {
         let mut local_full_orderbook = InhouseFullOrderBook::new();
         loop {
             let event_status = receiver.recv().await;
@@ -104,6 +104,5 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
         }
     });
     receivers.push(receiver_handle);
-    // }
     kucoin_arbitrage::tasks::background_routine().await
 }

@@ -2,7 +2,6 @@
     Translates from kucoin API into our model datatypes
 */
 
-use crate::model::order::LimitOrder;
 use crate::model::orderbook::{Orderbook, PVMap};
 use crate::translator::translator;
 use chrono;

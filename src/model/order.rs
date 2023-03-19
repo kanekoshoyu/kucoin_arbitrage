@@ -25,7 +25,7 @@ impl Default for OrderType {
 pub trait Order {
     fn id(&self) -> u128;
     fn side(&self) -> OrderSide;
-    fn currency(&self) -> String;
+    fn symbol(&self) -> String;
     fn amount(&self) -> String;
     fn order_type(&self) -> OrderType;
 }
@@ -35,7 +35,7 @@ pub struct MarketOrder {
     id: u128,
     order_type: OrderType,
     side: OrderSide,
-    currency: String,
+    symbol: String,
     amount: String,
 }
 
@@ -49,8 +49,8 @@ impl Order for MarketOrder {
     fn side(&self) -> OrderSide {
         self.side.clone()
     }
-    fn currency(&self) -> String {
-        self.currency.clone()
+    fn symbol(&self) -> String {
+        self.symbol.clone()
     }
     fn amount(&self) -> String {
         self.amount.clone()
@@ -62,7 +62,7 @@ pub struct LimitOrder {
     id: u128,
     order_type: OrderType,
     side: OrderSide,
-    currency: String,
+    symbol: String,
     amount: String,
     size: String,
 }
@@ -77,8 +77,8 @@ impl Order for LimitOrder {
     fn side(&self) -> OrderSide {
         self.side.clone()
     }
-    fn currency(&self) -> String {
-        self.currency.clone()
+    fn symbol(&self) -> String {
+        self.symbol.clone()
     }
     fn amount(&self) -> String {
         self.amount.clone()

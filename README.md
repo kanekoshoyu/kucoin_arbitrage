@@ -1,5 +1,5 @@
-# KuCoin Triangular Arbitrage Bot in Event-Driven Async Rust
-Rust project to implement zero-risk crypto trinagular arbitrage, explore technical feasiblity of generating passsive income (i.e. sleep to earn!).  
+# Event-Driven KuCoin Triangular Arbitrage Framework in Async Rust
+This is an async Rust project to implement zero-risk crypto trinagular arbitrage, explore technical feasiblity of generating passsive income (i.e. sleep to earn!).  
 ## How the arbitrage works
 Say we hold USDT, it checks all the coins(e.g. ETH) that can trade against BTC and USDT, and compare the profit by either:  
 - Buy-Sell-Sell: buy ETH (sell USDT), sell ETH (buy BTC), sell BTC (buy USDT)  
@@ -17,8 +17,14 @@ Copy config.ini.sample as config.ini and replace the API key with your own KuCoi
 ```
 cargo run --bin XXX  
 ```
-**/bin** and **main.rs** are the executable source code.  
-**/globals** has the lazy_statics that is used across the code. Technically it is better to pass Arc and Mutex around the functions instead of using global statics, but I just wanted the code to be a bit more readable with this way.  
+## Overview
+The project is split into these components:
+- `bin` and **main.rs** contain example executable codes.
+- `globals` has the lazy_statics that is used across the code. Technically it is better to pass Arc and Mutex around the functions instead of using global statics, but I just wanted the code to be a bit more readable with this way.
+- `model`has Internal generic data structures used for abstracted representations of markets. This should be generic from exchanges so that the the arbitrage algorithms can be conducted across different exchange APIs.
+- `events` has the events used to pass states and data passed across different components. This should again be generic from the exchange APIs. It uses the internal model.
+-  
+- 
   
 ## Major Structural Improvements
 - Use compiled Rust code for neat, efficient and proper code
@@ -39,4 +45,4 @@ cargo run --bin XXX
   
 ## To-dos
 - Allow variants of triangular arbitrage to run concurrently. (e.g. all taker v.s. Maker-Taker-Taker with profit monitor, selection of multiple quote coins, spot vs futures)
-- Add a Qt/WebAsssembly GUI which visualises the arbitrage situation
+- Add a message queue based GUI (e.g. Qt) which visualises the arbitrage situation.

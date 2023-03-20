@@ -10,6 +10,16 @@ impl Default for OrderSide {
     }
 }
 
+impl ToString for OrderSide {
+    fn to_string(&self) -> String {
+        match self {
+            OrderSide::Buy => "buy",
+            OrderSide::Sell => "sell",
+        }
+        .to_string()
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub enum OrderType {
     Limit,
@@ -19,6 +29,16 @@ pub enum OrderType {
 impl Default for OrderType {
     fn default() -> Self {
         OrderType::Limit
+    }
+}
+
+impl ToString for OrderType {
+    fn to_string(&self) -> String {
+        match self {
+            OrderType::Limit => "limit",
+            OrderType::Market => "market",
+        }
+        .to_string()
     }
 }
 
@@ -64,7 +84,7 @@ pub struct LimitOrder {
     side: OrderSide,
     symbol: String,
     amount: String,
-    size: String,
+    price: String,
 }
 
 impl Order for LimitOrder {
@@ -86,7 +106,7 @@ impl Order for LimitOrder {
 }
 
 impl LimitOrder {
-    pub fn size(&self) -> String {
-        self.size.clone()
+    pub fn price(&self) -> String {
+        self.price.clone()
     }
 }

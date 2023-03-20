@@ -20,11 +20,12 @@ cargo run --bin XXX
 ## Overview
 The project is split into these components:
 - `bin` and **main.rs** contain example executable codes.
-- `globals` has the lazy_statics that is used across the code. Technically it is better to pass Arc and Mutex around the functions instead of using global statics, but I just wanted the code to be a bit more readable with this way.
-- `model`has Internal generic data structures used for abstracted representations of markets. This should be generic from exchanges so that the the arbitrage algorithms can be conducted across different exchange APIs.
+- `model`has internal generic data structures used for abstracted representations of markets. This should be generic from exchanges so that the the arbitrage algorithms can be conducted across different exchange APIs.
 - `events` has the events used to pass states and data passed across different components. This should again be generic from the exchange APIs. It uses the internal model.
--  
-- 
+- `strategy` has the implementations of arbitrage algorithms. The algorithms should only be using internal model and events so that the strategy algorithms are cross platform. 
+- `translator` has the conversion of exchange API objects into internal models and vice versa.
+- `broker` has the event broadcasts as well as some task functions for the events to be processed. This is also the interface between events/models and the API calls.
+- `globals` has the lazy_statics that is used across the code. Technically it is better to pass Arc and Mutex around the functions instead of using global statics, but I just wanted the code to be a bit more readable with this way.
   
 ## Major Structural Improvements
 - Use compiled Rust code for neat, efficient and proper code

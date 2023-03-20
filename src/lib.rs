@@ -8,3 +8,4 @@ pub mod strings;
 pub mod tasks;
 pub mod tickers;
 pub mod translator;
+pub mod broker;

@@ -1,10 +1,51 @@
-use crate::globals;
-use globals::legacy::orderbook::{get_local_asks, get_local_bids};
+use crate::event::{chance::ChanceEvent, orderbook::OrderbookEvent};
+use crate::globalsglobals::legacy::orderbook::{get_local_asks, get_local_bids};
+use crate::model::chance::{ActionInfo, ThreeActions};
+use crate::model::order::OrderSide;
+use kucoin_rs::tokio::sync::broadcast::{Receiver, Sender};
 use std::collections::HashMap;
+
+/// Async Task to subscribe to hte websocket events, calculate chances,  
+pub async fn task_triangular_arbitrage(
+    receiver: &mut Receiver<OrderbookEvent>,
+    sender: &mut Sender<ChanceEvent>,
+) -> Result<(), kucoin_rs::failure::Error> {
+    while let Ok(event) = receiver.recv().await {
+        let symbol: String;
+        if let OrderbookEvent::OrderbookChangeReceived((symbol, _)) = event {
+        } else {
+            log::info!("Please retry");
+            continue;
+        }
+        // "symbol" is obtained, get the arbitrage
+
+
+
+        let bbs: ThreeActions = [
+            ActionInfo {
+                action: OrderSide::Buy,
+                ticker: String::from(""),
+                volume: String::from(""),
+            },
+            ActionInfo {
+                action: OrderSide::Buy,
+                ticker: String::from(""),
+                volume: String::from(""),
+            },
+            ActionInfo {
+                action: OrderSide::Sell,
+                ticker: String::from(""),
+                volume: String::from(""),
+            },
+        ];
+        sender.send(ChanceEvent::AllTaker(bbs));
+    }
+    Ok(())
+}
 
 static ERROR_PARSE_F64: &str = "Failed to parse value as f64";
 
-// internally converts string into f64 and get the max key
+/// internally converts string into f64 and get the max key
 pub fn get_max_key_ref(map: &HashMap<String, String>) -> (String, String) {
     let mut max_key = f64::MIN;
     let mut max_key_ref = &"".to_string();
@@ -21,7 +62,7 @@ pub fn get_max_key_ref(map: &HashMap<String, String>) -> (String, String) {
     (max_key_ref.clone(), val_ref.clone())
 }
 
-// internally converts string into f64 and get the min key
+/// internally converts string into f64 and get the min key
 pub fn get_min_key_ref(map: &HashMap<String, String>) -> (String, String) {
     let mut min_key = f64::MAX;
     let mut min_key_ref = &"".to_string();
@@ -37,7 +78,7 @@ pub fn get_min_key_ref(map: &HashMap<String, String>) -> (String, String) {
     (min_key_ref.clone(), val_ref.clone())
 }
 
-// get best ask/bid prices and volumes from the local order_book
+/// get best ask/bid prices and volumes from the local order_book
 pub fn get_best_ask_bid(symbol: &String) -> ((f64, f64), (f64, f64)) {
     let query_err = "query to symbol failed locally";
     // TODO: get the local ask/bid

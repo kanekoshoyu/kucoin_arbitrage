@@ -1,3 +1,4 @@
+pub mod broker;
 pub mod event;
 pub mod globals;
 pub mod logger;
@@ -8,4 +9,3 @@ pub mod strings;
 pub mod tasks;
 pub mod tickers;
 pub mod translator;
-pub mod broker;

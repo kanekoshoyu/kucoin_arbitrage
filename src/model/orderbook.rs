@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 pub type PVMap = HashMap<String, String>; //Prices to Volume
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Orderbook {
     pub ask: PVMap,
     pub bid: PVMap,

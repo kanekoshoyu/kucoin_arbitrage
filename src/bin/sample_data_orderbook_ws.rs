@@ -26,7 +26,7 @@ async fn main() -> Result<(), failure::Error> {
     let mut ws = api.websocket();
 
     // TODO: link the list_ticker to here and subscribe for all the tickers with BTC/USDT (Triangle)
-    
+
     let subs = vec![WSTopic::OrderBook(vec!["ETH-BTC".to_string()])];
     ws.subscribe(url, subs).await?;
 

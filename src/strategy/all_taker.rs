@@ -1,5 +1,5 @@
 use crate::event::{chance::ChanceEvent, orderbook::OrderbookEvent};
-use crate::globalsglobals::legacy::orderbook::{get_local_asks, get_local_bids};
+use crate::globals::legacy::orderbook::{get_local_asks, get_local_bids};
 use crate::model::chance::{ActionInfo, ThreeActions};
 use crate::model::order::OrderSide;
 use kucoin_rs::tokio::sync::broadcast::{Receiver, Sender};
@@ -18,8 +18,6 @@ pub async fn task_triangular_arbitrage(
             continue;
         }
         // "symbol" is obtained, get the arbitrage
-
-
 
         let bbs: ThreeActions = [
             ActionInfo {

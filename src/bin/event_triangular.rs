@@ -1,6 +1,7 @@
 use kucoin_arbitrage::event::orderbook::OrderbookEvent;
 use kucoin_arbitrage::globals::performance;
 use kucoin_arbitrage::model::orderbook::FullOrderbook as InhouseFullOrderBook;
+use kucoin_arbitrage::strategy::all_taker::task_triangular_arbitrage;
 use kucoin_arbitrage::translator::translator::OrderBookChangeTranslator;
 use kucoin_rs::futures::TryStreamExt;
 use kucoin_rs::kucoin::{
@@ -12,7 +13,6 @@ use kucoin_rs::tokio;
 use log::{error, info};
 use std::sync::Arc;
 use tokio::sync::broadcast::{channel, Sender};
-use kucoin_arbitrage::strategy::all_taker::task_triangular_arbitrage;
 
 async fn broadcast_websocket_l2(
     mut ws: KucoinWebsocket,

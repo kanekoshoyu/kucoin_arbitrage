@@ -9,7 +9,7 @@ pub async fn api_order(
 ) -> Result<(), kucoin_rs::failure::Error> {
     // Converts reveived Message into API call
 
-    while let Ok(event) = receiver.recv().await {
+    while let event = receiver.recv().await? {
         // println!("Received event: {event:?}");
         match event {
             OrderEvent::GetAllOrders => {

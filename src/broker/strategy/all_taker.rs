@@ -18,7 +18,7 @@ pub async fn task_triangular_arbitrage(
             continue;
         }
         // "symbol" is obtained, get the arbitrage
-
+        print(symbol)
         let bbs: ThreeActions = [
             ActionInfo {
                 action: OrderSide::Buy,

@@ -179,19 +179,3 @@ pub fn store_orderbook_changes(symbol: &String, l2: Level2) {
     store_book_changes(&mut local_asks, l2.changes.asks);
     store_book_changes(&mut local_bids, l2.changes.bids);
 }
-
-#[derive(Debug, Clone)]
-pub enum Action {
-    Buy,
-    Sell,
-}
-
-#[derive(Debug, Clone)]
-pub struct ActionInfo {
-    action: Action,
-    ticker: String,
-    volume: String,
-}
-
-// sequence in ascending order
-type ActionSequence = [ActionInfo; 3];

@@ -1,12 +1,11 @@
 use kucoin_arbitrage::broker::orderbook::kucoin::{task_pub_orderevent, task_sync_orderbook};
-use kucoin_arbitrage::model::orderbook::FullOrderbook as InhouseFullOrderBook;
-// use kucoin_arbitrage::strategy::all_taker::task_triangular_arbitrage;
+use kucoin_arbitrage::model::orderbook::FullOrderbook;
 use kucoin_rs::kucoin::{
     client::{Kucoin, KucoinEnv},
     model::websocket::{WSTopic, WSType},
 };
 use kucoin_rs::tokio;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio::sync::broadcast::channel;
 
 #[tokio::main]
@@ -39,14 +38,14 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
     let sender = Arc::new(sender);
     log::info!("Channel setup");
 
+    // OrderEvent Task
     tokio::spawn(async move { task_pub_orderevent(ws, sender).await });
     log::info!("task_pub_orderevent setup");
 
-    // Spawn multiple tasks to receive messages.
-    let mut full_orderbook = InhouseFullOrderBook::new();
-
-    tokio::spawn(async move { task_sync_orderbook(&mut receiver, &mut full_orderbook).await });
-    log::info!("task_pub_orderevent setup");
+    // Orderbook Sync Task
+    let full_orderbook = Arc::new(Mutex::new(FullOrderbook::new()));
+    tokio::spawn(async move { task_sync_orderbook(&mut receiver, full_orderbook).await });
+    log::info!("task_sync_orderbook setup");
 
     kucoin_arbitrage::tasks::background_routine().await
 }

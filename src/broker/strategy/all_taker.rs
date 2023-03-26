@@ -6,11 +6,12 @@ use kucoin_rs::tokio::sync::broadcast::{Receiver, Sender};
 use std::collections::HashMap;
 
 /// Async Task to subscribe to hte websocket events, calculate chances,  
-pub async fn task_triangular_arbitrage(
+pub async fn task_pub_chance_all_taker(
     receiver: &mut Receiver<OrderbookEvent>,
     sender: &mut Sender<ChanceEvent>,
 ) -> Result<(), kucoin_rs::failure::Error> {
-    while let Ok(event) = receiver.recv().await {
+    loop {
+        let event = receiver.recv().await?;
         let symbol: String;
         if let OrderbookEvent::OrderbookChangeReceived((symbol, _)) = event {
         } else {
@@ -18,7 +19,7 @@ pub async fn task_triangular_arbitrage(
             continue;
         }
         // "symbol" is obtained, get the arbitrage
-        print(symbol)
+
         let bbs: ThreeActions = [
             ActionInfo {
                 action: OrderSide::Buy,
@@ -36,9 +37,8 @@ pub async fn task_triangular_arbitrage(
                 volume: String::from(""),
             },
         ];
-        sender.send(ChanceEvent::AllTaker(bbs));
+        sender.send(ChanceEvent::AllTaker(bbs))?;
     }
-    Ok(())
 }
 
 static ERROR_PARSE_F64: &str = "Failed to parse value as f64";

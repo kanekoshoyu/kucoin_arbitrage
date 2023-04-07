@@ -779,6 +779,7 @@ dependencies = [
  "kucoin_rs",
  "lazy_static",
  "log",
+ "ordered-float",
  "rust-ini",
 ]
 
@@ -1002,6 +1003,15 @@ dependencies = [
  "libc",
  "pkg-config",
  "vcpkg",
+]
+
+[[package]]
+name = "ordered-float"
+version = "3.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "13a384337e997e6860ffbaa83708b2ef329fd8c54cb67a5f64d421e0f943254f"
+dependencies = [
+ "num-traits",
 ]
 
 [[package]]

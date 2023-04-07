@@ -1,7 +1,7 @@
 use crate::event::{chance::ChanceEvent, orderbook::OrderbookEvent};
-use crate::model::chance::{ActionInfo, ThreeActions};
+use crate::model::chance::{ActionInfo, TriangularArbitrageChance};
 use crate::model::order::OrderSide;
-use crate::model::orderbook::FullOrderbook;
+use crate::model::orderbook::{FullOrderbook, PVMap};
 use crate::strings::{merge_symbol, split_symbol};
 use kucoin_rs::tokio::sync::broadcast::{Receiver, Sender};
 use std::sync::{Arc, Mutex};
@@ -19,7 +19,7 @@ pub async fn task_pub_chance_all_taker_btc_usdt(
         let event = receiver.recv().await?;
         let mut coin_opt: Option<String> = None;
         match event {
-            OrderbookEvent::OrderbookChangeReceived((symbol, delta)) => {
+            OrderbookEvent::OrderbookChangeReceived((symbol, _delta)) => {
                 if symbol == base_symbol {
                     continue;
                 }
@@ -27,7 +27,7 @@ pub async fn task_pub_chance_all_taker_btc_usdt(
                 coin_opt = Some(coin);
             }
             _ => {
-                log::error!("Unrecognised event");
+                log::error!("Unrecognised event {event:?}");
                 continue;
             }
         }
@@ -37,34 +37,75 @@ pub async fn task_pub_chance_all_taker_btc_usdt(
         let tb = merge_symbol(coin.clone(), base2.clone());
 
         // TODO test below
-        print!("Analysing {ab},{ta},{tb}");
+        log::info!("Analysing {ab},{ta},{tb}");
 
         let mut full_orderbook = local_full_orderbook.lock().unwrap();
         let abo = (*full_orderbook).get(&ab);
         let tao = (*full_orderbook).get(&ta);
         let tbo = (*full_orderbook).get(&tb);
         if abo.is_none() || tao.is_none() || tbo.is_none() {
+            log::warn!("empty orderbook");
             continue;
         }
 
-        // "symbol" is obtained, get the arbitrage using the local_full_orderbook
-        let bbs: ThreeActions = [
-            ActionInfo {
-                action: OrderSide::Buy,
-                ticker: String::from(""),
-                volume: String::from(""),
-            },
-            ActionInfo {
-                action: OrderSide::Buy,
-                ticker: String::from(""),
-                volume: String::from(""),
-            },
-            ActionInfo {
-                action: OrderSide::Sell,
-                ticker: String::from(""),
-                volume: String::from(""),
-            },
-        ];
-        sender.send(ChanceEvent::AllTaker(bbs))?;
+        let abo = abo.unwrap();
+        let tao = tao.unwrap();
+        let tbo = tbo.unwrap();
+
+        let bss = bss_chance(abo.bid.clone(), abo.ask.clone(), abo.ask.clone());
+
+        ()
     }
 }
+
+///
+fn bss_chance(bid: PVMap, ask1: PVMap, ask2: PVMap) -> TriangularArbitrageChance {
+    log::info!("{bid:?}");
+    // log::info!("{ask1:?}");
+    // log::info!("{ask2:?}");
+    for (i, (key, value)) in bid.iter().take(5).enumerate() {
+        println!("{}: {}: {}", i + 1, key, value);
+    }
+
+    return TriangularArbitrageChance::default();
+}
+
+// modify from the code below
+/*
+fn bss_action_sequence(sum: f64, ticker_info_bss: [TickerInfo; 3]) -> ActionSequence {
+    let err_msg = "ticker_info_bss error";
+    let [b, s1, s2] = ticker_info_bss;
+
+    let ba = b.get_ask();
+    let s1b = s1.get_bid();
+    let s2b = s2.get_bid();
+    let ratio = bss_lcf_ratio(sum, ba, s1b, s2b);
+
+    let b_size = sum * ratio;
+    let s1_size = b_size * s1b.0 / s1b.0;
+    let s2_size = s1_size * s1b.0 / s2b.0;
+    // TODO: make floating point precision programmable
+    let b_size = format!("{:.2}", b_size);
+    let s1_size = format!("{:.2}", s1_size);
+    let s2_size = format!("{:.2}", s2_size);
+
+    return [
+        ActionInfo {
+            action: Action::Buy,
+            ticker: b.clone(),
+            volume: b_size,
+        },
+        ActionInfo {
+            action: Action::Sell,
+            ticker: s1.clone(),
+            volume: s1_size,
+        },
+        ActionInfo {
+            action: Action::Sell,
+            ticker: s2.clone(),
+            volume: s2_size,
+        },
+    ];
+}
+
+ */

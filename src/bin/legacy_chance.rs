@@ -12,7 +12,6 @@ use kucoin_rs::kucoin::{
     websocket::KucoinWebsocket,
 };
 use kucoin_rs::tokio;
-use log::*;
 use std::sync::{Arc, Mutex};
 
 #[tokio::main]
@@ -20,20 +19,23 @@ async fn main() -> Result<(), failure::Error> {
     // provide logging format
     logger::log_init();
     use kucoin_arbitrage::tickers::symbol_whitelisted;
-    info!("Hello world");
+    log::info!("Hello world");
 
     let credentials = config::credentials();
 
-    info!("{credentials:#?}");
+    log::info!("{credentials:#?}");
     let api = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
     let url = api.get_socket_endpoint(WSType::Public).await?;
     let ticker_list = symbol_whitelisted(api.clone(), "BTC", "USDT").await?;
+
+    log::info!("{ticker_list:#?}");
+    panic!("Done");
 
     let mut ws = api.websocket();
     let subs = vec![WSTopic::Ticker(ticker_list)];
     ws.subscribe(url, subs).await?;
 
-    info!("Async polling");
+    log::info!("Async polling");
     let mir = MIRROR.clone();
     tokio::spawn(async move { sync_tickers(ws, mir).await });
 
@@ -131,11 +133,11 @@ async fn sync_tickers(
                     }
                     let profit_percentage = format!("{:.5}", profit_percentage);
                     let i = sc.get(1).unwrap();
-                    info!("Found arbitrage at {coin1:?}");
+                    log::info!("Found arbitrage at {coin1:?}");
                     if i.action.eq(&Action::Buy) {
-                        info!("BBS, profit {}%", profit_percentage);
+                        log::info!("BBS, profit {}%", profit_percentage);
                     } else {
-                        info!("BSS, profit {}%", profit_percentage);
+                        log::info!("BSS, profit {}%", profit_percentage);
                     }
                     // info!("{sequence:#?}");
                 }

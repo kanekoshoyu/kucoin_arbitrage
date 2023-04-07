@@ -1,8 +1,8 @@
-use crate::model::chance::ThreeActions;
+use crate::model::chance::TriangularArbitrageChance;
 
 //TODO implement arbitrage chance events below
 #[derive(Debug, Clone)]
 pub enum ChanceEvent {
-    AllTaker(ThreeActions),
-    MakerTakerTaker(ThreeActions),
+    AllTaker(TriangularArbitrageChance),
+    MakerTakerTaker(TriangularArbitrageChance),
 }

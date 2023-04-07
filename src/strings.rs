@@ -1,5 +1,5 @@
 // append "BTC" and "USDT" as "BTC-USDT"
-pub fn symbol_string(base: &str, quote: &str) -> String {
+pub fn symbol_to_string(base: &str, quote: &str) -> String {
     let mut n = String::from(base);
     n.push('-');
     n.push_str(quote);
@@ -27,10 +27,11 @@ pub fn symbol_to_tuple(ticker: &str) -> Option<(&str, &str)> {
 /// ```
 pub fn split_symbol(symbol: String) -> Option<(String, String)> {
     let delimiter = "-";
-    let substrings: Vec<String> = symbol.split(delimiter)
-    .map(|s| s.trim().to_string())
-    .collect();
-    Some((substrings[0].clone(),substrings[1].clone()))
+    let substrings: Vec<String> = symbol
+        .split(delimiter)
+        .map(|s| s.trim().to_string())
+        .collect();
+    Some((substrings[0].clone(), substrings[1].clone()))
 }
 
 /// merge ("BTC", "USDT") intp "BTC-USDT"

@@ -1,5 +1,6 @@
 extern crate kucoin_rs;
-
+use kucoin_arbitrage::mirror::{Map, TickerInfo, MIRROR};
+use kucoin_arbitrage::strings::topic_to_symbol;
 use kucoin_rs::failure;
 use kucoin_rs::futures::TryStreamExt;
 use kucoin_rs::kucoin::{
@@ -8,8 +9,6 @@ use kucoin_rs::kucoin::{
     websocket::KucoinWebsocket,
 };
 use kucoin_rs::tokio::{self};
-
-use kucoin_arbitrage::mirror::{Map, TickerInfo, MIRROR};
 use log::*;
 use std::sync::{Arc, Mutex};
 
@@ -37,8 +36,6 @@ async fn main() -> Result<(), failure::Error> {
     tokio::spawn(async move { sync_tickers(ws, mirr).await });
     kucoin_arbitrage::tasks::background_routine().await
 }
-
-use kucoin_arbitrage::strings::topic_to_symbol;
 
 async fn sync_tickers(
     mut ws: KucoinWebsocket,
@@ -72,8 +69,8 @@ async fn sync_tickers(
                 }
                 kucoin_arbitrage::globals::performance::increment();
             }
-            KucoinWebsocketMsg::PongMsg(_msg) => {}
-            KucoinWebsocketMsg::WelcomeMsg(_msg) => {}
+            KucoinWebsocketMsg::PongMsg(_) => {}
+            KucoinWebsocketMsg::WelcomeMsg(_) => {}
             KucoinWebsocketMsg::OrderBookMsg(msg) => {
                 let l2 = msg.data;
                 info!("{l2:#?}")

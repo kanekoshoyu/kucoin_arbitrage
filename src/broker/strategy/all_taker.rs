@@ -1,6 +1,6 @@
 use crate::event::{chance::ChanceEvent, orderbook::OrderbookEvent};
 use crate::globals::legacy::orderbook::{get_local_asks, get_local_bids};
-use crate::model::chance::{ActionInfo, ThreeActions};
+use crate::model::chance::{ActionInfo, ThreeActions, TriangularArbitrageChance};
 use crate::model::order::OrderSide;
 use kucoin_rs::tokio::sync::broadcast::{Receiver, Sender};
 use std::collections::HashMap;
@@ -20,23 +20,7 @@ pub async fn task_pub_chance_all_taker(
         }
         // "symbol" is obtained, get the arbitrage
 
-        let bbs: ThreeActions = [
-            ActionInfo {
-                action: OrderSide::Buy,
-                ticker: String::from(""),
-                volume: String::from(""),
-            },
-            ActionInfo {
-                action: OrderSide::Buy,
-                ticker: String::from(""),
-                volume: String::from(""),
-            },
-            ActionInfo {
-                action: OrderSide::Sell,
-                ticker: String::from(""),
-                volume: String::from(""),
-            },
-        ];
+        let bbs = TriangularArbitrageChance::default();
         sender.send(ChanceEvent::AllTaker(bbs))?;
     }
 }

@@ -21,12 +21,12 @@ pub async fn task_pub_orderevent(
         if let KucoinWebsocketMsg::OrderBookMsg(msg) = msg {
             let (str, data) = msg.data.to_internal(serial);
             // info!("L2 recceived {str:#?}\n{data:#?}");
-            let event = OrderbookEvent::OrderbookReceived((str, data));
+            let event = OrderbookEvent::OrderbookChangeReceived((str, data));
             sender.send(event).unwrap();
         } else if let KucoinWebsocketMsg::TickerMsg(_msg) = msg {
             // info!("{msg:#?}")
-        } else if let KucoinWebsocketMsg::OrderBookChangeMsg(_msg) = msg {
-            // info!("{msg:#?}")
+        } else if let KucoinWebsocketMsg::OrderBookChangeMsg(msg) = msg {
+            log::info!("OrderbookChange: {msg:#?}")
         } else if let KucoinWebsocketMsg::WelcomeMsg(_msg) = msg {
             log::info!("Connection setup")
         } else if let KucoinWebsocketMsg::PongMsg(_msg) = msg {

@@ -1,7 +1,7 @@
 use crate::event::chance::ChanceEvent;
 use crate::event::order::OrderEvent;
 use crate::model::chance::{ActionInfo, ThreeActions};
-use kucoin_rs::tokio::sync::broadcast::{error, Receiver, Sender};
+use kucoin_rs::tokio::sync::broadcast::{Receiver, Sender};
 
 /// Broker that accepts chances, then outputs actual orders based on other limiting factors
 /// Gate Keeper

@@ -55,6 +55,7 @@ pub async fn task_sync_orderbook(
                 (*full_orderbook).insert(symbol, orderbook_change);
                 // log::info!("Created")
             } else {
+                log::info!("insertion");
                 if let Err(()) = orderbook.unwrap().merge(orderbook_change) {
                     log::error!("Merge conflict")
                 }

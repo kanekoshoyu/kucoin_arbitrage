@@ -1,3 +1,4 @@
+#![feature(map_first_last)]
 use crate::event::{chance::ChanceEvent, orderbook::OrderbookEvent};
 use crate::model::chance::{ActionInfo, TriangularArbitrageChance};
 use crate::model::order::OrderSide;
@@ -52,20 +53,26 @@ pub async fn task_pub_chance_all_taker_btc_usdt(
         let tao = tao.unwrap();
         let tbo = tbo.unwrap();
 
-        let bss = bss_chance(abo.bid.clone(), abo.ask.clone(), abo.ask.clone());
-
+        let bss = bss_chance(abo.bid.clone(), tao.ask.clone(), tbo.ask.clone());
         ()
     }
 }
 
 ///
-fn bss_chance(bid: PVMap, ask1: PVMap, ask2: PVMap) -> TriangularArbitrageChance {
+fn bss_chance(mut bid: PVMap, mut ask1: PVMap, mut ask2: PVMap) -> TriangularArbitrageChance {
     log::info!("{bid:?}");
     // log::info!("{ask1:?}");
     // log::info!("{ask2:?}");
-    for (i, (key, value)) in bid.iter().take(5).enumerate() {
-        println!("{}: {}: {}", i + 1, key, value);
-    }
+
+    // best buy
+    let (best_bid_price, best_bid_volume) = bid.last_key_value().unwrap();
+    let (best_ask1_price, best_ask1_volume) = ask1.first_key_value().unwrap();
+    let (best_ask2_price, best_ask2_volume) = ask2.first_key_value().unwrap();
+
+    // TODO setup below
+    // get transaction fees
+    // get minimum orders
+    // get order resolution
 
     return TriangularArbitrageChance::default();
 }

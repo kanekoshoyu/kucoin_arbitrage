@@ -29,7 +29,6 @@ async fn main() -> Result<(), failure::Error> {
     let ticker_list = symbol_whitelisted(api.clone(), "BTC", "USDT").await?;
 
     log::info!("{ticker_list:#?}");
-    panic!("Done");
 
     let mut ws = api.websocket();
     let subs = vec![WSTopic::Ticker(ticker_list)];
@@ -164,16 +163,11 @@ pub enum Action {
 pub struct ActionInfo {
     action: Action,
     ticker: TickerInfo,
-    volume: String,
+    _volume: String,
 }
 
 // sequence in ascending order
 type ActionSequence = [ActionInfo; 3];
-
-// TODO: profit in USDT
-fn profit_usdt(_seq: ActionSequence) {
-    unimplemented!();
-}
 
 fn profit_percentage(seq: ActionSequence) -> f64 {
     let [x, y, z] = seq;
@@ -223,7 +217,6 @@ fn chance(
 }
 
 fn bbs_action_sequence(sum: f64, ticker_info_bbs: [TickerInfo; 3]) -> ActionSequence {
-    let err_msg = "ticker_info_bss error";
     let [b1, b2, s] = ticker_info_bbs;
 
     let b1a = b1.get_ask();
@@ -244,23 +237,22 @@ fn bbs_action_sequence(sum: f64, ticker_info_bbs: [TickerInfo; 3]) -> ActionSequ
         ActionInfo {
             action: Action::Buy,
             ticker: b1.clone(),
-            volume: b1_size,
+            _volume: b1_size,
         },
         ActionInfo {
             action: Action::Buy,
             ticker: b2.clone(),
-            volume: b2_size,
+            _volume: b2_size,
         },
         ActionInfo {
             action: Action::Sell,
             ticker: s.clone(),
-            volume: s_size,
+            _volume: s_size,
         },
     ];
 }
 
 fn bss_action_sequence(sum: f64, ticker_info_bss: [TickerInfo; 3]) -> ActionSequence {
-    let err_msg = "ticker_info_bss error";
     let [b, s1, s2] = ticker_info_bss;
 
     let ba = b.get_ask();
@@ -280,17 +272,17 @@ fn bss_action_sequence(sum: f64, ticker_info_bss: [TickerInfo; 3]) -> ActionSequ
         ActionInfo {
             action: Action::Buy,
             ticker: b.clone(),
-            volume: b_size,
+            _volume: b_size,
         },
         ActionInfo {
             action: Action::Sell,
             ticker: s1.clone(),
-            volume: s1_size,
+            _volume: s1_size,
         },
         ActionInfo {
             action: Action::Sell,
             ticker: s2.clone(),
-            volume: s2_size,
+            _volume: s2_size,
         },
     ];
 }

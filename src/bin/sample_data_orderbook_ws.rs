@@ -8,17 +8,16 @@ use kucoin_rs::kucoin::{
     model::websocket::{KucoinWebsocketMsg, WSTopic, WSType},
     websocket::KucoinWebsocket,
 };
-use kucoin_rs::tokio::{self};
-use log::*;
+use kucoin_rs::tokio;
 use std::sync::{Arc, Mutex};
 
 #[tokio::main]
 async fn main() -> Result<(), failure::Error> {
     // provide logging format
     kucoin_arbitrage::logger::log_init();
-    info!("Hello world");
+    log::info!("Hello world");
     let credentials = kucoin_arbitrage::globals::config::credentials();
-    info!("{credentials:#?}");
+    log::info!("{credentials:#?}");
     // Initialize the Kucoin API struct
     let api = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
     let url = api.get_socket_endpoint(WSType::Public).await?;
@@ -29,7 +28,7 @@ async fn main() -> Result<(), failure::Error> {
     let subs = vec![WSTopic::OrderBook(vec!["ETH-BTC".to_string()])];
     ws.subscribe(url, subs).await?;
 
-    info!("Async polling");
+    log::info!("Async polling");
     // TODO: arbitrage performance analysis, such as arbitrage chance per minute
 
     let mirr = MIRROR.clone();
@@ -47,13 +46,13 @@ async fn sync_tickers(
             KucoinWebsocketMsg::TickerMsg(msg) => {
                 // info!("{:#?}", msg);
                 if msg.subject.ne("trade.ticker") {
-                    error!("unrecognised subject: {:?}", msg.subject);
+                    log::error!("unrecognised subject: {:?}", msg.subject);
                     continue;
                 }
                 // get the ticker name
                 let ticker_name = topic_to_symbol(msg.topic).expect("wrong ticker format");
-                info!("Ticker received: {ticker_name}");
-                info!("{:?}", msg.data);
+                log::info!("Ticker received: {ticker_name}");
+                log::info!("{:?}", msg.data);
 
                 // check if the ticker already exists in the map
                 let x = ticker_name.clone();
@@ -73,7 +72,7 @@ async fn sync_tickers(
             KucoinWebsocketMsg::WelcomeMsg(_) => {}
             KucoinWebsocketMsg::OrderBookMsg(msg) => {
                 let l2 = msg.data;
-                info!("{l2:#?}")
+                log::info!("{l2:#?}")
             }
             _ => {
                 panic!("unexpected msgs received: {msg:?}")

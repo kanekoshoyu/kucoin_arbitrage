@@ -52,7 +52,7 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
     let rx_orderbook_2 = sender_orderbook.subscribe();
     let full_orderbook = Arc::new(Mutex::new(FullOrderbook::new()));
     log::info!("Local Orderbook setup");
-    
+
     // Infrastructure tasks
     tokio::spawn(task_sync_orderbook(rx_orderbook_1, full_orderbook.clone()));
     tokio::spawn(task_gatekeep_chances(rx_chance_1, sender_order));

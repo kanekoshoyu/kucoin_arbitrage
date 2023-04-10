@@ -1,2 +1,2 @@
-pub mod exchancelimit;
+pub mod exchangelimit;
 pub mod kucoin;

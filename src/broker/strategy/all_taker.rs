@@ -11,6 +11,7 @@ pub async fn task_pub_chance_all_taker(
     sender: &mut Sender<ChanceEvent>,
 ) -> Result<(), kucoin_rs::failure::Error> {
     loop {
+        // TODO impelment
         let event = receiver.recv().await?;
         let symbol: String;
         if let OrderbookEvent::OrderbookChangeReceived((symbol, _)) = event {

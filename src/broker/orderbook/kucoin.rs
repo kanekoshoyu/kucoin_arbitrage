@@ -1,8 +1,7 @@
 use crate::event::orderbook::OrderbookEvent;
 use crate::globals::performance;
-use crate::model::orderbook::{FullOrderbook, Orderbook};
+use crate::model::orderbook::FullOrderbook;
 use crate::translator::translator::OrderBookChangeTranslator;
-// external
 use kucoin_rs::futures::TryStreamExt;
 use kucoin_rs::kucoin::{model::websocket::KucoinWebsocketMsg, websocket::KucoinWebsocket};
 use kucoin_rs::tokio::sync::broadcast::{Receiver, Sender};
@@ -47,19 +46,24 @@ pub async fn task_sync_orderbook(
         let event = receiver.recv().await?;
         performance::increment();
         let mut full_orderbook = local_full_orderbook.lock().unwrap();
-
-        if let OrderbookEvent::OrderbookReceived((symbol, orderbook_change)) = event {
-            // merge the local orderbook with this one
-            let orderbook = (*full_orderbook).get_mut(&symbol);
-            if orderbook.is_none() {
-                (*full_orderbook).insert(symbol, orderbook_change);
-                // log::info!("Created")
-            } else {
+        log::info!("new data");
+        match event {
+            OrderbookEvent::OrderbookReceived((symbol, orderbook)) => {
+                (*full_orderbook).insert(symbol.clone(), orderbook);
+                log::info!("Created Orderbook for {symbol}")
+            }
+            OrderbookEvent::OrderbookChangeReceived((symbol, orderbook_change)) => {
+                let orderbook = (*full_orderbook).get_mut(&symbol);
+                if orderbook.is_none() {
+                    panic!("REST Orderbook should be loaded before syncing with WebSocket OrderbookChange")
+                }
                 log::info!("insertion");
                 if let Err(()) = orderbook.unwrap().merge(orderbook_change) {
                     log::error!("Merge conflict")
                 }
-                // log::info!("Inserted")
+            }
+            _ => {
+                panic!("unexpected OrderbookEvent received")
             }
         }
     }

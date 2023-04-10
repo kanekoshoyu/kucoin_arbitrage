@@ -22,8 +22,8 @@ pub async fn task_pub_orderevent(
             // info!("L2 recceived {str:#?}\n{data:#?}");
             let event = OrderbookEvent::OrderbookChangeReceived((str, data));
             sender.send(event).unwrap();
-        } else if let KucoinWebsocketMsg::TickerMsg(_msg) = msg {
-            // info!("{msg:#?}")
+        } else if let KucoinWebsocketMsg::TickerMsg(msg) = msg {
+            log::info!("TickerMsg: {msg:#?}")
         } else if let KucoinWebsocketMsg::OrderBookChangeMsg(msg) = msg {
             log::info!("OrderbookChange: {msg:#?}")
         } else if let KucoinWebsocketMsg::WelcomeMsg(_msg) = msg {
@@ -39,31 +39,29 @@ pub async fn task_pub_orderevent(
 
 /// Task to puiblish orderbook events from websocket api output
 pub async fn task_sync_orderbook(
-    receiver: &mut Receiver<OrderbookEvent>,
+    mut receiver: Receiver<OrderbookEvent>,
     local_full_orderbook: Arc<Mutex<FullOrderbook>>,
 ) -> Result<(), kucoin_rs::failure::Error> {
     loop {
         let event = receiver.recv().await?;
         performance::increment();
         let mut full_orderbook = local_full_orderbook.lock().unwrap();
-        log::info!("new data");
         match event {
             OrderbookEvent::OrderbookReceived((symbol, orderbook)) => {
                 (*full_orderbook).insert(symbol.clone(), orderbook);
-                log::info!("Created Orderbook for {symbol}")
+                log::info!("Initialised Orderbook for {symbol}")
             }
             OrderbookEvent::OrderbookChangeReceived((symbol, orderbook_change)) => {
                 let orderbook = (*full_orderbook).get_mut(&symbol);
                 if orderbook.is_none() {
-                    panic!("REST Orderbook should be loaded before syncing with WebSocket OrderbookChange")
+                    log::warn!("received {symbol} but orderbook not initialised yet.");
+                    // REST Orderbook should be loaded before syncing with WebSocket OrderbookChange
+                    continue;
                 }
                 log::info!("insertion");
                 if let Err(()) = orderbook.unwrap().merge(orderbook_change) {
                     log::error!("Merge conflict")
                 }
-            }
-            _ => {
-                panic!("unexpected OrderbookEvent received")
             }
         }
     }

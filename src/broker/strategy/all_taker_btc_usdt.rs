@@ -9,8 +9,8 @@ use std::sync::{Arc, Mutex};
 
 /// Async Task to subscribe to hte websocket events, calculate chances,  
 pub async fn task_pub_chance_all_taker_btc_usdt(
-    receiver: &mut Receiver<OrderbookEvent>,
-    sender: &mut Sender<ChanceEvent>,
+    mut receiver: Receiver<OrderbookEvent>,
+    mut sender: Sender<ChanceEvent>,
     local_full_orderbook: Arc<Mutex<FullOrderbook>>,
 ) -> Result<(), kucoin_rs::failure::Error> {
     let base1 = String::from("BTC");
@@ -40,7 +40,7 @@ pub async fn task_pub_chance_all_taker_btc_usdt(
         // TODO test below
         log::info!("Analysing {ab},{ta},{tb}");
 
-        let mut full_orderbook = local_full_orderbook.lock().unwrap();
+        let full_orderbook = local_full_orderbook.lock().unwrap();
         let abo = (*full_orderbook).get(&ab);
         let tao = (*full_orderbook).get(&ta);
         let tbo = (*full_orderbook).get(&tb);

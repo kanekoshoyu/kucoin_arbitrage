@@ -22,9 +22,9 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
 
     // credentials
     let credentials = kucoin_arbitrage::globals::config::credentials();
-    let api = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
-    let api_clone = api.clone();
-    let url = api.get_socket_endpoint(WSType::Public).await?;
+    let api_1 = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
+    let api_2 = api_1.clone();
+    let url = api_1.get_socket_endpoint(WSType::Public).await?;
     log::info!("Credentials setup");
 
     // Configure the pairs to subscribe and analyze
@@ -39,52 +39,37 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
     // let x = api.get_symbol_list(market);
 
     // Initialize the websocket
-    let mut ws = api.websocket();
+    let mut ws = api_1.websocket();
     let subs = vec![WSTopic::OrderBook(symbols.to_vec())];
     ws.subscribe(url, subs).await?;
     log::info!("Websocket subscription setup");
 
     // Create broadcast channels
-    let (sender_orderbook, _) = channel::<OrderbookEvent>(256);
-    let (mut sender_chance, _) = channel::<ChanceEvent>(128);
-    let (mut sender_order, _) = channel::<OrderEvent>(64);
-
-    log::info!("Channel setup");
-    let mut rx_orderbook_1 = sender_orderbook.subscribe();
-    let mut rx_orderbook_2 = sender_orderbook.subscribe();
-    let mut rx_chance_2 = sender_chance.subscribe();
-    let mut rx_order = sender_order.subscribe();
-
+    let (sender_orderbook, rx_orderbook_1) = channel::<OrderbookEvent>(256);
+    let (sender_chance, rx_chance_1) = channel::<ChanceEvent>(128);
+    let (sender_order, rx_order_1) = channel::<OrderEvent>(64);
+    log::info!("broadcast channels setup");
+    let rx_orderbook_2 = sender_orderbook.subscribe();
     let full_orderbook = Arc::new(Mutex::new(FullOrderbook::new()));
-    let _res = tokio::join!(
-        task_pub_orderevent(ws, sender_orderbook.clone()),
-        task_sync_orderbook(&mut rx_orderbook_1, full_orderbook.clone()),
-        task_pub_chance_all_taker_btc_usdt(
-            &mut rx_orderbook_2,
-            &mut sender_chance,
-            full_orderbook.clone(),
-        ),
-        task_gatekeep_chances(&mut rx_chance_2, &mut sender_order),
-        task_place_order(&mut rx_order, api_clone)
-    );
+    log::info!("Local Orderbook setup");
+    
+    // Infrastructure tasks
+    tokio::spawn(task_sync_orderbook(rx_orderbook_1, full_orderbook.clone()));
+    tokio::spawn(task_gatekeep_chances(rx_chance_1, sender_order));
+    tokio::spawn(task_pub_chance_all_taker_btc_usdt(
+        rx_orderbook_2,
+        sender_chance,
+        full_orderbook.clone(),
+    ));
+    tokio::spawn(task_place_order(rx_order_1, api_2));
 
-    log::info!("tasks setup");
+    // TODO use REST to obtain the initial orderbook first
 
-    // tokio::join!(task_sync_orderbook(&mut receiver, full_orderbook.clone()));
-    // // tokio::spawn(async move { task_sync_orderbook(&mut receiver, full_orderbook.clone()).await });
-    // log::info!("task_sync_orderbook setup");
+    // task_pub_orderevent is the source of data (websocket)
+    tokio::spawn(task_pub_orderevent(ws, sender_orderbook.clone()));
+    log::info!("task_pub_orderevent setup");
 
-    // let (mut sender_chance, _) = channel::<ChanceEvent>(128);
-
-    // tokio::spawn(async move {
-    //     task_pub_chance_all_taker_btc_usdt(
-    //         &mut receiver_sync,
-    //         &mut sender_chance,
-    //         full_orderbook.clone(),
-    //     )
-    //     .await
-    // });
-    // log::info!("task_pub_chance_all_taker_btc_usdt setup");
-
-    kucoin_arbitrage::tasks::background_routine().await
+    log::info!("all application tasks setup");
+    let _res = tokio::join!(kucoin_arbitrage::tasks::background_routine());
+    panic!("Program should not arrive here")
 }

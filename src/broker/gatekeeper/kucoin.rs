@@ -10,8 +10,8 @@ use kucoin_rs::tokio::sync::broadcast::{Receiver, Sender};
 /// - 45 orders per 3 seconds
 /// - 200 active order at once
 pub async fn task_gatekeep_chances(
-    receiver: &mut Receiver<ChanceEvent>,
-    sender: &mut Sender<OrderEvent>,
+    mut receiver: Receiver<ChanceEvent>,
+    mut sender: Sender<OrderEvent>,
 ) -> Result<(), kucoin_rs::failure::Error> {
     loop {
         let status = receiver.recv().await;

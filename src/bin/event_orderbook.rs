@@ -34,7 +34,7 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
     log::info!("Websocket subscription setup");
 
     // Create a broadcast channel.
-    let (sender, mut receiver) = channel(256);
+    let (sender, receiver) = channel(256);
     log::info!("Channel setup");
 
     // OrderEvent Task
@@ -43,7 +43,7 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
 
     // Orderbook Sync Task
     let full_orderbook = Arc::new(Mutex::new(FullOrderbook::new()));
-    tokio::spawn(async move { task_sync_orderbook(&mut receiver, full_orderbook).await });
+    tokio::spawn(async move { task_sync_orderbook(receiver, full_orderbook).await });
     log::info!("task_sync_orderbook setup");
 
     kucoin_arbitrage::tasks::background_routine().await

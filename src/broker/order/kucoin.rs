@@ -4,7 +4,7 @@ use kucoin_rs::kucoin::client::Kucoin;
 use kucoin_rs::tokio::sync::broadcast;
 
 pub async fn task_place_order(
-    receiver: &mut broadcast::Receiver<OrderEvent>,
+    mut receiver: broadcast::Receiver<OrderEvent>,
     kucoin: Kucoin,
 ) -> Result<(), kucoin_rs::failure::Error> {
     // Converts reveived Message into API call

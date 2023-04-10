@@ -1,10 +1,11 @@
-#![feature(map_first_last)]
 use crate::event::{chance::ChanceEvent, orderbook::OrderbookEvent};
 use crate::model::chance::{ActionInfo, TriangularArbitrageChance};
-use crate::model::order::OrderSide;
 use crate::model::orderbook::{FullOrderbook, PVMap};
 use crate::strings::{merge_symbol, split_symbol};
 use kucoin_rs::tokio::sync::broadcast::{Receiver, Sender};
+use num_traits::cast::AsPrimitive;
+use ordered_float::OrderedFloat;
+use std::cmp::min;
 use std::sync::{Arc, Mutex};
 
 /// Async Task to subscribe to hte websocket events, calculate chances,  
@@ -53,31 +54,76 @@ pub async fn task_pub_chance_all_taker_btc_usdt(
         let tao = tao.unwrap();
         let tbo = tbo.unwrap();
 
-        let bss = bss_chance(abo.bid.clone(), tao.ask.clone(), tbo.ask.clone());
-        ()
+        let bss = bss_chance(
+            ab.clone(),
+            ta.clone(),
+            tb.clone(),
+            abo.ask.clone(),
+            tao.bid.clone(),
+            tbo.bid.clone(),
+        );
+
+        let bbs = bss_chance(
+            tb.clone(),
+            ta.clone(),
+            ab.clone(),
+            tbo.ask.clone(),
+            tao.ask.clone(),
+            abo.bid.clone(),
+        );
+
+        // TODO check profit for bss, bbs,
+        log::info!("BSS profit: {}", bss.profit);
+        log::info!("BBS profit: {}", bbs.profit);
     }
 }
 
-///
-fn bss_chance(mut bid: PVMap, mut ask1: PVMap, mut ask2: PVMap) -> TriangularArbitrageChance {
-    log::info!("{bid:?}");
-    // log::info!("{ask1:?}");
-    // log::info!("{ask2:?}");
+/// get the BSS chance
+/// Uses PVMap instead of price-volume pair to give higher flexibility in implementation changes
+fn bss_chance(
+    ask_symbol: String,
+    bid1_symbol: String,
+    bid2_symbol: String,
+    ask: PVMap,
+    bid1: PVMap,
+    bid2: PVMap,
+) -> TriangularArbitrageChance {
+    log::info!("Getting the BBS chance");
 
     // best buy
-    let (best_bid_price, best_bid_volume) = bid.last_key_value().unwrap();
-    let (best_ask1_price, best_ask1_volume) = ask1.first_key_value().unwrap();
-    let (best_ask2_price, best_ask2_volume) = ask2.first_key_value().unwrap();
+    let (best_ask_price, best_ask_volume) = ask.last_key_value().unwrap();
+    let (best_bid1_price, best_bid1_volume) = bid1.first_key_value().unwrap();
+    let (best_bid2_price, best_bid2_volume) = bid2.first_key_value().unwrap();
 
-    // TODO setup below
-    // get transaction fees
-    // get minimum orders
-    // get order resolution
+    // TODO get actual transaction fee
+    let trade_fee = 0.1;
+    // TODO get min size and increment
 
-    return TriangularArbitrageChance::default();
+    // ETH-USDT, ETH-BTC, BTC-USDT
+    let v_usdt_old = OrderedFloat(10.0); // arbitrary limit
+
+    // Buy, min() requires Ord, keep using OrderedFloat<f32>
+    let v_eth = best_ask_price * min(v_usdt_old, best_ask_volume.to_owned()) * (1.0 - trade_fee);
+    // Sell
+    let v_btc = min(v_eth / best_bid1_price, best_bid1_volume.to_owned()) * (1.0 - trade_fee);
+    // Sell
+    let v_usdt_new = min(v_btc / best_bid2_price, best_bid2_volume.to_owned()) * (1.0 - trade_fee);
+
+    // TODO reduce the size to fit the min_size and increment
+    let profit = v_usdt_new - v_usdt_old;
+
+    // TODO Double check, when selling do we use the quote or base coin
+    TriangularArbitrageChance {
+        profit,
+        actions: [
+            ActionInfo::buy(ask_symbol, v_eth),
+            ActionInfo::sell(bid1_symbol, v_btc),
+            ActionInfo::sell(bid2_symbol, v_usdt_new),
+        ],
+    }
 }
 
-// modify from the code below
+// TODO modify from the code below
 /*
 fn bss_action_sequence(sum: f64, ticker_info_bss: [TickerInfo; 3]) -> ActionSequence {
     let err_msg = "ticker_info_bss error";
@@ -116,3 +162,48 @@ fn bss_action_sequence(sum: f64, ticker_info_bss: [TickerInfo; 3]) -> ActionSequ
 }
 
  */
+
+/// get the BBS chance
+/// Uses PVMap instead of price-volume pair to give higher flexibility in implementation changes
+fn bbs_chance(
+    ask1_symbol: String,
+    ask2_symbol: String,
+    bid_symbol: String,
+    ask1: PVMap,
+    ask2: PVMap,
+    bid: PVMap,
+) -> TriangularArbitrageChance {
+    log::info!("Getting the BBS chance");
+
+    // best buy
+    let (best_ask1_price, best_ask1_volume) = ask1.last_key_value().unwrap();
+    let (best_ask2_price, best_ask2_volume) = ask2.first_key_value().unwrap();
+    let (best_bid_price, best_bid_volume) = bid.first_key_value().unwrap();
+
+    // TODO do everything mentioned as of bbs_chance
+    let trade_fee = 0.1;
+    // TODO get min size and increment
+
+    // BTC-USDT, ETH-BTC, ETH-USDT
+    let v_usdt_old = OrderedFloat(10.0); // arbitrary limit
+
+    // Buy, min() requires Ord, keep using OrderedFloat<f32>
+    let v_btc = best_ask1_price * min(v_usdt_old, best_ask1_volume.to_owned()) * (1.0 - trade_fee);
+    // Buy
+    let v_eth = best_ask2_price * min(v_btc, best_ask2_volume.to_owned()) * (1.0 - trade_fee);
+    // Sell
+    let v_usdt_new = min(v_btc / best_bid_price, best_bid_volume.to_owned()) * (1.0 - trade_fee);
+
+    // TODO reduce the size to fit the min_size and increment
+    let profit = v_usdt_new - v_usdt_old;
+
+    // TODO Double check, when selling do we use the quote or base coin
+    TriangularArbitrageChance {
+        profit,
+        actions: [
+            ActionInfo::buy(ask1_symbol, v_btc),
+            ActionInfo::buy(ask2_symbol, v_eth),
+            ActionInfo::sell(bid_symbol, v_usdt_new),
+        ],
+    }
+}

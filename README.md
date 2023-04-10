@@ -42,7 +42,7 @@ The project is split into these components:
 | Copy and sync local orderbook in real-time                                                         | Available |
 | Execute on the arbitrage                                                                           | Pending   |
 | Resort against trade execution that could not complete as anticipated                              | Pending   |
-| Structurally allow multiple strategies to run in pararrel                                          | Pending   |
+| Structurally allow multiple strategies to run in pararrel                                          | Available |
   
 ## To-dos
 - Allow variants of triangular arbitrage to run concurrently. (e.g. all taker v.s. Maker-Taker-Taker with profit monitor, selection of multiple quote coins, spot vs futures)

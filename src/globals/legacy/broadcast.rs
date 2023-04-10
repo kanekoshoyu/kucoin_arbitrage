@@ -187,13 +187,3 @@ pub enum Action {
     Buy,
     Sell,
 }
-
-#[derive(Debug, Clone)]
-pub struct ActionInfo {
-    action: Action,
-    ticker: String,
-    volume: String,
-}
-
-// sequence in ascending order
-type ActionSequence = [ActionInfo; 3];

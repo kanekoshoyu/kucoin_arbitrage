@@ -62,12 +62,12 @@ pub async fn symbol_whitelisted(
     let bases = bases_with_quotes(api, quote1, quote2).await?;
     let mut res: Vec<String> = Vec::new();
     // append "quote1-quote2"
-    res.push(symbol_string(quote1, quote2));
+    res.push(symbol_to_string(quote1, quote2));
     // append "base-quote"
     for base in bases.into_iter() {
         let base = base.as_str();
-        res.push(symbol_string(base, quote1));
-        res.push(symbol_string(base, quote2));
+        res.push(symbol_to_string(base, quote1));
+        res.push(symbol_to_string(base, quote2));
     }
     Ok(res)
 }

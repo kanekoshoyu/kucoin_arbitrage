@@ -1,6 +1,6 @@
 [package]
 name = "kucoin_arbitrage"
-version = "0.0.3"
+version = "0.0.4"
 edition = "2021"
 authors = ["Sho Kaneko <kanekoshoyu@gmail.com>"]
 description = "Event-Driven Kucoin Arbitrage Framework in Async Rust"
@@ -15,4 +15,6 @@ chrono = "0.4"
 env_logger = "0.10.0"
 rust-ini = "0.18"
 lazy_static = "1.4"
-futures= "0.3"
+futures = "0.3"
+ordered-float = "3.6.0"
+num-traits = "0.2.15"

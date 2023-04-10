@@ -12,7 +12,6 @@ use kucoin_rs::kucoin::{
     websocket::KucoinWebsocket,
 };
 use kucoin_rs::tokio;
-use log::*;
 use std::sync::{Arc, Mutex};
 
 #[tokio::main]
@@ -20,20 +19,22 @@ async fn main() -> Result<(), failure::Error> {
     // provide logging format
     logger::log_init();
     use kucoin_arbitrage::tickers::symbol_whitelisted;
-    info!("Hello world");
+    log::info!("Hello world");
 
     let credentials = config::credentials();
 
-    info!("{credentials:#?}");
+    log::info!("{credentials:#?}");
     let api = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
     let url = api.get_socket_endpoint(WSType::Public).await?;
     let ticker_list = symbol_whitelisted(api.clone(), "BTC", "USDT").await?;
+
+    log::info!("{ticker_list:#?}");
 
     let mut ws = api.websocket();
     let subs = vec![WSTopic::Ticker(ticker_list)];
     ws.subscribe(url, subs).await?;
 
-    info!("Async polling");
+    log::info!("Async polling");
     let mir = MIRROR.clone();
     tokio::spawn(async move { sync_tickers(ws, mir).await });
 
@@ -131,11 +132,11 @@ async fn sync_tickers(
                     }
                     let profit_percentage = format!("{:.5}", profit_percentage);
                     let i = sc.get(1).unwrap();
-                    info!("Found arbitrage at {coin1:?}");
+                    log::info!("Found arbitrage at {coin1:?}");
                     if i.action.eq(&Action::Buy) {
-                        info!("BBS, profit {}%", profit_percentage);
+                        log::info!("BBS, profit {}%", profit_percentage);
                     } else {
-                        info!("BSS, profit {}%", profit_percentage);
+                        log::info!("BSS, profit {}%", profit_percentage);
                     }
                     // info!("{sequence:#?}");
                 }
@@ -162,16 +163,11 @@ pub enum Action {
 pub struct ActionInfo {
     action: Action,
     ticker: TickerInfo,
-    volume: String,
+    _volume: String,
 }
 
 // sequence in ascending order
 type ActionSequence = [ActionInfo; 3];
-
-// TODO: profit in USDT
-fn profit_usdt(_seq: ActionSequence) {
-    unimplemented!();
-}
 
 fn profit_percentage(seq: ActionSequence) -> f64 {
     let [x, y, z] = seq;
@@ -221,7 +217,6 @@ fn chance(
 }
 
 fn bbs_action_sequence(sum: f64, ticker_info_bbs: [TickerInfo; 3]) -> ActionSequence {
-    let err_msg = "ticker_info_bss error";
     let [b1, b2, s] = ticker_info_bbs;
 
     let b1a = b1.get_ask();
@@ -242,23 +237,22 @@ fn bbs_action_sequence(sum: f64, ticker_info_bbs: [TickerInfo; 3]) -> ActionSequ
         ActionInfo {
             action: Action::Buy,
             ticker: b1.clone(),
-            volume: b1_size,
+            _volume: b1_size,
         },
         ActionInfo {
             action: Action::Buy,
             ticker: b2.clone(),
-            volume: b2_size,
+            _volume: b2_size,
         },
         ActionInfo {
             action: Action::Sell,
             ticker: s.clone(),
-            volume: s_size,
+            _volume: s_size,
         },
     ];
 }
 
 fn bss_action_sequence(sum: f64, ticker_info_bss: [TickerInfo; 3]) -> ActionSequence {
-    let err_msg = "ticker_info_bss error";
     let [b, s1, s2] = ticker_info_bss;
 
     let ba = b.get_ask();
@@ -278,17 +272,17 @@ fn bss_action_sequence(sum: f64, ticker_info_bss: [TickerInfo; 3]) -> ActionSequ
         ActionInfo {
             action: Action::Buy,
             ticker: b.clone(),
-            volume: b_size,
+            _volume: b_size,
         },
         ActionInfo {
             action: Action::Sell,
             ticker: s1.clone(),
-            volume: s1_size,
+            _volume: s1_size,
         },
         ActionInfo {
             action: Action::Sell,
             ticker: s2.clone(),
-            volume: s2_size,
+            _volume: s2_size,
         },
     ];
 }

@@ -1,8 +1,10 @@
+use kucoin_arbitrage::broker::gatekeeper::kucoin::task_gatekeep_chances;
 use kucoin_arbitrage::broker::orderbook::kucoin::{task_pub_orderevent, task_sync_orderbook};
 use kucoin_arbitrage::broker::strategy::all_taker_btc_usdt::task_pub_chance_all_taker_btc_usdt;
 use kucoin_arbitrage::event::chance::ChanceEvent;
+use kucoin_arbitrage::event::order::OrderEvent;
+use kucoin_arbitrage::event::orderbook::OrderbookEvent;
 use kucoin_arbitrage::model::orderbook::FullOrderbook;
-
 use kucoin_arbitrage::model::symbol::SymbolInfo;
 use kucoin_rs::kucoin::{
     client::{Kucoin, KucoinEnv},
@@ -41,28 +43,29 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
     ws.subscribe(url, subs).await?;
     log::info!("Websocket subscription setup");
 
-    // Create a broadcast channel.
-    let (sender, mut receiver) = channel(256);
-    let sender = Arc::new(sender);
-    let mut receiver_sync = sender.subscribe();
-    log::info!("Channel setup");
-
-    // OrderEvent Task
-    tokio::spawn(async move { task_pub_orderevent(ws, sender).await });
-    log::info!("task_pub_orderevent setup");
-
-    // Orderbook Sync Task
+    // Create broadcast channels
+    let (sender_orderbook, _) = channel::<OrderbookEvent>(256);
     let (mut sender_chance, _) = channel::<ChanceEvent>(128);
+    let (mut sender_order, _) = channel::<OrderEvent>(64);
+
+    log::info!("Channel setup");
+    let mut rx_orderbook_1 = sender_orderbook.subscribe();
+    let mut rx_orderbook_2 = sender_orderbook.subscribe();
+    let mut rx_chance_2 = sender_chance.subscribe();
 
     let full_orderbook = Arc::new(Mutex::new(FullOrderbook::new()));
     let _res = tokio::join!(
-        task_sync_orderbook(&mut receiver, full_orderbook.clone()),
+        task_pub_orderevent(ws, sender_orderbook.clone()),
+        task_sync_orderbook(&mut rx_orderbook_1, full_orderbook.clone()),
         task_pub_chance_all_taker_btc_usdt(
-            &mut receiver_sync,
+            &mut rx_orderbook_2,
             &mut sender_chance,
             full_orderbook.clone(),
-        )
+        ),
+        task_gatekeep_chances(&mut rx_chance_2, &mut sender_order,)
     );
+    log::info!("tasks setup");
+
     // tokio::join!(task_sync_orderbook(&mut receiver, full_orderbook.clone()));
     // // tokio::spawn(async move { task_sync_orderbook(&mut receiver, full_orderbook.clone()).await });
     // log::info!("task_sync_orderbook setup");

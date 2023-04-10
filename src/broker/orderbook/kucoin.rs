@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 /// Task to puiblish orderbook events from websocket api output
 pub async fn task_pub_orderevent(
     mut ws: KucoinWebsocket,
-    sender: Arc<Sender<OrderbookEvent>>,
+    sender: Sender<OrderbookEvent>,
 ) -> Result<(), kucoin_rs::failure::Error> {
     let serial = 0;
     loop {

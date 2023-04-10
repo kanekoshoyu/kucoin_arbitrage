@@ -35,7 +35,6 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
 
     // Create a broadcast channel.
     let (sender, mut receiver) = channel(256);
-    let sender = Arc::new(sender);
     log::info!("Channel setup");
 
     // OrderEvent Task

@@ -1,11 +1,11 @@
 use kucoin_arbitrage::broker::gatekeeper::kucoin::task_gatekeep_chances;
+use kucoin_arbitrage::broker::order::kucoin::task_place_order;
 use kucoin_arbitrage::broker::orderbook::kucoin::{task_pub_orderevent, task_sync_orderbook};
 use kucoin_arbitrage::broker::strategy::all_taker_btc_usdt::task_pub_chance_all_taker_btc_usdt;
 use kucoin_arbitrage::event::chance::ChanceEvent;
 use kucoin_arbitrage::event::order::OrderEvent;
 use kucoin_arbitrage::event::orderbook::OrderbookEvent;
 use kucoin_arbitrage::model::orderbook::FullOrderbook;
-use kucoin_arbitrage::model::symbol::SymbolInfo;
 use kucoin_rs::kucoin::{
     client::{Kucoin, KucoinEnv},
     model::websocket::{WSTopic, WSType},
@@ -23,6 +23,7 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
     // credentials
     let credentials = kucoin_arbitrage::globals::config::credentials();
     let api = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
+    let api_clone = api.clone();
     let url = api.get_socket_endpoint(WSType::Public).await?;
     log::info!("Credentials setup");
 
@@ -52,6 +53,7 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
     let mut rx_orderbook_1 = sender_orderbook.subscribe();
     let mut rx_orderbook_2 = sender_orderbook.subscribe();
     let mut rx_chance_2 = sender_chance.subscribe();
+    let mut rx_order = sender_order.subscribe();
 
     let full_orderbook = Arc::new(Mutex::new(FullOrderbook::new()));
     let _res = tokio::join!(
@@ -62,8 +64,10 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
             &mut sender_chance,
             full_orderbook.clone(),
         ),
-        task_gatekeep_chances(&mut rx_chance_2, &mut sender_order,)
+        task_gatekeep_chances(&mut rx_chance_2, &mut sender_order),
+        task_place_order(&mut rx_order, api_clone)
     );
+
     log::info!("tasks setup");
 
     // tokio::join!(task_sync_orderbook(&mut receiver, full_orderbook.clone()));

@@ -3,7 +3,7 @@ use crate::model::order::Order;
 use kucoin_rs::kucoin::client::Kucoin;
 use kucoin_rs::tokio::sync::broadcast;
 
-pub async fn api_order(
+pub async fn task_place_order(
     receiver: &mut broadcast::Receiver<OrderEvent>,
     kucoin: Kucoin,
 ) -> Result<(), kucoin_rs::failure::Error> {

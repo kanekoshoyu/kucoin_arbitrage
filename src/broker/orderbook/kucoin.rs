@@ -4,7 +4,7 @@ use crate::model::orderbook::FullOrderbook;
 use crate::translator::translator::OrderBookChangeTranslator;
 use kucoin_rs::futures::TryStreamExt;
 use kucoin_rs::kucoin::{model::websocket::KucoinWebsocketMsg, websocket::KucoinWebsocket};
-use kucoin_rs::tokio::sync::broadcast::{Receiver, Sender};
+use tokio::sync::broadcast::{Receiver, Sender};
 use std::sync::{Arc, Mutex};
 //TODO implement the internal trade order task in kucoin
 

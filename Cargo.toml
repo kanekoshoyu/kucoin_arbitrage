@@ -18,3 +18,4 @@ lazy_static = "1.4"
 futures = "0.3"
 ordered-float = "3.6.0"
 num-traits = "0.2.15"
+tokio = { version = "1.27.0", features = ["full"] }

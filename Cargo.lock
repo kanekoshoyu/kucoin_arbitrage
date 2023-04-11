@@ -782,6 +782,7 @@ dependencies = [
  "num-traits",
  "ordered-float",
  "rust-ini",
+ "tokio",
 ]
 
 [[package]]

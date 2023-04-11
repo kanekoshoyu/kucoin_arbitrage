@@ -118,7 +118,6 @@ pub async fn symbol_list_filtered(
 mod tests {
     use crate::mirror;
     use core::panic;
-    use kucoin_rs::tokio;
     #[test]
     fn test_insert_and_read() {
         let ticker_name = "BTC-USDT".to_string();

@@ -4,7 +4,6 @@ use kucoin_rs::kucoin::{
     client::{Kucoin, KucoinEnv},
     model::websocket::{WSTopic, WSType},
 };
-use kucoin_rs::tokio;
 use std::sync::{Arc, Mutex};
 use tokio::sync::broadcast::channel;
 

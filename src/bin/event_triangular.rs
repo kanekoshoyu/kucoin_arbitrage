@@ -6,12 +6,16 @@ use kucoin_arbitrage::event::chance::ChanceEvent;
 use kucoin_arbitrage::event::order::OrderEvent;
 use kucoin_arbitrage::event::orderbook::OrderbookEvent;
 use kucoin_arbitrage::model::orderbook::FullOrderbook;
+use kucoin_arbitrage::translator;
+use kucoin_arbitrage::translator::translator::OrderBookTranslator;
 use kucoin_rs::kucoin::{
     client::{Kucoin, KucoinEnv},
+    model::market::OrderBookType,
     model::websocket::{WSTopic, WSType},
 };
-use kucoin_rs::tokio;
+
 use std::sync::{Arc, Mutex};
+use tokio;
 use tokio::sync::broadcast::channel;
 
 #[tokio::main]
@@ -24,6 +28,7 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
     let credentials = kucoin_arbitrage::globals::config::credentials();
     let api_1 = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
     let api_2 = api_1.clone();
+    let api_3 = api_1.clone();
     let url = api_1.get_socket_endpoint(WSType::Public).await?;
     log::info!("Credentials setup");
 
@@ -48,8 +53,9 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
     let (sender_orderbook, rx_orderbook_1) = channel::<OrderbookEvent>(256);
     let (sender_chance, rx_chance_1) = channel::<ChanceEvent>(128);
     let (sender_order, rx_order_1) = channel::<OrderEvent>(64);
-    log::info!("broadcast channels setup");
     let rx_orderbook_2 = sender_orderbook.subscribe();
+    log::info!("broadcast channels setup");
+
     let full_orderbook = Arc::new(Mutex::new(FullOrderbook::new()));
     log::info!("Local Orderbook setup");
 
@@ -63,7 +69,23 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
     ));
     tokio::spawn(task_place_order(rx_order_1, api_2));
 
-    // TODO use REST to obtain the initial orderbook first
+    // use REST to obtain the initial orderbook before subscribing to websocket
+    let full_orderbook_2 = full_orderbook.clone();
+    for symbol in symbols.iter() {
+        log::info!("obtaining initial orderbook[{symbol}] from REST");
+        // OrderBookType::Full fails
+        let res = api_3
+            .get_orderbook(symbol.as_str(), OrderBookType::L100)
+            .await
+            .expect("invalid data");
+        if let Some(data) = res.data {
+            // log::info!("orderbook[{symbol}] {:#?}", data);
+            let mut x = full_orderbook_2.lock().unwrap();
+            (*x).insert(symbol.to_string(), data.to_internal());
+        } else {
+            log::warn!("orderbook[{symbol}] received none")
+        }
+    }
 
     // task_pub_orderevent is the source of data (websocket)
     tokio::spawn(task_pub_orderevent(ws, sender_orderbook.clone()));

@@ -7,15 +7,13 @@ use kucoin_rs::kucoin::{
     model::websocket::{KucoinWebsocketMsg, WSTopic, WSType},
     websocket::KucoinWebsocket,
 };
-use kucoin_rs::tokio;
-use log::*;
 
 #[tokio::main]
 async fn main() -> Result<(), failure::Error> {
     kucoin_arbitrage::logger::log_init();
-    info!("Hello world");
+    log::info!("Hello world");
     let credentials = kucoin_arbitrage::globals::config::credentials();
-    info!("{credentials:#?}");
+    log::info!("{credentials:#?}");
     // Initialize the Kucoin API struct
     let api = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
     // Generate the dynamic Public or Private websocket url and endpoint
@@ -29,7 +27,7 @@ async fn main() -> Result<(), failure::Error> {
         "ETH-USDT".to_string(),
     ])];
     ws.subscribe(url, subs).await?;
-    info!("Async polling");
+    log::info!("Async polling");
     tokio::spawn(async move { poll_task(ws).await });
     kucoin_arbitrage::tasks::background_routine().await
 }

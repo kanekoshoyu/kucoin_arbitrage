@@ -6,6 +6,7 @@ use kucoin_rs::kucoin::model::websocket::Level2;
 //ws api
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use tokio::sync::broadcast;
 
 /*
 please refer to
@@ -29,7 +30,6 @@ pub struct BookData {
 }
 pub type PartialBook = HashMap<String, BookData>; //Symbols to BookData
 
-use kucoin_rs::tokio::sync::broadcast;
 lazy_static::lazy_static! {
     pub static ref ASKS: Arc<Mutex<PartialBook>> = Arc::new(Mutex::new(PartialBook::new()));
     pub static ref BIDS: Arc<Mutex<PartialBook>> = Arc::new(Mutex::new(PartialBook::new()));

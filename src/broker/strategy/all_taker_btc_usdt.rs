@@ -2,7 +2,7 @@ use crate::event::{chance::ChanceEvent, orderbook::OrderbookEvent};
 use crate::model::chance::{ActionInfo, TriangularArbitrageChance};
 use crate::model::orderbook::{FullOrderbook, PVMap};
 use crate::strings::{merge_symbol, split_symbol};
-use kucoin_rs::tokio::sync::broadcast::{Receiver, Sender};
+use tokio::sync::broadcast::{Receiver, Sender};
 use ordered_float::OrderedFloat;
 use std::cmp::{max, min};
 use std::sync::{Arc, Mutex};
@@ -10,7 +10,7 @@ use std::sync::{Arc, Mutex};
 /// Async Task to subscribe to hte websocket events, calculate chances,  
 pub async fn task_pub_chance_all_taker_btc_usdt(
     mut receiver: Receiver<OrderbookEvent>,
-    mut sender: Sender<ChanceEvent>,
+    sender: Sender<ChanceEvent>,
     local_full_orderbook: Arc<Mutex<FullOrderbook>>,
 ) -> Result<(), kucoin_rs::failure::Error> {
     let base1 = String::from("BTC");
@@ -79,7 +79,8 @@ pub async fn task_pub_chance_all_taker_btc_usdt(
         if best.profit > OrderedFloat(0.0) {
             // TODO publish
             let chance = ChanceEvent::AllTaker(best);
-            log::info!("{chance:?}")
+            log::info!("{chance:?}");
+            let _res = sender.send(chance);
         }
     }
 }

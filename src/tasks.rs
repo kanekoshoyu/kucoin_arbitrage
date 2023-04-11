@@ -1,5 +1,5 @@
 use crate::globals::{config, performance};
-use kucoin_rs::tokio::time::{sleep, Duration};
+use tokio::time::{sleep, Duration};
 use log::*;
 
 fn report_status() -> Result<(), kucoin_rs::failure::Error> {

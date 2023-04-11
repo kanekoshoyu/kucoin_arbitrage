@@ -1,7 +1,7 @@
 use crate::event::chance::ChanceEvent;
 use crate::event::order::OrderEvent;
 use crate::model::chance::{ActionInfo, ThreeActions};
-use kucoin_rs::tokio::sync::broadcast::{Receiver, Sender};
+use tokio::sync::broadcast::{Receiver, Sender};
 
 /// Broker that accepts chances, then outputs actual orders based on other limiting factors
 /// Gate Keeper
@@ -17,6 +17,7 @@ pub async fn task_gatekeep_chances(
         let status = receiver.recv().await;
         if status.is_err() {
             // TODO return the error as we want here
+            panic!("{:?}", status.err());
         }
         let event = status.unwrap();
         match event {

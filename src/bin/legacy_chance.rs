@@ -11,7 +11,6 @@ use kucoin_rs::kucoin::{
     model::websocket::{KucoinWebsocketMsg, WSTopic, WSType},
     websocket::KucoinWebsocket,
 };
-use kucoin_rs::tokio;
 use std::sync::{Arc, Mutex};
 
 #[tokio::main]

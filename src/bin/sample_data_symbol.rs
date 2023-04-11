@@ -3,7 +3,6 @@ extern crate kucoin_rs;
 use kucoin_rs::failure;
 use kucoin_rs::kucoin::client::{Kucoin, KucoinEnv};
 use kucoin_rs::kucoin::model::market::SymbolList;
-use kucoin_rs::tokio;
 
 #[tokio::main]
 async fn main() -> Result<(), failure::Error> {

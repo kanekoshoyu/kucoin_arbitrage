@@ -8,17 +8,13 @@ use kucoin_rs::kucoin::{
     websocket::KucoinWebsocket,
 };
 
-use kucoin_rs::tokio::{self};
-
-use log::*;
-
 #[tokio::main]
 async fn main() -> Result<(), failure::Error> {
     // provide logging format
     kucoin_arbitrage::logger::log_init();
-    info!("Hello world");
+    log::info!("Hello world");
     let credentials = kucoin_arbitrage::globals::config::credentials();
-    info!("{credentials:#?}");
+    log::info!("{credentials:#?}");
     // Initialize the Kucoin API struct
     let api = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
     let url = api.get_socket_endpoint(WSType::Public).await?;
@@ -31,7 +27,7 @@ async fn main() -> Result<(), failure::Error> {
     ])];
     ws.subscribe(url, subs).await?;
 
-    info!("Async polling");
+    log::info!("Async polling");
     tokio::spawn(async move { sync_tickers(ws).await });
     kucoin_arbitrage::tasks::background_routine().await
 }

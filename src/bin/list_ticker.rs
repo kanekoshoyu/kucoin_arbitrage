@@ -4,7 +4,6 @@ use kucoin_arbitrage::logger;
 use kucoin_arbitrage::tickers::bases_with_quotes;
 use kucoin_rs::failure;
 use kucoin_rs::kucoin::client::{Kucoin, KucoinEnv};
-use kucoin_rs::tokio;
 
 #[tokio::main]
 async fn main() -> Result<(), failure::Error> {

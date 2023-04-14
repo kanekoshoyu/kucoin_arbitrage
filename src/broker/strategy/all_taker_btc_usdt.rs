@@ -62,7 +62,7 @@ pub async fn task_pub_chance_all_taker_btc_usdt(
             tbo.bid.clone(),
         );
 
-        let bbs = bss_chance(
+        let bbs = bbs_chance(
             tb.clone(),
             ta.clone(),
             ab.clone(),
@@ -95,7 +95,7 @@ fn bss_chance(
     bid1: PVMap,
     bid2: PVMap,
 ) -> TriangularArbitrageChance {
-    log::info!("Getting the BBS chance");
+    log::info!("Getting the BSS chance");
 
     // best buy
     let (best_ask_price, best_ask_volume) = ask.last_key_value().unwrap();

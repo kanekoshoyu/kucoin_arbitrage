@@ -14,7 +14,6 @@ impl translator::OrderBookTranslator for KucoinOrderBook {
     fn to_internal(&self) -> Orderbook {
         let parse_err_msg = "Failed to parse input";
         let sequence = self.sequence.parse::<u64>().unwrap();
-        let time = self.time;
         let mut ask = PVMap::new();
         let mut bid = PVMap::new();
 
@@ -31,7 +30,6 @@ impl translator::OrderBookTranslator for KucoinOrderBook {
         Orderbook {
             ask,
             bid,
-            time,
             sequence,
         }
     }
@@ -61,13 +59,11 @@ impl translator::OrderBookChangeTranslator for KucoinOrderBookChange {
             }
         }
         let sequence = self.sequence_end.clone() as u64;
-        let time = chrono::offset::Utc::now().timestamp();
         (
             self.symbol.clone(),
             Orderbook {
                 ask,
                 bid,
-                time,
                 sequence,
             },
         )

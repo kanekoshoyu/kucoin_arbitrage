@@ -6,7 +6,6 @@ use kucoin_arbitrage::event::chance::ChanceEvent;
 use kucoin_arbitrage::event::order::OrderEvent;
 use kucoin_arbitrage::event::orderbook::OrderbookEvent;
 use kucoin_arbitrage::model::orderbook::FullOrderbook;
-use kucoin_arbitrage::translator;
 use kucoin_arbitrage::translator::translator::OrderBookTranslator;
 use kucoin_rs::kucoin::{
     client::{Kucoin, KucoinEnv},

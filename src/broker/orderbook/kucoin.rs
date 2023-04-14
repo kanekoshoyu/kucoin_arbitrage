@@ -4,8 +4,8 @@ use crate::model::orderbook::FullOrderbook;
 use crate::translator::translator::OrderBookChangeTranslator;
 use kucoin_rs::futures::TryStreamExt;
 use kucoin_rs::kucoin::{model::websocket::KucoinWebsocketMsg, websocket::KucoinWebsocket};
-use tokio::sync::broadcast::{Receiver, Sender};
 use std::sync::{Arc, Mutex};
+use tokio::sync::broadcast::{Receiver, Sender};
 //TODO implement the internal trade order task in kucoin
 
 /// Task to puiblish orderbook events from websocket api output
@@ -40,6 +40,7 @@ pub async fn task_pub_orderevent(
 /// Task to puiblish orderbook events from websocket api output
 pub async fn task_sync_orderbook(
     mut receiver: Receiver<OrderbookEvent>,
+    sender: Sender<OrderbookEvent>,
     local_full_orderbook: Arc<Mutex<FullOrderbook>>,
 ) -> Result<(), kucoin_rs::failure::Error> {
     loop {
@@ -58,9 +59,18 @@ pub async fn task_sync_orderbook(
                     // REST Orderbook should be loaded before syncing with WebSocket OrderbookChange
                     continue;
                 }
-                log::info!("insertion");
-                if let Err(()) = orderbook.unwrap().merge(orderbook_change) {
-                    log::error!("Merge conflict")
+                // log::info!("insertion");
+                match orderbook.unwrap().merge(orderbook_change) {
+                    Ok(res) => {
+                        if let Some(ob) = res {
+                            sender
+                                .send(OrderbookEvent::OrderbookChangeReceived((symbol, ob)))
+                                .unwrap();
+                        }
+                    }
+                    Err(e) => {
+                        log::error!("Merge conflict, {e}")
+                    }
                 }
             }
         }

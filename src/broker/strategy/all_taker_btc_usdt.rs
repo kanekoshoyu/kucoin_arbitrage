@@ -18,6 +18,7 @@ pub async fn task_pub_chance_all_taker_btc_usdt(
     let base_symbol = String::from("BTC-USDT");
     loop {
         let event = receiver.recv().await?;
+        log::info!("received orderbook_update");
         let mut coin_opt: Option<String> = None;
         match event {
             OrderbookEvent::OrderbookChangeReceived((symbol, _delta)) => {

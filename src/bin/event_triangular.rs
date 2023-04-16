@@ -91,7 +91,7 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
     }
 
     // task_pub_orderevent is the source of data (websocket)
-    tokio::spawn(task_pub_orderevent(ws, tx_orderbook.clone()));
+    tokio::spawn(task_pub_orderevent(ws, tx_orderbook));
     log::info!("task_pub_orderevent setup");
 
     log::info!("all application tasks setup");

@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 
 /// price as key, volume as value
-pub type PVMap = BTreeMap<OrderedFloat<f32>, OrderedFloat<f32>>; //Prices to Volume
+pub type PVMap = BTreeMap<OrderedFloat<f64>, OrderedFloat<f64>>; //Prices to Volume
 
 /// orderbook for each symbol, contains ask, bid, time and sequence
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
@@ -49,12 +49,12 @@ impl Orderbook {
         }
 
         if let Some((merge_min_ask, _)) = to_merge_clone.ask.first_key_value() {
-            if merge_min_ask.to_owned() < min_ask {
+            if merge_min_ask.to_owned() <= min_ask {
                 return Ok(Some(to_merge_clone));
             }
         }
         if let Some((merge_max_bid, _)) = to_merge_clone.bid.first_key_value() {
-            if merge_max_bid.to_owned() > max_bid {
+            if merge_max_bid.to_owned() >= max_bid {
                 return Ok(Some(to_merge_clone));
             }
         }

@@ -7,18 +7,18 @@ use std::cmp::Ordering;
 pub struct ActionInfo {
     pub action: OrderSide,
     pub ticker: String,
-    pub volume: OrderedFloat<f32>,
+    pub volume: OrderedFloat<f64>,
 }
 
 impl ActionInfo {
-    pub fn buy(ticker: String, volume: OrderedFloat<f32>) -> ActionInfo {
+    pub fn buy(ticker: String, volume: OrderedFloat<f64>) -> ActionInfo {
         ActionInfo {
             action: OrderSide::Buy,
             ticker,
             volume,
         }
     }
-    pub fn sell(ticker: String, volume: OrderedFloat<f32>) -> ActionInfo {
+    pub fn sell(ticker: String, volume: OrderedFloat<f64>) -> ActionInfo {
         ActionInfo {
             action: OrderSide::Sell,
             ticker,
@@ -33,7 +33,7 @@ pub type ThreeActions = [ActionInfo; 3];
 /// structure of of arbitrage chances
 #[derive(Debug, Clone, Default, Eq)]
 pub struct TriangularArbitrageChance {
-    pub profit: OrderedFloat<f32>,
+    pub profit: OrderedFloat<f64>,
     pub actions: ThreeActions,
 }
 

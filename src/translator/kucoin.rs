@@ -18,13 +18,13 @@ impl translator::OrderBookTranslator for KucoinOrderBook {
         let mut bid = PVMap::new();
 
         for ask_pv in self.asks.clone() {
-            let price: OrderedFloat<f32> = ask_pv[0].parse().expect(parse_err_msg);
-            let volume: OrderedFloat<f32> = ask_pv[1].parse().expect(parse_err_msg);
+            let price: OrderedFloat<f64> = ask_pv[0].parse().expect(parse_err_msg);
+            let volume: OrderedFloat<f64> = ask_pv[1].parse().expect(parse_err_msg);
             ask.insert(price, volume);
         }
         for bid_pv in self.bids.clone() {
-            let price: OrderedFloat<f32> = bid_pv[0].parse().expect(parse_err_msg);
-            let volume: OrderedFloat<f32> = bid_pv[1].parse().expect(parse_err_msg);
+            let price: OrderedFloat<f64> = bid_pv[0].parse().expect(parse_err_msg);
+            let volume: OrderedFloat<f64> = bid_pv[1].parse().expect(parse_err_msg);
             bid.insert(price, volume);
         }
         Orderbook {
@@ -45,16 +45,16 @@ impl translator::OrderBookChangeTranslator for KucoinOrderBookChange {
         for ask_change in self.changes.asks.clone() {
             // ignore if sequence <=serial
             if ask_change[2].parse::<u64>().unwrap() > serial {
-                let price: OrderedFloat<f32> = ask_change[0].parse().expect(parse_err_msg);
-                let volume: OrderedFloat<f32> = ask_change[1].parse().expect(parse_err_msg);
+                let price: OrderedFloat<f64> = ask_change[0].parse().expect(parse_err_msg);
+                let volume: OrderedFloat<f64> = ask_change[1].parse().expect(parse_err_msg);
                 ask.insert(price, volume);
             }
         }
         for bid_change in self.changes.bids.clone() {
             // ignore if sequence <=serial
             if bid_change[2].parse::<u64>().unwrap() > serial {
-                let price: OrderedFloat<f32> = bid_change[0].parse().expect(parse_err_msg);
-                let volume: OrderedFloat<f32> = bid_change[1].parse().expect(parse_err_msg);
+                let price: OrderedFloat<f64> = bid_change[0].parse().expect(parse_err_msg);
+                let volume: OrderedFloat<f64> = bid_change[1].parse().expect(parse_err_msg);
                 bid.insert(price, volume);
             }
         }

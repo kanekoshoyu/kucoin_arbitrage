@@ -140,8 +140,8 @@ async fn sync_tickers(
                     // info!("{sequence:#?}");
                 }
             }
-            KucoinWebsocketMsg::PongMsg(_msg) => {}
-            KucoinWebsocketMsg::WelcomeMsg(_msg) => {}
+            KucoinWebsocketMsg::PongMsg(_msg) => continue,
+            KucoinWebsocketMsg::WelcomeMsg(_msg) => continue,
             _ => {
                 panic!("unexpected msgs received: {msg:?}")
             }

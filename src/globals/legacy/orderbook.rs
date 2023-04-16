@@ -66,7 +66,6 @@ pub fn set_local_bids(symbol: String, book_data: BookData) -> Option<BookData> {
 pub fn store_orderbook(symbol: String, orderbook: OrderBook) {
     let asks = orderbook.asks;
     let bids = orderbook.bids;
-    let queue_err_msg = "symbol not found locally";
 
     //  TODO: Create new BookData here and store them
     // unimplemented!("implement local asks/bids creation ");

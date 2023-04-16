@@ -1,7 +1,6 @@
 use crate::event::{chance::ChanceEvent, orderbook::OrderbookEvent};
 use crate::globals::legacy::orderbook::{get_local_asks, get_local_bids};
 use crate::model::chance::{ActionInfo, ThreeActions, TriangularArbitrageChance};
-use crate::model::order::OrderSide;
 use std::collections::HashMap;
 use tokio::sync::broadcast::{Receiver, Sender};
 

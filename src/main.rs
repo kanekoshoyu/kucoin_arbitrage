@@ -39,8 +39,8 @@ async fn poll_task(mut ws: KucoinWebsocket) -> Result<(), failure::Error> {
             KucoinWebsocketMsg::TickerMsg(_msg) => {
                 kucoin_arbitrage::globals::performance::increment();
             }
-            KucoinWebsocketMsg::PongMsg(_msg) => {}
-            KucoinWebsocketMsg::WelcomeMsg(_msg) => {}
+            KucoinWebsocketMsg::PongMsg(_) => continue,
+            KucoinWebsocketMsg::WelcomeMsg(_) => continue,
             _ => {
                 panic!("unexpected msgs received: {msg:?}")
             }

@@ -1,7 +1,8 @@
 use crate::event::chance::ChanceEvent;
 use crate::event::order::OrderEvent;
-use crate::model::chance::{ActionInfo, ThreeActions};
 use tokio::sync::broadcast::{Receiver, Sender};
+
+// TODO implement when all_taker_btc_usdt is done
 
 /// Broker that accepts chances, then outputs actual orders based on other limiting factors
 /// Gate Keeper
@@ -11,7 +12,7 @@ use tokio::sync::broadcast::{Receiver, Sender};
 /// - 200 active order at once
 pub async fn task_gatekeep_chances(
     mut receiver: Receiver<ChanceEvent>,
-    mut sender: Sender<OrderEvent>,
+    mut _sender: Sender<OrderEvent>,
 ) -> Result<(), kucoin_rs::failure::Error> {
     loop {
         let status = receiver.recv().await;
@@ -21,8 +22,8 @@ pub async fn task_gatekeep_chances(
         }
         let event = status.unwrap();
         match event {
-            ChanceEvent::AllTaker(actions) => {}
-            ChanceEvent::MakerTakerTaker(actions) => {}
+            ChanceEvent::AllTaker(_actions) => {}
+            ChanceEvent::MakerTakerTaker(_actions) => {}
         }
     }
 }

@@ -63,7 +63,11 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
     log::info!("Local Orderbook setup");
 
     // Infrastructure tasks
-    tokio::spawn(task_sync_orderbook(rx_orderbook, tx_orderbook_best, full_orderbook.clone()));
+    tokio::spawn(task_sync_orderbook(
+        rx_orderbook,
+        tx_orderbook_best,
+        full_orderbook.clone(),
+    ));
     tokio::spawn(task_pub_chance_all_taker_btc_usdt(
         rx_orderbook_best,
         tx_chance,
@@ -78,11 +82,12 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
         log::info!("obtaining initial orderbook[{symbol}] from REST");
         // OrderBookType::Full fails
         let res = api_3
-            .get_orderbook(symbol.as_str(), OrderBookType::L100)
+            .get_orderbook(symbol.as_str(), OrderBookType::L20)
             .await
             .expect("invalid data");
         if let Some(data) = res.data {
             // log::info!("orderbook[{symbol}] {:#?}", data);
+            log::info!("Initial sequence {}:{}", symbol, data.sequence);
             let mut x = full_orderbook_2.lock().unwrap();
             (*x).insert(symbol.to_string(), data.to_internal());
         } else {

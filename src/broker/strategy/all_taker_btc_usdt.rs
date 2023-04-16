@@ -2,10 +2,10 @@ use crate::event::{chance::ChanceEvent, orderbook::OrderbookEvent};
 use crate::model::chance::{ActionInfo, TriangularArbitrageChance};
 use crate::model::orderbook::{FullOrderbook, PVMap};
 use crate::strings::{merge_symbol, split_symbol};
-use tokio::sync::broadcast::{Receiver, Sender};
 use ordered_float::OrderedFloat;
 use std::cmp::{max, min};
 use std::sync::{Arc, Mutex};
+use tokio::sync::broadcast::{Receiver, Sender};
 
 /// Async Task to subscribe to hte websocket events, calculate chances,  
 pub async fn task_pub_chance_all_taker_btc_usdt(
@@ -15,10 +15,10 @@ pub async fn task_pub_chance_all_taker_btc_usdt(
 ) -> Result<(), kucoin_rs::failure::Error> {
     let base1 = String::from("BTC");
     let base2 = String::from("USDT");
-    let base_symbol = String::from("BTC-USDT");
+    let base_symbol = std::format!("{base1}-{base2}");
     loop {
         let event = receiver.recv().await?;
-        log::info!("received orderbook_update");
+        // log::info!("received orderbook_update");
         let mut coin_opt: Option<String> = None;
         match event {
             OrderbookEvent::OrderbookChangeReceived((symbol, _delta)) => {
@@ -49,7 +49,7 @@ pub async fn task_pub_chance_all_taker_btc_usdt(
             log::warn!("empty orderbook");
             continue;
         }
-
+        log::info!("Full orderbook: {full_orderbook:#?}");
         let abo = abo.unwrap();
         let tao = tao.unwrap();
         let tbo = tbo.unwrap();

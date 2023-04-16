@@ -18,8 +18,8 @@ pub async fn task_pub_orderevent(
         let msg = ws.try_next().await?.unwrap();
         // add matches for multi-subscribed sockets handling
         if let KucoinWebsocketMsg::OrderBookMsg(msg) = msg {
+            // log::info!("WS: {msg:#?}");
             let (str, data) = msg.data.to_internal(serial);
-            // info!("L2 recceived {str:#?}\n{data:#?}");
             let event = OrderbookEvent::OrderbookChangeReceived((str, data));
             sender.send(event).unwrap();
         } else if let KucoinWebsocketMsg::TickerMsg(msg) = msg {
@@ -59,17 +59,18 @@ pub async fn task_sync_orderbook(
                     // REST Orderbook should be loaded before syncing with WebSocket OrderbookChange
                     continue;
                 }
-                // log::info!("insertion");
+                // log::info!("insertion: {orderbook_change:#?}");
                 match orderbook.unwrap().merge(orderbook_change) {
                     Ok(res) => {
                         if let Some(ob) = res {
+                            // log::info!("update: {ob:#?}");
                             sender
                                 .send(OrderbookEvent::OrderbookChangeReceived((symbol, ob)))
                                 .unwrap();
                         }
                     }
                     Err(e) => {
-                        log::error!("Merge conflict, {e}")
+                        log::error!("Merge conflict: {e}")
                     }
                 }
             }

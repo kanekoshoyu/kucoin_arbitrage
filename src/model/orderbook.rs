@@ -31,8 +31,11 @@ impl Orderbook {
         let max_bid = self.bid.last_key_value().unwrap().0.to_owned();
 
         if self.sequence > to_merge.sequence {
-            return Err(String::from(
-                "older orderbook trying to get merged into newer orderbook",
+            // This happen in the beginning when older orderbook in websocket is received after REST
+            return Err(std::format!(
+                "[{}] -> [{}]",
+                to_merge.sequence,
+                self.sequence
             ));
         }
         // make sure that to_merge's PVMaps are already filtered such that
@@ -42,10 +45,24 @@ impl Orderbook {
         // TODO find breaking record here
 
         for (price, volume) in to_merge.ask.into_iter() {
-            self.ask.insert(price, volume);
+            if volume.eq(&0.0) {
+                if self.ask.remove(&price).is_none() {
+                    log::error!("remove ask error at {}", &price);
+                }
+                // log::info!("cleared ask {}",&price);
+            } else {
+                self.ask.insert(price, volume);
+            }
         }
         for (price, volume) in to_merge.bid.into_iter() {
-            self.bid.insert(price, volume);
+            if volume.eq(&0.0) {
+                if self.bid.remove(&price).is_none() {
+                    log::error!("remove bid error at {}", &price);
+                }
+                // log::info!("cleared bid {}",&price);
+            } else {
+                self.bid.insert(price, volume);
+            }
         }
 
         if let Some((merge_min_ask, _)) = to_merge_clone.ask.first_key_value() {

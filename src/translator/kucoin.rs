@@ -27,11 +27,7 @@ impl translator::OrderBookTranslator for KucoinOrderBook {
             let volume: OrderedFloat<f64> = bid_pv[1].parse().expect(parse_err_msg);
             bid.insert(price, volume);
         }
-        Orderbook {
-            ask,
-            bid,
-            sequence,
-        }
+        Orderbook { ask, bid, sequence }
     }
 }
 
@@ -59,13 +55,6 @@ impl translator::OrderBookChangeTranslator for KucoinOrderBookChange {
             }
         }
         let sequence = self.sequence_end.clone() as u64;
-        (
-            self.symbol.clone(),
-            Orderbook {
-                ask,
-                bid,
-                sequence,
-            },
-        )
+        (self.symbol.clone(), Orderbook { ask, bid, sequence })
     }
 }

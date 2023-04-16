@@ -5,7 +5,7 @@ pub fn log_init() {
     let now = Local::now();
     let formatted_date = now.format(fmt).to_string();
     let dir = "log";
-    let filename = String::from(dir)+"/"+&formatted_date+".log";
+    let filename = String::from(dir) + "/" + &formatted_date + ".log";
     let _ = std::fs::create_dir(dir);
 
     let console_logger = fern::Dispatch::new()
@@ -25,7 +25,7 @@ pub fn log_init() {
         .format(|out, message, _| out.finish(format_args!("{}", message)))
         .level(log::LevelFilter::Info)
         .chain(fern::log_file(filename).unwrap());
-    
+
     // TODO make log file generation configurable
     console_logger
         .chain(file_logger)

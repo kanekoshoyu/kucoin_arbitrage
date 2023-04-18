@@ -33,13 +33,3 @@ pub fn split_symbol(symbol: String) -> Option<(String, String)> {
         .collect();
     Some((substrings[0].clone(), substrings[1].clone()))
 }
-
-/// merge ("BTC", "USDT") intp "BTC-USDT"
-/// ```
-/// use kucoin_arbitrage::strings::merge_symbol;
-/// let res = merge_symbol(String::from("BTC"), String::from("USDT"));
-/// assert_eq!(res, String::from("BTC-USDT"));
-/// ```
-pub fn merge_symbol(coin1: String, coin2: String) -> String {
-    format!("{}-{}", coin1, coin2)
-}

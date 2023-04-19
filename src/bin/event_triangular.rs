@@ -82,7 +82,7 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
         log::info!("obtaining initial orderbook[{symbol}] from REST");
         // OrderBookType::Full fails
         let res = api_3
-            .get_orderbook(symbol.as_str(), OrderBookType::L20)
+            .get_orderbook(symbol.as_str(), OrderBookType::L100)
             .await
             .expect("invalid data");
         if let Some(data) = res.data {

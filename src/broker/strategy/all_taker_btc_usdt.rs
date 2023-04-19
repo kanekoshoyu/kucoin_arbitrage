@@ -1,11 +1,10 @@
 use crate::event::{chance::ChanceEvent, orderbook::OrderbookEvent};
-use crate::model::chance::{ActionInfo, ThreeActions, TriangularArbitrageChance};
+use crate::model::chance::{ActionInfo, TriangularArbitrageChance};
 use crate::model::order::OrderSide;
-use crate::model::orderbook::{FullOrderbook, Orderbook, PVMap};
+use crate::model::orderbook::{FullOrderbook, Orderbook};
 use crate::strings::split_symbol;
 use num_traits::pow;
 use ordered_float::OrderedFloat;
-use std::cmp::{max, min};
 use std::sync::{Arc, Mutex};
 use tokio::sync::broadcast::{Receiver, Sender};
 
@@ -56,34 +55,30 @@ pub async fn task_pub_chance_all_taker_btc_usdt(
         // log::info!("Full orderbook: \n{full_orderbook:#?}");
         // let orderbook_eth_usdt = orderbook_eth_usdt.unwrap();
 
-        let chance = triangular_chance_sequence(
+        let mut chance = triangular_chance_sequence(
             orderbook_btc_usdt.unwrap(),
             orderbook_eth_btc.unwrap(),
             orderbook_eth_usdt.unwrap(),
             10.0,
         );
-        if let Some(mut chance) = chance {
-            if chance.actions[1].action.eq(&OrderSide::Buy) {
-                // bbs
-                chance.actions[0].ticker = btc_usdt.clone();
-                chance.actions[1].ticker = eth_btc.clone();
-                chance.actions[2].ticker = eth_usdt.clone();
-            } else {
-                chance.actions[0].ticker = eth_usdt.clone();
-                chance.actions[1].ticker = eth_btc.clone();
-                chance.actions[2].ticker = btc_usdt.clone();
-            }
-            log::info!("chance: {chance:?}");
+        if chance.actions[1].action.eq(&OrderSide::Buy) {
+            // bbs
+            chance.actions[0].ticker = btc_usdt.clone();
+            chance.actions[1].ticker = eth_btc.clone();
+            chance.actions[2].ticker = eth_usdt.clone();
+        } else {
+            chance.actions[0].ticker = eth_usdt.clone();
+            chance.actions[1].ticker = eth_btc.clone();
+            chance.actions[2].ticker = btc_usdt.clone();
         }
 
-        // TODO check profit for bss, bbs,
-
-        // if best.profit > OrderedFloat(0.0) {
-        //     // TODO publish
-        //     let chance = ChanceEvent::AllTaker(best);
-        //     log::info!("{chance:?}");
-        //     let _res = sender.send(chance);
-        // }
+        // found profitable chance
+        if chance.profit > OrderedFloat(5.0) {
+            log::info!("profit: {}", chance.profit.into_inner());
+            log::info!("full_orderbook: \n{:#?}", (*full_orderbook));
+            log::info!("chance \n{chance:#?}");
+            panic!()
+        }
     }
 }
 
@@ -92,7 +87,7 @@ fn triangular_chance_sequence(
     orderbook_eth_btc: &Orderbook,
     orderbook_eth_usdt: &Orderbook,
     usdt_amount: f64,
-) -> Option<TriangularArbitrageChance> {
+) -> TriangularArbitrageChance {
     let (btc_usdt_bid, btc_usdt_bid_volume) = orderbook_btc_usdt.bid.last_key_value().unwrap();
     let (eth_btc_bid, eth_btc_bid_volume) = orderbook_eth_btc.bid.last_key_value().unwrap();
     let (eth_usdt_bid, eth_usdt_bid_volume) = orderbook_eth_usdt.bid.last_key_value().unwrap();
@@ -117,76 +112,96 @@ fn triangular_chance_sequence(
     )
 }
 
+fn round_amount(amount: f64, increment: f64) -> f64 {
+    (amount / increment).round() * increment
+}
+
+/// internal chance function, stripped down for doctest
+/// >>> triangular_chance_sequence_f64()
+///
 fn triangular_chance_sequence_f64(
-    btc_usdt_bid: f64,
-    btc_usdt_ask: f64,
-    eth_usdt_bid: f64,
-    eth_usdt_ask: f64,
+    btc_usd_bid: f64,
+    btc_usd_ask: f64,
+    eth_usd_bid: f64,
+    eth_usd_ask: f64,
     eth_btc_bid: f64,
     eth_btc_ask: f64,
-    btc_usdt_bid_volume: f64,
-    btc_usdt_ask_volume: f64,
-    eth_usdt_bid_volume: f64,
-    eth_usdt_ask_volume: f64,
+    btc_usd_bid_volume: f64,
+    btc_usd_ask_volume: f64,
+    eth_usd_bid_volume: f64,
+    eth_usd_ask_volume: f64,
     eth_btc_bid_volume: f64,
     eth_btc_ask_volume: f64,
-    usdt_amount: f64,
-) -> Option<TriangularArbitrageChance> {
-    let fee = 0.001;
-    let weight = 1.0 - fee;
+    usd_amount: f64,
+) -> TriangularArbitrageChance {
+    let fee: f64 = 0.001;
+    let weight: f64 = 1.0 - fee;
 
     // Calculate the maximum amount of base currency that can be traded for each sequence
-    let max_base_currency_bbs = btc_usdt_ask_volume
-        .min(eth_btc_ask_volume * btc_usdt_bid)
-        .min(eth_usdt_bid_volume * eth_btc_ask);
-    let max_base_currency_bss = eth_usdt_ask_volume
-        .min(eth_btc_bid_volume * eth_usdt_bid)
-        .min(btc_usdt_bid_volume * eth_btc_bid);
+    let max_usd_bbs: f64 = btc_usd_ask_volume
+        .min(eth_btc_ask_volume * btc_usd_bid)
+        .min(eth_usd_bid_volume * eth_btc_ask);
+    let max_usd_bss: f64 = eth_usd_ask_volume
+        .min(eth_btc_bid_volume * eth_usd_bid)
+        .min(btc_usd_bid_volume * eth_btc_bid);
 
     // Use the minimum between available base currency and the maximum amount allowed by the volumes
-    let usdt_before_bbs = usdt_amount.min(max_base_currency_bbs);
-    let usdt_before_bss = usdt_amount.min(max_base_currency_bss);
+    let usd_before_bbs = usd_amount.min(max_usd_bbs);
+    let usd_before_bss = usd_amount.min(max_usd_bss);
+
+    let btc_usd_increment = 0.01;
+    let eth_btc_increment = 0.001;
+    let eth_usd_increment = 0.01;
+
+    let trade_amounts_bbs_0 = round_amount(usd_before_bbs, btc_usd_increment);
+    let trade_amounts_bbs_1 = round_amount(
+        trade_amounts_bbs_0 * weight / btc_usd_ask,
+        eth_btc_increment,
+    );
+    let trade_amounts_bbs_2 = round_amount(
+        trade_amounts_bbs_1 * weight / eth_btc_bid,
+        eth_usd_increment,
+    );
+
+    let trade_amounts_bss_0 = round_amount(usd_before_bss, eth_usd_increment);
+    let trade_amounts_bss_1 = round_amount(
+        trade_amounts_bss_0 * weight / eth_usd_ask,
+        eth_btc_increment,
+    );
+    let trade_amounts_bss_2 = round_amount(
+        trade_amounts_bss_1 * weight / eth_btc_bid,
+        btc_usd_increment,
+    );
 
     // Calculate the net profit of each sequence after accounting for fees and volume constraints
-    let usdt_after_bbs =
-        usdt_before_bbs / btc_usdt_ask / eth_btc_ask * eth_usdt_bid * pow(weight, 3);
-    let usdt_after_bss =
-        usdt_before_bss / eth_usdt_ask / eth_btc_bid * btc_usdt_bid * pow(weight, 3);
+    // let usd_after_bbs = usd_before_bbs / btc_usd_ask / eth_btc_ask * eth_usd_bid * pow(weight, 3);
+    // let usd_after_bss = usd_before_bss / eth_usd_ask / eth_btc_bid * btc_usd_bid * pow(weight, 3);
+    let usd_after_bbs = trade_amounts_bbs_0 / btc_usd_ask * trade_amounts_bbs_1 * (1.0 - fee) / eth_btc_ask * eth_usd_bid * (1.0 - fee);
+    let usd_after_bss = trade_amounts_bss_0 / eth_usd_ask * trade_amounts_bss_1 / eth_btc_bid * btc_usd_bid * pow(weight, 3);
 
     // Calculate profit in base currency
-    let profit_bbs = usdt_after_bbs - usdt_before_bbs;
-    let profit_bss = usdt_after_bss - usdt_after_bss;
+    let profit_bbs = usd_after_bbs - usd_before_bbs;
+    let profit_bss = usd_after_bss - usd_before_bss;
+    // log::info!("profit_bbs: {profit_bbs}");
+    // log::info!("profit_bss: {profit_bss}");
 
     // Calculate the amounts to trade for each step of the sequence
-    if profit_bbs > 0.0 && profit_bbs > profit_bss {
-        let trade_amounts_bbs = (
-            usdt_before_bbs,
-            usdt_before_bbs * weight / btc_usdt_ask,
-            usdt_before_bbs * weight / btc_usdt_ask * weight / eth_btc_ask,
-        );
-        return Some(TriangularArbitrageChance {
+    if profit_bbs >= profit_bss {
+        return TriangularArbitrageChance {
             profit: OrderedFloat(profit_bbs),
             actions: [
-                ActionInfo::buy(OrderedFloat(trade_amounts_bbs.0)),
-                ActionInfo::buy(OrderedFloat(trade_amounts_bbs.1)),
-                ActionInfo::sell(OrderedFloat(trade_amounts_bbs.2)),
+                ActionInfo::buy(OrderedFloat(btc_usd_ask), OrderedFloat(trade_amounts_bbs_0)),
+                ActionInfo::buy(OrderedFloat(eth_btc_ask), OrderedFloat(trade_amounts_bbs_1)),
+                ActionInfo::sell(OrderedFloat(eth_usd_bid), OrderedFloat(trade_amounts_bbs_2)),
             ],
-        });
+        };
     }
-    if profit_bss > 0.0 && profit_bbs < profit_bss {
-        let trade_amounts_bss = (
-            usdt_before_bss,
-            usdt_before_bss * weight / eth_usdt_ask,
-            usdt_before_bss * weight / eth_usdt_ask * weight / eth_btc_bid,
-        );
-        return Some(TriangularArbitrageChance {
-            profit: OrderedFloat(profit_bss),
-            actions: [
-                ActionInfo::buy(OrderedFloat(trade_amounts_bss.0)),
-                ActionInfo::buy(OrderedFloat(trade_amounts_bss.1)),
-                ActionInfo::sell(OrderedFloat(trade_amounts_bss.2)),
-            ],
-        });
+    TriangularArbitrageChance {
+        profit: OrderedFloat(profit_bss),
+        actions: [
+            ActionInfo::buy(OrderedFloat(eth_usd_ask), OrderedFloat(trade_amounts_bss_0)),
+            ActionInfo::sell(OrderedFloat(eth_btc_bid), OrderedFloat(trade_amounts_bss_1)),
+            ActionInfo::sell(OrderedFloat(btc_usd_bid), OrderedFloat(trade_amounts_bss_2)),
+        ],
     }
-    None
 }

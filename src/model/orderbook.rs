@@ -27,6 +27,9 @@ impl Orderbook {
 
     pub fn merge(&mut self, to_merge: Orderbook) -> Result<Option<Orderbook>, String> {
         let to_merge_clone = to_merge.clone();
+
+        // log::info!("to_merge: {to_merge_clone:?}");
+        let zero = 0.0;
         let min_ask = self.ask.first_key_value().unwrap().0.to_owned();
         let max_bid = self.bid.last_key_value().unwrap().0.to_owned();
 
@@ -43,23 +46,20 @@ impl Orderbook {
         self.sequence = to_merge.sequence;
         // return the value when to_merge is the best (i.e. lowest ask or highest bid)
         // TODO find breaking record here
-
         for (price, volume) in to_merge.ask.into_iter() {
-            if volume.eq(&0.0) {
+            if volume.eq(&zero) {
                 if self.ask.remove(&price).is_none() {
-                    log::error!("remove ask error at {}", &price);
+                    // log::error!("failed to remove ask at {}, no orderbook data", &price);
                 }
-                // log::info!("cleared ask {}",&price);
             } else {
                 self.ask.insert(price, volume);
             }
         }
         for (price, volume) in to_merge.bid.into_iter() {
-            if volume.eq(&0.0) {
+            if volume.eq(&zero) {
                 if self.bid.remove(&price).is_none() {
-                    log::error!("remove bid error at {}", &price);
+                    // log::error!("failed to remove bid at {}, no orderbook data", &price);
                 }
-                // log::info!("cleared bid {}",&price);
             } else {
                 self.bid.insert(price, volume);
             }
@@ -70,7 +70,7 @@ impl Orderbook {
                 return Ok(Some(to_merge_clone));
             }
         }
-        if let Some((merge_max_bid, _)) = to_merge_clone.bid.first_key_value() {
+        if let Some((merge_max_bid, _)) = to_merge_clone.bid.last_key_value() {
             if merge_max_bid.to_owned() >= max_bid {
                 return Ok(Some(to_merge_clone));
             }

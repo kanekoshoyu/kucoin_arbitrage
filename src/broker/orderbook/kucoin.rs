@@ -9,7 +9,7 @@ use tokio::sync::broadcast::{Receiver, Sender};
 //TODO implement the internal trade order task in kucoin
 
 /// Task to puiblish orderbook events from websocket api output
-pub async fn task_pub_orderevent(
+pub async fn task_pub_orderbook_event(
     mut ws: KucoinWebsocket,
     sender: Sender<OrderbookEvent>,
 ) -> Result<(), kucoin_rs::failure::Error> {

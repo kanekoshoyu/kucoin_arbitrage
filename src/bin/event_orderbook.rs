@@ -1,4 +1,4 @@
-use kucoin_arbitrage::broker::orderbook::kucoin::{task_pub_orderevent, task_sync_orderbook};
+use kucoin_arbitrage::broker::orderbook::kucoin::{task_pub_orderbook_event, task_sync_orderbook};
 use kucoin_arbitrage::model::orderbook::FullOrderbook;
 use kucoin_rs::kucoin::{
     client::{Kucoin, KucoinEnv},
@@ -38,7 +38,7 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
     log::info!("Channel setup");
 
     // OrderEvent Task
-    tokio::spawn(async move { task_pub_orderevent(ws, sender).await });
+    tokio::spawn(async move { task_pub_orderbook_event(ws, sender).await });
     log::info!("task_pub_orderevent setup");
 
     // Orderbook Sync Task

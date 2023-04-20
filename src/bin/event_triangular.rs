@@ -20,8 +20,6 @@ use tokio;
 use tokio::sync::broadcast::channel;
 
 fn prune_vector<T>(input_vec: Vec<T>, n: usize) -> Vec<T> {
-    let original_size = input_vec.len();
-    let size_to_prune = original_size - n;
     let mut output_vec = Vec::new();
     for (index, value) in input_vec.into_iter().enumerate() {
         if index >= n {
@@ -71,7 +69,7 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
 
     // Create broadcast channels
     // for syncing
-    let (tx_orderbook, rx_orderbook) = channel::<OrderbookEvent>(1024*2);
+    let (tx_orderbook, rx_orderbook) = channel::<OrderbookEvent>(1024 * 2);
     // for getting notable orderbook after syncing
     let (tx_orderbook_best, rx_orderbook_best) = channel::<OrderbookEvent>(1024);
     // for getting chance

@@ -17,7 +17,7 @@ pub async fn task_gatekeep_chances(
     loop {
         let status = receiver.recv().await;
         if status.is_err() {
-            continue
+            continue;
             // TODO return the error as we want here
             // panic!("{:?}", status.err());
         }

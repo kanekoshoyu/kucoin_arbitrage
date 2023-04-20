@@ -20,7 +20,7 @@ pub async fn task_pub_chance_all_taker_btc_usd(
     loop {
         let event = receiver.recv().await?;
         // log::info!("received orderbook_update");
-        let mut eth: Option<String> = None;
+        let eth: Option<String>;
         match event {
             OrderbookEvent::OrderbookChangeReceived((symbol, _delta)) => {
                 if symbol == btc_usd {
@@ -45,9 +45,7 @@ pub async fn task_pub_chance_all_taker_btc_usd(
         let orderbook_btc_usd = (*full_orderbook).get(&btc_usd);
         let orderbook_eth_btc = (*full_orderbook).get(&eth_btc);
         let orderbook_eth_usd = (*full_orderbook).get(&eth_usd);
-        if orderbook_btc_usd.is_none()
-            || orderbook_eth_btc.is_none()
-            || orderbook_eth_usd.is_none()
+        if orderbook_btc_usd.is_none() || orderbook_eth_btc.is_none() || orderbook_eth_usd.is_none()
         {
             log::warn!("empty orderbook");
             continue;

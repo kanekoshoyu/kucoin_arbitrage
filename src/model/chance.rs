@@ -35,7 +35,10 @@ impl std::fmt::Debug for ActionInfo {
         write!(
             f,
             "ActionInfo {{ {:?} {} at {} for {}}}",
-            self.action, self.ticker, self.price.into_inner(), self.volume.into_inner()
+            self.action,
+            self.ticker,
+            self.price.into_inner(),
+            self.volume.into_inner()
         )
     }
 }

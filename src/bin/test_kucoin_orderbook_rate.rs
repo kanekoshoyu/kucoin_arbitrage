@@ -1,3 +1,5 @@
+/// Test WebSocket Message Rate
+/// Subscribe to messages, run for 10 seconds, get the rate respectively
 extern crate kucoin_rs;
 use kucoin_rs::failure;
 use kucoin_rs::futures::TryStreamExt;
@@ -7,8 +9,7 @@ use kucoin_rs::kucoin::{
     websocket::KucoinWebsocket,
 };
 
-/// Test WebSocket Message Rate
-/// Subscribe to messages, run for 10 seconds, get the rate respectively
+/// main function
 #[tokio::main]
 async fn main() -> Result<(), failure::Error> {
     // provide logging format

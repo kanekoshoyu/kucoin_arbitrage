@@ -103,7 +103,7 @@ fn triangular_chance_sequence(
             quote_available: usd_amount,
             trading_min: 0.01,
             trading_increment: 0.01,
-            trading_fee: 0.001
+            trading_fee: 0.001,
         },
         PairProfile {
             ask: eth_btc_ask.into_inner(),
@@ -113,7 +113,7 @@ fn triangular_chance_sequence(
             quote_available: 0.0,
             trading_min: 0.01,
             trading_increment: 0.01,
-            trading_fee: 0.001
+            trading_fee: 0.001,
         },
         PairProfile {
             ask: eth_usd_ask.into_inner(),
@@ -123,7 +123,7 @@ fn triangular_chance_sequence(
             quote_available: 0.0,
             trading_min: 0.01,
             trading_increment: 0.01,
-            trading_fee: 0.001
+            trading_fee: 0.001,
         },
     )
 }
@@ -153,7 +153,7 @@ fn triangular_chance_sequence_f64(
     eth_btc: PairProfile,
     eth_usd: PairProfile,
 ) -> TriangularArbitrageChance {
-    // TODO for higher accuracy at high volume trading, use the PairProfile trading fee when its query is done 
+    // TODO for higher accuracy at high volume trading, use the PairProfile trading fee when its query is done
     let fee: f64 = 0.001;
     let weight: f64 = 1.0 - fee;
 

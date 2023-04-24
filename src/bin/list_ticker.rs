@@ -1,5 +1,4 @@
 extern crate kucoin_rs;
-
 use kucoin_arbitrage::logger;
 use kucoin_arbitrage::tickers::bases_with_quotes;
 use kucoin_rs::failure;

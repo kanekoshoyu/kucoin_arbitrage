@@ -1,8 +1,8 @@
 extern crate kucoin_rs;
-
 use kucoin_arbitrage::globals::{config, performance};
 use kucoin_arbitrage::logger;
-use kucoin_arbitrage::mirror::*;
+use kucoin_arbitrage::mirror::{Map, MIRROR};
+use kucoin_arbitrage::strings::{symbol_to_tuple, topic_to_symbol};
 use kucoin_arbitrage::tasks;
 use kucoin_rs::failure;
 use kucoin_rs::futures::TryStreamExt;
@@ -42,9 +42,6 @@ async fn main() -> Result<(), failure::Error> {
     // }
     tasks::background_routine().await
 }
-
-use kucoin_arbitrage::mirror::Map;
-use kucoin_arbitrage::strings::*;
 
 async fn sync_tickers(
     mut ws: KucoinWebsocket,
@@ -99,20 +96,15 @@ async fn sync_tickers(
                     let tb = tickers.get(&tb);
                     let ta = tickers.get(&ta);
                     let ab = tickers.get(&ab);
-                    if tb.is_none() {
+                    if tb.is_none() || ta.is_none() || tb.is_none() {
                         continue;
                     }
-                    if ta.is_none() {
-                        continue;
-                    }
-                    if ab.is_none() {
-                        continue;
-                    }
-                    let tb = tb.unwrap().to_owned();
-                    let ta = ta.unwrap().to_owned();
-                    let ab = ab.unwrap().to_owned();
 
-                    Some([tb, ta, ab])
+                    Some([
+                        tb.unwrap().to_owned(),
+                        ta.unwrap().to_owned(),
+                        ab.unwrap().to_owned(),
+                    ])
                 };
                 let triangle = triangle.unwrap();
                 let tb = triangle.get(0).unwrap().to_owned();

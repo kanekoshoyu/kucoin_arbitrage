@@ -1,5 +1,4 @@
 extern crate kucoin_rs;
-
 use kucoin_rs::failure;
 use kucoin_rs::futures::TryStreamExt;
 use kucoin_rs::kucoin::{

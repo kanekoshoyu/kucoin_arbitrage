@@ -8,13 +8,11 @@ use kucoin_arbitrage::event::orderbook::OrderbookEvent;
 use kucoin_arbitrage::model::orderbook::FullOrderbook;
 use kucoin_arbitrage::tickers::symbol_whitelisted;
 use kucoin_arbitrage::translator::translator::OrderBookTranslator;
-
 use kucoin_rs::kucoin::{
     client::{Kucoin, KucoinEnv},
     model::market::OrderBookType,
     model::websocket::{WSTopic, WSType},
 };
-
 use std::sync::{Arc, Mutex};
 use tokio;
 use tokio::sync::broadcast::channel;

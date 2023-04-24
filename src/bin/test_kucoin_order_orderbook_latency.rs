@@ -1,7 +1,6 @@
 /// Test REST-to-WS Network Latency
 /// place extreme order, receive extreme order, check time difference
 extern crate kucoin_rs;
-
 use chrono::prelude::Local;
 use kucoin_arbitrage::model::order::OrderSide;
 use kucoin_arbitrage::translator::translator::OrderBookChangeTranslator;

@@ -5,12 +5,35 @@ use std::collections::HashMap;
 /// price as key, volume as value
 pub type PVMap = BTreeMap<OrderedFloat<f64>, OrderedFloat<f64>>; //Prices to Volume
 
+/// Internal printer struct
+struct PVMapDebug<'a>(&'a PVMap);
+
+impl<'a> std::fmt::Debug for PVMapDebug<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut list = f.debug_list();
+        for (price, volume) in self.0 {
+            list.entry(&format_args!("{price}: {volume}"));
+        }
+        list.finish()
+    }
+}
+
 /// orderbook for each symbol, contains ask, bid, time and sequence
-#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Orderbook {
     pub ask: PVMap,
     pub bid: PVMap,
     pub sequence: u64,
+}
+
+impl std::fmt::Debug for Orderbook {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Orderbook")
+            .field("sequence", &self.sequence)
+            .field("ask", &PVMapDebug(&self.ask))
+            .field("bid", &PVMapDebug(&self.bid))
+            .finish()
+    }
 }
 
 /// symbol as key, orderbook as value

@@ -31,7 +31,7 @@ impl translator::OrderBookTranslator for KucoinOrderBook {
 }
 
 impl translator::OrderBookChangeTranslator for KucoinOrderBookChange {
-    fn to_internal(&self, serial: u64) -> (String, Orderbook) {
+    fn to_internal(&self, last_serial: u64) -> (String, Orderbook) {
         // return Orderbook::new();
         let mut ask = PVMap::new();
         let mut bid = PVMap::new();
@@ -39,7 +39,7 @@ impl translator::OrderBookChangeTranslator for KucoinOrderBookChange {
 
         for ask_change in self.changes.asks.clone() {
             // ignore if sequence <=serial
-            if ask_change[2].parse::<u64>().unwrap() > serial {
+            if ask_change[2].parse::<u64>().unwrap() > last_serial {
                 let price: OrderedFloat<f64> = ask_change[0].parse().expect(parse_err_msg);
                 let volume: OrderedFloat<f64> = ask_change[1].parse().expect(parse_err_msg);
                 ask.insert(price, volume);
@@ -47,7 +47,7 @@ impl translator::OrderBookChangeTranslator for KucoinOrderBookChange {
         }
         for bid_change in self.changes.bids.clone() {
             // ignore if sequence <=serial
-            if bid_change[2].parse::<u64>().unwrap() > serial {
+            if bid_change[2].parse::<u64>().unwrap() > last_serial {
                 let price: OrderedFloat<f64> = bid_change[0].parse().expect(parse_err_msg);
                 let volume: OrderedFloat<f64> = bid_change[1].parse().expect(parse_err_msg);
                 bid.insert(price, volume);

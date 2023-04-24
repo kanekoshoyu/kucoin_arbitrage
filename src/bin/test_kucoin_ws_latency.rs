@@ -1,3 +1,5 @@
+/// Test REST-to-WS Network Latency
+/// place extreme order, receive extreme order, check time difference
 extern crate kucoin_rs;
 
 use chrono::prelude::Local;
@@ -9,9 +11,9 @@ use kucoin_rs::kucoin::{
     client::{Kucoin, KucoinEnv},
     model::websocket::{KucoinWebsocketMsg, WSTopic, WSType},
 };
+use uuid::Uuid;
 
-/// Test REST-to-WS Network Latency
-/// place extreme order, receive extreme order, check time difference
+/// main function
 #[tokio::main]
 async fn main() -> Result<(), failure::Error> {
     // provide logging format
@@ -26,14 +28,17 @@ async fn main() -> Result<(), failure::Error> {
 
     let subs = vec![WSTopic::OrderBook(vec!["BTC-USDT".to_string()])];
     // extreme order
-    let test_symbol = "BTC-USDT";
-    let test_price = 0.1;
-    let test_volume = 0.1;
+    let id: Uuid = Uuid::new_v4();
+    let test_symbol: &str = "BTC-USDT";
+    let test_price: f64 = 1.0; // buying BTC at 1 USD, which cannot happen as of 2023
+    let test_volume: f64 = 0.1;
 
     let dt_order_placed = Local::now();
+
+    api.cancel_all_orders(None, None).await.unwrap();
     // TODO set a valid limit order
     api.post_limit_order(
-        0.to_string().as_str(),
+        id.to_string().as_str(),
         test_symbol,
         OrderSide::Buy.as_ref(),
         test_price.to_string().as_str(),
@@ -50,13 +55,21 @@ async fn main() -> Result<(), failure::Error> {
         match msg {
             KucoinWebsocketMsg::OrderBookMsg(msg) => {
                 let (symbol, data) = msg.data.to_internal(serial);
-                if let Some(volume) = data.ask.get(&ordered_float::OrderedFloat(test_price)) {
-                    if volume.eq(&test_volume) && symbol.eq(test_symbol) {
-                        let dt_order_reported = Local::now();
-                        let delta = dt_order_reported - dt_order_placed;
-                        log::info!("REST-to-WS: {}ms", delta.num_milliseconds());
-                        return Ok(());
-                    }
+                // match symbol
+                if symbol.ne(test_symbol) {
+                    continue;
+                }
+                // BTC-USDT now, check bid volume
+                if let Some(_) = data.bid.get(&ordered_float::OrderedFloat(test_price)) {
+                    // price
+                    log::info!("data: {:#?}", data);
+                    // volume might not be equal, as they are cumulative with other previous orders
+
+                    let dt_order_reported = Local::now();
+                    let delta = dt_order_reported - dt_order_placed;
+                    log::info!("REST-to-WS: {}ms", delta.num_milliseconds());
+                    // I generally get around 2.4s to 3.0s
+                    return Ok(());
                 }
             }
             KucoinWebsocketMsg::PongMsg(_) => continue,

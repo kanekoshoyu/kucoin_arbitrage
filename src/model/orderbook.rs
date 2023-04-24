@@ -74,18 +74,18 @@ impl Orderbook {
                 if self.ask.remove(&price).is_none() {
                     // log::error!("failed to remove ask at {}, no orderbook data", &price);
                 }
-            } else {
-                self.ask.insert(price, volume);
+                continue;
             }
+            self.ask.insert(price, volume);
         }
         for (price, volume) in to_merge.bid.into_iter() {
             if volume.eq(&zero) {
                 if self.bid.remove(&price).is_none() {
                     // log::error!("failed to remove bid at {}, no orderbook data", &price);
                 }
-            } else {
-                self.bid.insert(price, volume);
+                continue;
             }
+            self.bid.insert(price, volume);
         }
 
         if let Some((merge_min_ask, _)) = to_merge_clone.ask.first_key_value() {
@@ -98,11 +98,6 @@ impl Orderbook {
                 return Ok(Some(to_merge_clone));
             }
         }
-        // let (merge_min_ask, _) = to_merge_clone.ask.first_key_value().unwrap();
-        // let (merge_max_bid, _) = to_merge_clone.bid.last_key_value().unwrap();
-        // if merge_min_ask < min_ask || merge_max_bid > max_bid {
-        //     Some(to_merge_clone);
-        // }
         Ok(None)
     }
 }

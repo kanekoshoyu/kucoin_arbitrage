@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 lazy_static::lazy_static! {
     static ref INI: Ini = Ini::load_from_file("config.ini").expect("config file not found");
-    pub static ref SEC_CRED: Properties = INI.section(Some("Credentials")).unwrap().clone();
+    pub static ref SEC_CRED: Properties = INI.section(Some("KuCoin Credentials")).unwrap().clone();
     pub static ref SEC_BEHV: Properties = INI.section(Some("Behaviour")).unwrap().clone();
     pub static ref CONFIG: Arc<Config> = Arc::new(load_ini());
 }

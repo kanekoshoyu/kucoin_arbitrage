@@ -1,8 +1,10 @@
-# create a copy config.ini
-[Credentials]
-api_key="xxxxxxxxxxxxxXXXXXXxxx"
-secret_key="XXxxxxx-xxxxxx-xXxxxx-xxxx"
-passphrase="xxxxxx"
+# Create a copy of config.ini.sample as config.ini in the same directory
+
+# Get API credentials from https://www.kucoin.com/ and paste below
+[KuCoin Credentials]
+api_key="YOUR_API_KEY_HERE"
+secret_key="YOUR_SECRET_KEY_HERE"
+passphrase="YOUR_PASSPHRASE_HERE"
 
 [Behaviour]
 monitor_interval_sec=2

@@ -17,7 +17,7 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
     if let Some(orderbook) = res.data {
         log::info!("{orderbook:#?}");
     } else {
-        log::info!("failed obtaining hte proper data")
+        log::info!("failed obtaining the proper data")
     }
 
     return Ok(());

@@ -6,7 +6,7 @@ use kucoin_arbitrage::event::order::OrderEvent;
 use kucoin_arbitrage::event::orderbook::OrderbookEvent;
 use kucoin_arbitrage::model::orderbook::FullOrderbook;
 use kucoin_arbitrage::strategy::all_taker_btc_usd::task_pub_chance_all_taker_btc_usd;
-use kucoin_arbitrage::tickers::symbol_whitelisted;
+use kucoin_arbitrage::broker::symbol::{filter::symbol_with_quotes, kucoin::get_symbols};
 use kucoin_arbitrage::translator::translator::OrderBookTranslator;
 use kucoin_rs::kucoin::{
     client::{Kucoin, KucoinEnv},
@@ -40,12 +40,15 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
     let url = api.clone().get_socket_endpoint(WSType::Public).await?;
     log::info!("Credentials setup");
 
-    // list all the BTC
-    // TODO replace this list with the symbollist via broker
-    let symbols = symbol_whitelisted(api.clone(), "BTC", "USDT").await?;
+    // get symbol lists
+    let symbol_list = get_symbols(api.clone()).await;
+    let symbol_infos = symbol_with_quotes(&symbol_list, "BTC", "USDT");
 
-    // let symbols = prune_vector(symbols, 49);
-    let symbols = prune_vector(symbols, 49);
+    let symbol_infos = prune_vector(symbol_infos, 99);
+    let mut symbols = Vec::new();
+    for symbol_info in symbol_infos{
+        symbols.push(symbol_info.symbol);
+    }
     log::info!("{symbols:#?}");
     // or manually select
     // let symbols: [String; 5] = [

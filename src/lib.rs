@@ -7,5 +7,4 @@ pub mod model;
 pub mod strategy;
 pub mod strings;
 pub mod tasks;
-pub mod tickers;
 pub mod translator;

@@ -1,9 +1,8 @@
-/// TODO
-/// get the Orderbook from some API
-///
-///
+/// get the Orderbook from REST API
+
 use kucoin_rs::kucoin::client::{Kucoin, KucoinEnv};
 use kucoin_rs::kucoin::model::market::OrderBookType;
+use kucoin_rs::tokio;
 
 use log::info;
 

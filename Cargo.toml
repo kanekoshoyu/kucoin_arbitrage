@@ -9,7 +9,7 @@ license = "MIT"
 
 
 [dependencies]
-kucoin_rs = "0.4.4"
+kucoin_rs = {"git" = "https://github.com/kanekoshoyu/kucoin_rs.git"}
 log = "0.4"
 fern = "0.6.0"
 chrono = "0.4"

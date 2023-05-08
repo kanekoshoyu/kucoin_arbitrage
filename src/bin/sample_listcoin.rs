@@ -1,4 +1,5 @@
 /// Get the Symbol list, and blacklist a few weird looking ones
+use kucoin_arbitrage::translator::translator::SymbolInfoTranslator;
 use kucoin_rs::kucoin::client::{Kucoin, KucoinEnv};
 use kucoin_rs::kucoin::model::market::SymbolList;
 
@@ -43,32 +44,9 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
                 symbol.base_currency,
             );
         }
-        let internal_symbol_info = SymbolInfo::new(symbol);
+        let internal_symbol_info = symbol.to_internal();
         log::info!("created: {:?}", internal_symbol_info)
     }
 
     return Ok(());
-}
-
-// create the internal class
-
-#[derive(Debug, Clone, Default)]
-pub struct SymbolInfo {
-    name: String,
-    base: String,
-    quote: String,
-    base_increment: f64,
-    base_min: f64,
-}
-
-impl SymbolInfo {
-    pub fn new(symbol: SymbolList) -> Self {
-        SymbolInfo {
-            name: symbol.name,
-            base: symbol.base_currency,
-            quote: symbol.quote_currency,
-            base_increment: symbol.base_increment.parse().unwrap(),
-            base_min: symbol.base_min_size.parse().unwrap(),
-        }
-    }
 }

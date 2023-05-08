@@ -140,9 +140,9 @@ struct PairProfile {
     bid_volume: f64,
     // amount of USD in BTC/USD
     quote_available: f64,
-    _trading_min: f64,
+    trading_min: f64,
     trading_increment: f64,
-    _trading_fee: f64,
+    trading_fee: f64,
 }
 
 /// internal chance function, stripped down for doctest

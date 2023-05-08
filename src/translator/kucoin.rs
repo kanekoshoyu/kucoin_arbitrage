@@ -62,7 +62,7 @@ impl translator::OrderBookChangeTranslator for kucoin_rs_model::websocket::Level
 impl translator::SymbolInfoTranslator for kucoin_rs_model::market::SymbolList {
     fn to_internal(&self) -> internal_model::symbol::SymbolInfo {
         internal_model::symbol::SymbolInfo {
-            name: self.name.clone(),
+            symbol: self.symbol.clone(),
             base: self.base_currency.clone(),
             quote: self.quote_currency.clone(),
             base_increment: self.base_increment.parse().unwrap(),

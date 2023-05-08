@@ -1,11 +1,11 @@
 use kucoin_arbitrage::broker::gatekeeper::kucoin::task_gatekeep_chances;
 use kucoin_arbitrage::broker::order::kucoin::task_place_order;
 use kucoin_arbitrage::broker::orderbook::kucoin::{task_pub_orderbook_event, task_sync_orderbook};
-use kucoin_arbitrage::broker::strategy::all_taker_btc_usd::task_pub_chance_all_taker_btc_usd;
 use kucoin_arbitrage::event::chance::ChanceEvent;
 use kucoin_arbitrage::event::order::OrderEvent;
 use kucoin_arbitrage::event::orderbook::OrderbookEvent;
 use kucoin_arbitrage::model::orderbook::FullOrderbook;
+use kucoin_arbitrage::strategy::all_taker_btc_usd::task_pub_chance_all_taker_btc_usd;
 use kucoin_arbitrage::tickers::symbol_whitelisted;
 use kucoin_arbitrage::translator::translator::OrderBookTranslator;
 use kucoin_rs::kucoin::{
@@ -14,7 +14,6 @@ use kucoin_rs::kucoin::{
     model::websocket::{WSTopic, WSType},
 };
 use std::sync::{Arc, Mutex};
-use tokio;
 use tokio::sync::broadcast::channel;
 
 fn prune_vector<T>(input_vec: Vec<T>, n: usize) -> Vec<T> {
@@ -42,7 +41,9 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
     log::info!("Credentials setup");
 
     // list all the BTC
+    // TODO replace this list with the symbollist via broker
     let symbols = symbol_whitelisted(api.clone(), "BTC", "USDT").await?;
+
     // let symbols = prune_vector(symbols, 49);
     let symbols = prune_vector(symbols, 49);
     log::info!("{symbols:#?}");

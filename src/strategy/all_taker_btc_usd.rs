@@ -2,9 +2,11 @@ use crate::event::{chance::ChanceEvent, orderbook::OrderbookEvent};
 use crate::model::chance::{ActionInfo, TriangularArbitrageChance};
 use crate::model::order::OrderSide;
 use crate::model::orderbook::{FullOrderbook, Orderbook};
+use crate::model::symbol::SymbolInfo;
 use crate::strings::split_symbol;
 use num_traits::pow;
 use ordered_float::OrderedFloat;
+use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 use tokio::sync::broadcast::{Receiver, Sender};
 
@@ -13,10 +15,12 @@ pub async fn task_pub_chance_all_taker_btc_usd(
     mut receiver: Receiver<OrderbookEvent>,
     _sender: Sender<ChanceEvent>,
     local_full_orderbook: Arc<Mutex<FullOrderbook>>,
+    symbol_map: Arc<Mutex<BTreeMap<String, SymbolInfo>>>,
 ) -> Result<(), kucoin_rs::failure::Error> {
     let btc = String::from("BTC");
     let usd = String::from("USDT");
     let btc_usd = std::format!("{btc}-{usd}");
+    let usd_budget = 10.0;
     loop {
         let event = receiver.recv().await?;
         // log::info!("received orderbook_update");
@@ -54,10 +58,14 @@ pub async fn task_pub_chance_all_taker_btc_usd(
         // let orderbook_eth_usd = orderbook_eth_usd.unwrap();
 
         let mut chance = triangular_chance_sequence(
+            &btc_usd,
+            &eth_btc,
+            &eth_usd,
             orderbook_btc_usd.unwrap(),
             orderbook_eth_btc.unwrap(),
             orderbook_eth_usd.unwrap(),
-            10.0,
+            symbol_map.clone(),
+            usd_budget,
         );
         if chance.actions[1].action.eq(&OrderSide::Buy) {
             // bbs
@@ -82,9 +90,13 @@ pub async fn task_pub_chance_all_taker_btc_usd(
 }
 
 fn triangular_chance_sequence(
+    symbol_btc_usd: &str,
+    symbol_eth_btc: &str,
+    symbol_eth_usd: &str,
     orderbook_btc_usd: &Orderbook,
     orderbook_eth_btc: &Orderbook,
     orderbook_eth_usd: &Orderbook,
+    symbol_map: Arc<Mutex<BTreeMap<String, SymbolInfo>>>,
     usd_amount: f64,
 ) -> TriangularArbitrageChance {
     let (btc_usd_bid, btc_usd_bid_volume) = orderbook_btc_usd.bid.last_key_value().unwrap();
@@ -94,36 +106,48 @@ fn triangular_chance_sequence(
     let (eth_btc_ask, eth_btc_ask_volume) = orderbook_eth_btc.ask.first_key_value().unwrap();
     let (eth_usd_ask, eth_usd_ask_volume) = orderbook_eth_usd.ask.first_key_value().unwrap();
 
+    let symbol_map = symbol_map.lock().unwrap();
+
+    let btc_usd_info = &symbol_map.get(symbol_btc_usd).unwrap();
+    let eth_btc_info = &symbol_map.get(symbol_eth_btc).unwrap();
+    let eth_usd_info = &symbol_map.get(symbol_eth_usd).unwrap();
+
+    // This should be obtained from the API
+    let trading_fee = 0.001;
+
     triangular_chance_sequence_f64(
         PairProfile {
+            symbol: btc_usd_info.symbol.clone(),
             ask: btc_usd_ask.into_inner(),
             ask_volume: btc_usd_ask_volume.into_inner(),
             bid: btc_usd_bid.into_inner(),
             bid_volume: btc_usd_bid_volume.into_inner(),
             quote_available: usd_amount,
-            trading_min: 0.01,
-            trading_increment: 0.01,
-            trading_fee: 0.001,
+            trading_min: *btc_usd_info.base_min,
+            trading_increment: *btc_usd_info.base_increment,
+            trading_fee,
         },
         PairProfile {
+            symbol: eth_btc_info.symbol.clone(),
             ask: eth_btc_ask.into_inner(),
             ask_volume: eth_btc_ask_volume.into_inner(),
             bid: eth_btc_bid.into_inner(),
             bid_volume: eth_btc_bid_volume.into_inner(),
             quote_available: 0.0,
-            trading_min: 0.01,
-            trading_increment: 0.01,
-            trading_fee: 0.001,
+            trading_min: *eth_btc_info.base_min,
+            trading_increment: *eth_btc_info.base_increment,
+            trading_fee,
         },
         PairProfile {
+            symbol: eth_btc_info.symbol.clone(),
             ask: eth_usd_ask.into_inner(),
             ask_volume: eth_usd_ask_volume.into_inner(),
             bid: eth_usd_bid.into_inner(),
             bid_volume: eth_usd_bid_volume.into_inner(),
             quote_available: 0.0,
-            trading_min: 0.01,
-            trading_increment: 0.01,
-            trading_fee: 0.001,
+            trading_min: *eth_usd_info.base_min,
+            trading_increment: *eth_usd_info.base_increment,
+            trading_fee,
         },
     )
 }
@@ -133,7 +157,9 @@ fn round_amount(amount: f64, increment: f64) -> f64 {
 }
 
 // Struct for easier parsing of the pair
+// TODO also include symbol for simplicity and debugging
 struct PairProfile {
+    symbol: String,
     ask: f64,
     ask_volume: f64,
     bid: f64,
@@ -156,6 +182,8 @@ fn triangular_chance_sequence_f64(
     // TODO for higher accuracy at high volume trading, use the PairProfile trading fee when its query is done
     let fee: f64 = 0.001;
     let weight: f64 = 1.0 - fee;
+
+    // TODO use trading_min nad trading_fee here
 
     // Calculate the maximum amount of base currency that can be traded for each sequence
     let max_usd_bbs: f64 = btc_usd
@@ -194,6 +222,8 @@ fn triangular_chance_sequence_f64(
     // Calculate the net profit of each sequence after accounting for fees and volume constraints
     // let usd_after_bbs = usd_before_bbs / btc_usd.ask / eth_btc_ask * eth_usd_bid * pow(weight, 3);
     // let usd_after_bss = usd_before_bss / eth_usd.ask / eth_btc.bid * btc_usd_bid * pow(weight, 3);
+
+    // TODO update the firmware
     let usd_after_bbs = trade_amounts_bbs_0 / btc_usd.ask * trade_amounts_bbs_1 * (1.0 - fee)
         / eth_btc.ask
         * eth_usd.bid
@@ -205,8 +235,18 @@ fn triangular_chance_sequence_f64(
     // Calculate profit in base currency
     let profit_bbs = usd_after_bbs - usd_before_bbs;
     let profit_bss = usd_after_bss - usd_before_bss;
-    log::info!("profit_bbs: {profit_bbs}");
-    log::info!("profit_bss: {profit_bss}");
+    log::info!(
+        "BBS profit ({},{},{}): {profit_bbs}",
+        btc_usd.symbol,
+        eth_btc.symbol,
+        eth_usd.symbol
+    );
+    log::info!(
+        "BSS profit ({},{},{}): {profit_bss}",
+        eth_usd.symbol,
+        eth_btc.symbol,
+        btc_usd.symbol
+    );
 
     // Calculate the amounts to trade for each step of the sequence
     if profit_bbs >= profit_bss {

@@ -1,12 +1,13 @@
 use kucoin_arbitrage::broker::gatekeeper::kucoin::task_gatekeep_chances;
 use kucoin_arbitrage::broker::order::kucoin::task_place_order;
 use kucoin_arbitrage::broker::orderbook::kucoin::{task_pub_orderbook_event, task_sync_orderbook};
+use kucoin_arbitrage::broker::symbol::filter::{symbol_with_quotes, vector_to_hash};
+use kucoin_arbitrage::broker::symbol::kucoin::get_symbols;
 use kucoin_arbitrage::event::chance::ChanceEvent;
 use kucoin_arbitrage::event::order::OrderEvent;
 use kucoin_arbitrage::event::orderbook::OrderbookEvent;
 use kucoin_arbitrage::model::orderbook::FullOrderbook;
 use kucoin_arbitrage::strategy::all_taker_btc_usd::task_pub_chance_all_taker_btc_usd;
-use kucoin_arbitrage::broker::symbol::{filter::symbol_with_quotes, kucoin::get_symbols};
 use kucoin_arbitrage::translator::translator::OrderBookTranslator;
 use kucoin_rs::kucoin::{
     client::{Kucoin, KucoinEnv},
@@ -36,32 +37,21 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
     // credentials
     let credentials = kucoin_arbitrage::globals::config::credentials();
     let api = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
-    let api_1 = api.clone();
     let url = api.clone().get_socket_endpoint(WSType::Public).await?;
     log::info!("Credentials setup");
 
     // get symbol lists
     let symbol_list = get_symbols(api.clone()).await;
     let symbol_infos = symbol_with_quotes(&symbol_list, "BTC", "USDT");
+    let hash_symbols = Arc::new(Mutex::new(vector_to_hash(&symbol_infos)));
 
+    // prune to smaller dataset for testing. size is 1+2N
     let symbol_infos = prune_vector(symbol_infos, 99);
     let mut symbols = Vec::new();
-    for symbol_info in symbol_infos{
+    for symbol_info in symbol_infos {
         symbols.push(symbol_info.symbol);
     }
     log::info!("{symbols:#?}");
-    // or manually select
-    // let symbols: [String; 5] = [
-    //     "BTC-USDT".to_string(),
-    //     "ETH-BTC".to_string(),
-    //     "ETH-USDT".to_string(),
-    //     "DOGE-BTC".to_string(),
-    //     "DOGE-USDT".to_string(),
-    // ];
-
-    // TODO get the coin configs
-    //  get all the data from symbol first, then obtain the symbol info sich as trade_amount_increment and min_trade_amount
-    // let x = api.get_symbol_list(market);
 
     // Initialize the websocket
     let mut ws = api.websocket();
@@ -93,6 +83,7 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
         rx_orderbook_best,
         tx_chance,
         full_orderbook.clone(),
+        hash_symbols,
     ));
     tokio::spawn(task_gatekeep_chances(rx_chance, tx_order));
     tokio::spawn(task_place_order(rx_order, api.clone()));
@@ -102,7 +93,8 @@ async fn main() -> Result<(), kucoin_rs::failure::Error> {
     for symbol in symbols.iter() {
         log::info!("obtaining initial orderbook[{symbol}] from REST");
         // OrderBookType::Full fails
-        let res = api_1
+        let res = api
+            .clone()
             .get_orderbook(symbol.as_str(), OrderBookType::L100)
             .await
             .expect("invalid data");

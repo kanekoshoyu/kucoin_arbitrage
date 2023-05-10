@@ -10,13 +10,23 @@ impl Default for OrderSide {
     }
 }
 
-impl ToString for OrderSide {
-    fn to_string(&self) -> String {
+impl AsRef<str> for OrderSide {
+    fn as_ref(&self) -> &str {
         match self {
             OrderSide::Buy => "buy",
             OrderSide::Sell => "sell",
         }
-        .to_string()
+    }
+}
+
+/// ```
+/// use kucoin_arbitrage::model::order::OrderSide;
+/// let buy = OrderSide::Buy;
+/// assert_eq!(buy.to_string(), "buy");
+/// ```
+impl ToString for OrderSide {
+    fn to_string(&self) -> String {
+        self.as_ref().to_string()
     }
 }
 

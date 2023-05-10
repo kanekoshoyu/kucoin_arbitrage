@@ -3,27 +3,43 @@ use ordered_float::OrderedFloat;
 use std::cmp::Ordering;
 
 /// structure of of arbitrage chances
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Clone, Default, PartialEq, Eq)]
 pub struct ActionInfo {
     pub action: OrderSide,
     pub ticker: String,
-    pub volume: OrderedFloat<f32>,
+    pub price: OrderedFloat<f64>,
+    pub volume: OrderedFloat<f64>,
 }
 
 impl ActionInfo {
-    pub fn buy(ticker: String, volume: OrderedFloat<f32>) -> ActionInfo {
+    pub fn buy(price: OrderedFloat<f64>, volume: OrderedFloat<f64>) -> ActionInfo {
         ActionInfo {
             action: OrderSide::Buy,
-            ticker,
+            ticker: String::new(),
+            price,
             volume,
         }
     }
-    pub fn sell(ticker: String, volume: OrderedFloat<f32>) -> ActionInfo {
+    pub fn sell(price: OrderedFloat<f64>, volume: OrderedFloat<f64>) -> ActionInfo {
         ActionInfo {
             action: OrderSide::Sell,
-            ticker,
+            ticker: String::new(),
+            price,
             volume,
         }
+    }
+}
+
+impl std::fmt::Debug for ActionInfo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "ActionInfo {{ {:?} {} at {} for {}}}",
+            self.action,
+            self.ticker,
+            self.price.into_inner(),
+            self.volume.into_inner()
+        )
     }
 }
 
@@ -33,7 +49,7 @@ pub type ThreeActions = [ActionInfo; 3];
 /// structure of of arbitrage chances
 #[derive(Debug, Clone, Default, Eq)]
 pub struct TriangularArbitrageChance {
-    pub profit: OrderedFloat<f32>,
+    pub profit: OrderedFloat<f64>,
     pub actions: ThreeActions,
 }
 

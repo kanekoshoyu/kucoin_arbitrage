@@ -1,7 +1,7 @@
 use crate::event::order::OrderEvent;
 use crate::model::order::Order;
 use kucoin_rs::kucoin::client::Kucoin;
-use kucoin_rs::tokio::sync::broadcast;
+use tokio::sync::broadcast;
 
 pub async fn task_place_order(
     mut receiver: broadcast::Receiver<OrderEvent>,

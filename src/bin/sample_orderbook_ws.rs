@@ -8,7 +8,6 @@ use kucoin_rs::kucoin::{
     model::websocket::{KucoinWebsocketMsg, WSTopic, WSType},
     websocket::KucoinWebsocket,
 };
-use kucoin_rs::tokio;
 use std::sync::{Arc, Mutex};
 
 #[tokio::main]
@@ -68,8 +67,8 @@ async fn sync_tickers(
                 }
                 kucoin_arbitrage::globals::performance::increment();
             }
-            KucoinWebsocketMsg::PongMsg(_) => {}
-            KucoinWebsocketMsg::WelcomeMsg(_) => {}
+            KucoinWebsocketMsg::PongMsg(_) => continue,
+            KucoinWebsocketMsg::WelcomeMsg(_) => continue,
             KucoinWebsocketMsg::OrderBookMsg(msg) => {
                 let l2 = msg.data;
                 log::info!("{l2:#?}")

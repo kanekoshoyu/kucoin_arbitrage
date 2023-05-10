@@ -1,11 +1,10 @@
 use crate::globals::{config, performance};
-use kucoin_rs::tokio::time::{sleep, Duration};
-use log::*;
+use tokio::time::{sleep, Duration};
 
 fn report_status() -> Result<(), kucoin_rs::failure::Error> {
-    info!("reporting");
+    log::info!("reporting");
     let data_rate = performance::data_count() / config::CONFIG.monitor_interval_sec;
-    info!("Data rate: {data_rate:?} points/sec");
+    log::info!("Data rate: {data_rate:?} points/sec");
     // clear the data
     performance::reset();
     Ok(())

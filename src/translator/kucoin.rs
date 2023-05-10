@@ -1,75 +1,72 @@
 /*
-    Translates from kucoin API into our model datatypes
+    Translates from kucoin_rs crates model to out internal model
 */
 
-use crate::model::orderbook::{Orderbook, PVMap};
+use crate::model as internal_model;
 use crate::translator::translator;
-use chrono;
-use kucoin_rs::kucoin::model::{
-    market::OrderBook as KucoinOrderBook, websocket::Level2 as KucoinOrderBookChange,
-};
+use kucoin_rs::kucoin::model as kucoin_rs_model;
 use ordered_float::OrderedFloat;
 
-impl translator::OrderBookTranslator for KucoinOrderBook {
-    fn to_internal(&self) -> Orderbook {
+impl translator::OrderBookTranslator for kucoin_rs_model::market::OrderBook {
+    fn to_internal(&self) -> internal_model::orderbook::Orderbook {
         let parse_err_msg = "Failed to parse input";
         let sequence = self.sequence.parse::<u64>().unwrap();
-        let time = self.time;
-        let mut ask = PVMap::new();
-        let mut bid = PVMap::new();
+        let mut ask = internal_model::orderbook::PVMap::new();
+        let mut bid = internal_model::orderbook::PVMap::new();
 
         for ask_pv in self.asks.clone() {
-            let price: OrderedFloat<f32> = ask_pv[0].parse().expect(parse_err_msg);
-            let volume: OrderedFloat<f32> = ask_pv[1].parse().expect(parse_err_msg);
+            let price: OrderedFloat<f64> = ask_pv[0].parse().expect(parse_err_msg);
+            let volume: OrderedFloat<f64> = ask_pv[1].parse().expect(parse_err_msg);
             ask.insert(price, volume);
         }
         for bid_pv in self.bids.clone() {
-            let price: OrderedFloat<f32> = bid_pv[0].parse().expect(parse_err_msg);
-            let volume: OrderedFloat<f32> = bid_pv[1].parse().expect(parse_err_msg);
+            let price: OrderedFloat<f64> = bid_pv[0].parse().expect(parse_err_msg);
+            let volume: OrderedFloat<f64> = bid_pv[1].parse().expect(parse_err_msg);
             bid.insert(price, volume);
         }
-        Orderbook {
-            ask,
-            bid,
-            time,
-            sequence,
-        }
+        internal_model::orderbook::Orderbook { ask, bid, sequence }
     }
 }
 
-impl translator::OrderBookChangeTranslator for KucoinOrderBookChange {
-    fn to_internal(&self, serial: u64) -> (String, Orderbook) {
+impl translator::OrderBookChangeTranslator for kucoin_rs_model::websocket::Level2 {
+    fn to_internal(&self, last_serial: u64) -> (String, internal_model::orderbook::Orderbook) {
         // return Orderbook::new();
-        let mut ask = PVMap::new();
-        let mut bid = PVMap::new();
+        let mut ask = internal_model::orderbook::PVMap::new();
+        let mut bid = internal_model::orderbook::PVMap::new();
         let parse_err_msg = "Failed to parse input";
 
         for ask_change in self.changes.asks.clone() {
             // ignore if sequence <=serial
-            if ask_change[2].parse::<u64>().unwrap() > serial {
-                let price: OrderedFloat<f32> = ask_change[0].parse().expect(parse_err_msg);
-                let volume: OrderedFloat<f32> = ask_change[1].parse().expect(parse_err_msg);
+            if ask_change[2].parse::<u64>().unwrap() > last_serial {
+                let price: OrderedFloat<f64> = ask_change[0].parse().expect(parse_err_msg);
+                let volume: OrderedFloat<f64> = ask_change[1].parse().expect(parse_err_msg);
                 ask.insert(price, volume);
             }
         }
         for bid_change in self.changes.bids.clone() {
             // ignore if sequence <=serial
-            if bid_change[2].parse::<u64>().unwrap() > serial {
-                let price: OrderedFloat<f32> = bid_change[0].parse().expect(parse_err_msg);
-                let volume: OrderedFloat<f32> = bid_change[1].parse().expect(parse_err_msg);
+            if bid_change[2].parse::<u64>().unwrap() > last_serial {
+                let price: OrderedFloat<f64> = bid_change[0].parse().expect(parse_err_msg);
+                let volume: OrderedFloat<f64> = bid_change[1].parse().expect(parse_err_msg);
                 bid.insert(price, volume);
             }
         }
         let sequence = self.sequence_end.clone() as u64;
-        let time = chrono::offset::Utc::now().timestamp();
         (
             self.symbol.clone(),
-            Orderbook {
-                ask,
-                bid,
-                time,
-                sequence,
-            },
+            internal_model::orderbook::Orderbook { ask, bid, sequence },
         )
+    }
+}
+
+impl translator::SymbolInfoTranslator for kucoin_rs_model::market::SymbolList {
+    fn to_internal(&self) -> internal_model::symbol::SymbolInfo {
+        internal_model::symbol::SymbolInfo {
+            symbol: self.symbol.clone(),
+            base: self.base_currency.clone(),
+            quote: self.quote_currency.clone(),
+            base_increment: self.base_increment.parse().unwrap(),
+            base_min: self.base_min_size.parse().unwrap(),
+        }
     }
 }

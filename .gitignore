@@ -1,2 +1,4 @@
 /target
 config.ini
+log/*
+.vscode/settings.json

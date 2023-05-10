@@ -4,12 +4,12 @@ use crate::model::orderbook::FullOrderbook;
 use crate::translator::translator::OrderBookChangeTranslator;
 use kucoin_rs::futures::TryStreamExt;
 use kucoin_rs::kucoin::{model::websocket::KucoinWebsocketMsg, websocket::KucoinWebsocket};
-use kucoin_rs::tokio::sync::broadcast::{Receiver, Sender};
 use std::sync::{Arc, Mutex};
+use tokio::sync::broadcast::{Receiver, Sender};
 //TODO implement the internal trade order task in kucoin
 
 /// Task to puiblish orderbook events from websocket api output
-pub async fn task_pub_orderevent(
+pub async fn task_pub_orderbook_event(
     mut ws: KucoinWebsocket,
     sender: Sender<OrderbookEvent>,
 ) -> Result<(), kucoin_rs::failure::Error> {
@@ -18,8 +18,8 @@ pub async fn task_pub_orderevent(
         let msg = ws.try_next().await?.unwrap();
         // add matches for multi-subscribed sockets handling
         if let KucoinWebsocketMsg::OrderBookMsg(msg) = msg {
+            // log::info!("WS: {msg:#?}");
             let (str, data) = msg.data.to_internal(serial);
-            // info!("L2 recceived {str:#?}\n{data:#?}");
             let event = OrderbookEvent::OrderbookChangeReceived((str, data));
             sender.send(event).unwrap();
         } else if let KucoinWebsocketMsg::TickerMsg(msg) = msg {
@@ -40,6 +40,7 @@ pub async fn task_pub_orderevent(
 /// Task to puiblish orderbook events from websocket api output
 pub async fn task_sync_orderbook(
     mut receiver: Receiver<OrderbookEvent>,
+    sender: Sender<OrderbookEvent>,
     local_full_orderbook: Arc<Mutex<FullOrderbook>>,
 ) -> Result<(), kucoin_rs::failure::Error> {
     loop {
@@ -58,9 +59,19 @@ pub async fn task_sync_orderbook(
                     // REST Orderbook should be loaded before syncing with WebSocket OrderbookChange
                     continue;
                 }
-                log::info!("insertion");
-                if let Err(()) = orderbook.unwrap().merge(orderbook_change) {
-                    log::error!("Merge conflict")
+                // log::info!("insertion: {orderbook_change:#?}");
+                match orderbook.unwrap().merge(orderbook_change) {
+                    Ok(res) => {
+                        if let Some(ob) = res {
+                            // log::info!("update: {ob:#?}");
+                            sender
+                                .send(OrderbookEvent::OrderbookChangeReceived((symbol, ob)))
+                                .unwrap();
+                        }
+                    }
+                    Err(e) => {
+                        log::error!("Merge conflict: {e}")
+                    }
                 }
             }
         }

@@ -1,9 +1,9 @@
-use kucoin_arbitrage::broker::orderbook::kucoin::{task_pub_orderbook_event, task_sync_orderbook};
-use kucoin_arbitrage::model::orderbook::FullOrderbook;
 use kucoin_api::{
     client::{Kucoin, KucoinEnv},
     model::websocket::{WSTopic, WSType},
 };
+use kucoin_arbitrage::broker::orderbook::kucoin::{task_pub_orderbook_event, task_sync_orderbook};
+use kucoin_arbitrage::model::orderbook::FullOrderbook;
 use std::sync::{Arc, Mutex};
 use tokio::sync::broadcast::channel;
 

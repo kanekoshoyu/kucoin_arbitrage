@@ -10,7 +10,7 @@ pub async fn get_symbols(api: Kucoin) -> Vec<SymbolInfo> {
     let data: Vec<SymbolList> = api_result.unwrap().data.unwrap();
     let mut result: Vec<SymbolInfo> = Vec::new();
     for symbol in data {
-        // check base currency. Kucoin updates symbol instead of name when the alias updates 
+        // check base currency. Kucoin updates symbol instead of name when the alias updates
         if false == symbol.symbol.starts_with(symbol.base_currency.as_str()) {
             log::warn!(
                 "name and base doesnt match (symbol: {:10}, name: {:10}, base: {:5})",

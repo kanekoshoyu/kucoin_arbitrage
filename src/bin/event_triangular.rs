@@ -1,3 +1,8 @@
+use kucoin_api::{
+    client::{Kucoin, KucoinEnv},
+    model::market::OrderBookType,
+    model::websocket::{WSTopic, WSType},
+};
 use kucoin_arbitrage::broker::gatekeeper::kucoin::task_gatekeep_chances;
 use kucoin_arbitrage::broker::order::kucoin::task_place_order;
 use kucoin_arbitrage::broker::orderbook::kucoin::{task_pub_orderbook_event, task_sync_orderbook};
@@ -9,11 +14,6 @@ use kucoin_arbitrage::event::orderbook::OrderbookEvent;
 use kucoin_arbitrage::model::orderbook::FullOrderbook;
 use kucoin_arbitrage::strategy::all_taker_btc_usd::task_pub_chance_all_taker_btc_usd;
 use kucoin_arbitrage::translator::translator::OrderBookTranslator;
-use kucoin_api::{
-    client::{Kucoin, KucoinEnv},
-    model::market::OrderBookType,
-    model::websocket::{WSTopic, WSType},
-};
 use std::sync::{Arc, Mutex};
 use tokio::sync::broadcast::channel;
 

@@ -1,2 +1,2 @@
-pub mod kucoin;
 pub mod filter;
+pub mod kucoin;

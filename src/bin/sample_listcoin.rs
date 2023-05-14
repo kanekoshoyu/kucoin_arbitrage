@@ -9,7 +9,7 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     log::info!("Hello world");
 
     // set credentials
-    let credentials = kucoin_arbitrage::globals::config::credentials();
+    let credentials = kucoin_arbitrage::global::config::credentials();
     let api = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
 
     // get symbol lists

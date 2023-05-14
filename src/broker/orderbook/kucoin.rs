@@ -1,5 +1,5 @@
 use crate::event::orderbook::OrderbookEvent;
-use crate::globals::performance;
+use crate::global::performance;
 use crate::model::orderbook::FullOrderbook;
 use crate::translator::translator::OrderBookChangeTranslator;
 use kucoin_api::futures::TryStreamExt;

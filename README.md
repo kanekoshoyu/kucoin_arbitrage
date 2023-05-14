@@ -28,7 +28,7 @@ The project is split into these components:
 - `strategy` has the implementations of arbitrage algorithms. The algorithms should only be using internal model and events so that the strategy algorithms are cross platform. 
 - `translator` has the conversion of exchange API objects into internal models and vice versa.
 - `broker` has the event broadcasts as well as some task functions for the events to be processed. This is also the interface between events/models and the API calls.
-- `globals` has the lazy_statics that is used across the code. Technically it is better to pass Arc and Mutex around the functions instead of using global statics, but I just wanted the code to be a bit more readable with this way.
+- `global` has the lazy_statics that is used across the code. Technically it is better to pass Arc and Mutex around the functions instead of using global statics, but I just wanted the code to be a bit more readable with this way.
   
 ## Major Structural Improvements
 - Use compiled Rust code for neat, efficient and proper code

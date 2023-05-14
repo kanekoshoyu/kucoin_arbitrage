@@ -1,4 +1,4 @@
-use crate::globals::{config, performance};
+use crate::global::{config, performance};
 use tokio::time::{sleep, Duration};
 
 fn report_status() -> Result<(), kucoin_api::failure::Error> {

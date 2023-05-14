@@ -14,7 +14,7 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     log::info!("Log setup");
 
     // credentials
-    let credentials = kucoin_arbitrage::globals::config::credentials();
+    let credentials = kucoin_arbitrage::global::config::credentials();
     let api = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
     let url = api.get_socket_endpoint(WSType::Public).await?;
     log::info!("Credentials setup");

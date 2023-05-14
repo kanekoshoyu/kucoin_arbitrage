@@ -1,6 +1,6 @@
 pub mod broker;
 pub mod event;
-pub mod globals;
+pub mod global;
 pub mod logger;
 pub mod mirror;
 pub mod model;

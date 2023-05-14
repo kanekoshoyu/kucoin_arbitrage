@@ -18,7 +18,7 @@ async fn main() -> Result<(), failure::Error> {
     // provide logging format
     kucoin_arbitrage::logger::log_init();
     log::info!("Testing Kucoin REST-to-WS latency");
-    let credentials = kucoin_arbitrage::globals::config::credentials();
+    let credentials = kucoin_arbitrage::global::config::credentials();
     log::info!("{credentials:#?}");
     // Initialize the Kucoin API struct
     let api = Kucoin::new(KucoinEnv::Live, Some(credentials))?;

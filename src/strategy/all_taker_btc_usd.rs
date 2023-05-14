@@ -185,25 +185,25 @@ fn triangular_chance_sequence_f64(
 
     // Buy/Buy/Sell path: USD -> BTC -> ETH -> USD
     let mut bbs_1_btc = usd_amount / btc_usd.ask;
-    bbs_1_btc = adjust_amount(bbs_1_btc, btc_usd.trading_min, btc_usd.trading_increment);
+    bbs_1_btc = adjust_amount(bbs_1_btc, btc_usd.trading_min, btc_usd.trading_increment, btc_usd.ask_volume);
 
     let mut bbs_2_eth = after_fee(bbs_1_btc, btc_usd.trading_fee) / eth_btc.ask;
-    bbs_2_eth = adjust_amount(bbs_2_eth, eth_btc.trading_min, eth_btc.trading_increment);
+    bbs_2_eth = adjust_amount(bbs_2_eth, eth_btc.trading_min, eth_btc.trading_increment, eth_btc.ask_volume);
 
     let mut bbs_3_eth = after_fee(bbs_2_eth, eth_btc.trading_fee);
-    bbs_3_eth = adjust_amount(bbs_3_eth, eth_usd.trading_min, eth_usd.trading_increment);
+    bbs_3_eth = adjust_amount(bbs_3_eth, eth_usd.trading_min, eth_usd.trading_increment, eth_usd.bid_volume);
 
     let profit_bbs = bbs_3_eth * eth_usd.bid - after_fee(bbs_3_eth, eth_usd.trading_fee) - usd_amount;
 
     // Buy/Sell/Sell path: USD -> ETH -> BTC -> USD
     let mut bss_1_eth = usd_amount / eth_usd.ask;
-    bss_1_eth = adjust_amount(bss_1_eth, eth_usd.trading_min, eth_usd.trading_increment);
+    bss_1_eth = adjust_amount(bss_1_eth, eth_usd.trading_min, eth_usd.trading_increment, eth_usd.ask_volume);
 
     let mut bss_2_eth = after_fee(bss_1_eth, eth_usd.trading_fee) * eth_btc.bid;
-    bss_2_eth = adjust_amount(bss_2_eth, eth_btc.trading_min, eth_btc.trading_increment);
+    bss_2_eth = adjust_amount(bss_2_eth, eth_btc.trading_min, eth_btc.trading_increment, eth_btc.bid_volume);
 
     let mut bss_3_btc = after_fee(bss_2_eth, eth_btc.trading_fee);
-    bss_3_btc = adjust_amount(bss_3_btc, btc_usd.trading_min, btc_usd.trading_increment);
+    bss_3_btc = adjust_amount(bss_3_btc, btc_usd.trading_min, btc_usd.trading_increment, btc_usd.bid_volume);
 
     let profit_bss = bss_3_btc * btc_usd.bid - after_fee(bss_3_btc, btc_usd.trading_fee) - usd_amount;
 
@@ -229,9 +229,9 @@ fn triangular_chance_sequence_f64(
         TriangularArbitrageChance {
             profit: OrderedFloat(profit_bbs),
             actions: [
-                ActionInfo::buy(OrderedFloat(btc_usd.ask), OrderedFloat(bbs_btc)),
-                ActionInfo::buy(OrderedFloat(eth_btc.ask), OrderedFloat(bbs_eth)),
-                ActionInfo::sell(OrderedFloat(eth_usd.bid), OrderedFloat(bbs_usd)),
+                ActionInfo::buy(OrderedFloat(btc_usd.ask), OrderedFloat(bbs_1_btc)),
+                ActionInfo::buy(OrderedFloat(eth_btc.ask), OrderedFloat(bbs_2_eth)),
+                ActionInfo::sell(OrderedFloat(eth_usd.bid), OrderedFloat(bbs_3_eth)),
             ],
         }
     } else {
@@ -239,21 +239,31 @@ fn triangular_chance_sequence_f64(
         TriangularArbitrageChance {
             profit: OrderedFloat(profit_bss),
             actions: [
-                ActionInfo::buy(OrderedFloat(eth_usd.ask), OrderedFloat(bss_eth)),
-                ActionInfo::sell(OrderedFloat(eth_btc.bid), OrderedFloat(bss_btc)),
-                ActionInfo::sell(OrderedFloat(btc_usd.bid), OrderedFloat(bss_usd)),
+                ActionInfo::buy(OrderedFloat(eth_usd.ask), OrderedFloat(bss_1_eth)),
+                ActionInfo::sell(OrderedFloat(eth_btc.bid), OrderedFloat(bss_2_eth)),
+                ActionInfo::sell(OrderedFloat(btc_usd.bid), OrderedFloat(bss_3_btc)),
             ],
         }
     }
 }
 
-fn adjust_amount(amount: f64, minimum: f64, increment: f64) -> f64 {
-    // round amount to the multiple of increment, then return adjusted_amount or 0
-    let adjusted_amount = (amount / increment).floor() * increment;
-    if adjusted_amount >= minimum {
-        return adjusted_amount;
+/// rounds the trade volume based on mimimum, increment and the avaiable volume
+/// use 'if else' rather than 'min' as f64 does not impelment Ord 
+/// ```
+/// adjust_amount(10, 1, 0.1, 10)
+/// ```
+fn adjust_amount(amount: f64, minimum: f64, increment: f64, available: f64) -> f64 {
+    // round amount to the multiple of increment
+    let amount = (amount / increment).floor() * increment;
+    if amount < minimum {
+        // less than minimum tradeable, return 0
+        0.0
+    } else if amount < available {
+        // less than available volume, return avaiable volume
+        available
+    } else {
+        amount
     }
-    0.0
 }
 
 fn after_fee(amount: f64, fee: f64) -> f64 {

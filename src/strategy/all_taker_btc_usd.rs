@@ -282,9 +282,13 @@ fn triangular_chance_sequence_f64(
 /// rounds the trade volume based on mimimum, increment and the avaiable volume
 /// use 'if else' rather than 'min' as f64 does not impelment Ord
 /// ```
-/// adjust_amount(10, 1, 0.1, 10)
+/// use kucoin_arbitrage::strategy::all_taker_btc_usd::adjust_amount;
+/// assert_eq!(adjust_amount(10.0, 1.0, 0.1, 10.0), 10.0);
+/// assert_eq!(adjust_amount(10.0, 5.0, 0.1, 10.0), 10.0);
+/// assert_eq!(adjust_amount(10.0, 20.0, 0.1, 10.0), 0.0);
+/// assert_eq!(adjust_amount(10.0, 1.0, 0.1, 5.0), 5.0);
 /// ```
-fn adjust_amount(amount: f64, minimum: f64, increment: f64, available: f64) -> f64 {
+pub fn adjust_amount(amount: f64, minimum: f64, increment: f64, available: f64) -> f64 {
     // round amount to the multiple of increment
     let amount = (amount / increment).floor() * increment;
     if amount < minimum {
@@ -292,9 +296,9 @@ fn adjust_amount(amount: f64, minimum: f64, increment: f64, available: f64) -> f
         0.0
     } else if amount < available {
         // less than available volume, return avaiable volume
-        available
-    } else {
         amount
+    } else {
+        available
     }
 }
 

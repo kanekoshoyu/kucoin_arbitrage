@@ -1,9 +1,9 @@
-extern crate kucoin_rs;
+extern crate kucoin_api;
 use kucoin_arbitrage::mirror::{Map, TickerInfo, MIRROR};
 use kucoin_arbitrage::strings::topic_to_symbol;
-use kucoin_rs::failure;
-use kucoin_rs::futures::TryStreamExt;
-use kucoin_rs::kucoin::{
+use kucoin_api::failure;
+use kucoin_api::futures::TryStreamExt;
+use kucoin_api::{
     client::{Kucoin, KucoinEnv},
     model::websocket::{KucoinWebsocketMsg, WSTopic, WSType},
     websocket::KucoinWebsocket,

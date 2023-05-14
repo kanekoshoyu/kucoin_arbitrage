@@ -2,8 +2,8 @@ use crate::event::orderbook::OrderbookEvent;
 use crate::globals::performance;
 use crate::model::orderbook::FullOrderbook;
 use crate::translator::translator::OrderBookChangeTranslator;
-use kucoin_rs::futures::TryStreamExt;
-use kucoin_rs::kucoin::{model::websocket::KucoinWebsocketMsg, websocket::KucoinWebsocket};
+use kucoin_api::futures::TryStreamExt;
+use kucoin_api::{model::websocket::KucoinWebsocketMsg, websocket::KucoinWebsocket};
 use std::sync::{Arc, Mutex};
 use tokio::sync::broadcast::{Receiver, Sender};
 //TODO implement the internal trade order task in kucoin
@@ -12,7 +12,7 @@ use tokio::sync::broadcast::{Receiver, Sender};
 pub async fn task_pub_orderbook_event(
     mut ws: KucoinWebsocket,
     sender: Sender<OrderbookEvent>,
-) -> Result<(), kucoin_rs::failure::Error> {
+) -> Result<(), kucoin_api::failure::Error> {
     let serial = 0;
     loop {
         let msg = ws.try_next().await?.unwrap();
@@ -42,7 +42,7 @@ pub async fn task_sync_orderbook(
     mut receiver: Receiver<OrderbookEvent>,
     sender: Sender<OrderbookEvent>,
     local_full_orderbook: Arc<Mutex<FullOrderbook>>,
-) -> Result<(), kucoin_rs::failure::Error> {
+) -> Result<(), kucoin_api::failure::Error> {
     loop {
         let event = receiver.recv().await?;
         performance::increment();

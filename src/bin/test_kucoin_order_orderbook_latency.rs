@@ -1,12 +1,12 @@
 /// Test REST-to-WS Network Latency
 /// place extreme order, receive extreme order, check time difference
-extern crate kucoin_rs;
+extern crate kucoin_api;
 use chrono::prelude::Local;
 use kucoin_arbitrage::model::order::OrderSide;
 use kucoin_arbitrage::translator::translator::OrderBookChangeTranslator;
-use kucoin_rs::failure;
-use kucoin_rs::futures::TryStreamExt;
-use kucoin_rs::kucoin::{
+use kucoin_api::failure;
+use kucoin_api::futures::TryStreamExt;
+use kucoin_api::{
     client::{Kucoin, KucoinEnv},
     model::websocket::{KucoinWebsocketMsg, WSTopic, WSType},
 };

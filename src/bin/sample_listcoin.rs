@@ -1,9 +1,9 @@
 /// Get the Symbol list, and blacklist a few weird looking ones
 use kucoin_arbitrage::broker::symbol::{filter::symbol_with_quotes, kucoin::get_symbols};
-use kucoin_rs::kucoin::client::{Kucoin, KucoinEnv};
+use kucoin_api::client::{Kucoin, KucoinEnv};
 
 #[tokio::main]
-async fn main() -> Result<(), kucoin_rs::failure::Error> {
+async fn main() -> Result<(), kucoin_api::failure::Error> {
     // provide logging format
     kucoin_arbitrage::logger::log_init();
     log::info!("Hello world");

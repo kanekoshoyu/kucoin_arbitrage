@@ -16,7 +16,7 @@ pub async fn task_pub_chance_all_taker_btc_usd(
     _sender: Sender<ChanceEvent>,
     local_full_orderbook: Arc<Mutex<FullOrderbook>>,
     symbol_map: Arc<Mutex<BTreeMap<String, SymbolInfo>>>,
-) -> Result<(), kucoin_rs::failure::Error> {
+) -> Result<(), kucoin_api::failure::Error> {
     let btc = String::from("BTC");
     let usd = String::from("USDT");
     let btc_usd = std::format!("{btc}-{usd}");

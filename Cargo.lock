@@ -779,27 +779,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "kucoin_arbitrage"
-version = "0.0.5"
-dependencies = [
- "chrono",
- "env_logger",
- "fern",
- "futures",
- "kucoin_rs",
- "lazy_static",
- "log",
- "num-traits",
- "ordered-float",
- "rust-ini",
- "tokio",
- "uuid",
-]
-
-[[package]]
-name = "kucoin_rs"
-version = "0.4.5"
-source = "git+https://github.com/kanekoshoyu/kucoin_rs.git#7694f4480dda5af8a5d01c5a6b46de8c2d0eaed8"
+name = "kucoin_api"
+version = "1.4.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb7293cbea7963f41e458fe0a0455c95c36ca291356dd629e314d13c595f1b18"
 dependencies = [
  "base64 0.12.3",
  "failure",
@@ -817,6 +800,24 @@ dependencies = [
  "tokio-tungstenite",
  "tungstenite 0.13.0",
  "url",
+]
+
+[[package]]
+name = "kucoin_arbitrage"
+version = "0.0.6"
+dependencies = [
+ "chrono",
+ "env_logger",
+ "fern",
+ "futures",
+ "kucoin_api",
+ "lazy_static",
+ "log",
+ "num-traits",
+ "ordered-float",
+ "rust-ini",
+ "tokio",
+ "uuid",
 ]
 
 [[package]]

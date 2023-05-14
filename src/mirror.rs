@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use kucoin_rs::kucoin::model::websocket::SymbolTicker;
+use kucoin_api::model::websocket::SymbolTicker;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};

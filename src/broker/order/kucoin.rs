@@ -1,12 +1,12 @@
 use crate::event::order::OrderEvent;
 use crate::model::order::Order;
-use kucoin_rs::kucoin::client::Kucoin;
+use kucoin_api::client::Kucoin;
 use tokio::sync::broadcast;
 
 pub async fn task_place_order(
     mut receiver: broadcast::Receiver<OrderEvent>,
     kucoin: Kucoin,
-) -> Result<(), kucoin_rs::failure::Error> {
+) -> Result<(), kucoin_api::failure::Error> {
     // Converts reveived Message into API call
     loop {
         let event = receiver.recv().await?;

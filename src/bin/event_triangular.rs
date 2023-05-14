@@ -40,6 +40,7 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     let url = api.clone().get_socket_endpoint(WSType::Public).await?;
     log::info!("Credentials setup");
 
+    // TODO use tokio_spawn to get the below data concurrently
     // get symbol lists
     let symbol_list = get_symbols(api.clone()).await;
     let symbol_infos = symbol_with_quotes(&symbol_list, "BTC", "USDT");

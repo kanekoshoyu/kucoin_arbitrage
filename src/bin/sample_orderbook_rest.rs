@@ -20,5 +20,5 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
         log::info!("failed obtaining the proper data")
     }
 
-    return Ok(());
+    Ok(())
 }

@@ -1,5 +1,5 @@
 use crate::model::symbol::SymbolInfo;
-use crate::translator::translator::SymbolInfoTranslator;
+use crate::translator::traits::SymbolInfoTranslator;
 use kucoin_api::client::Kucoin;
 use kucoin_api::model::market::SymbolList;
 
@@ -11,7 +11,7 @@ pub async fn get_symbols(api: Kucoin) -> Vec<SymbolInfo> {
     let mut result: Vec<SymbolInfo> = Vec::new();
     for symbol in data {
         // check base currency. Kucoin updates symbol instead of name when the alias updates
-        if false == symbol.symbol.starts_with(symbol.base_currency.as_str()) {
+        if !symbol.symbol.starts_with(symbol.base_currency.as_str()) {
             log::warn!(
                 "name and base doesnt match (symbol: {:10}, name: {:10}, base: {:5})",
                 symbol.symbol,
@@ -40,5 +40,5 @@ pub async fn get_symbols(api: Kucoin) -> Vec<SymbolInfo> {
         let internal_symbol_info = symbol.to_internal();
         result.push(internal_symbol_info);
     }
-    return result;
+    result
 }

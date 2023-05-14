@@ -1,7 +1,7 @@
 use crate::event::orderbook::OrderbookEvent;
 use crate::global::performance;
 use crate::model::orderbook::FullOrderbook;
-use crate::translator::translator::OrderBookChangeTranslator;
+use crate::translator::traits::OrderBookChangeTranslator;
 use kucoin_api::futures::TryStreamExt;
 use kucoin_api::{model::websocket::KucoinWebsocketMsg, websocket::KucoinWebsocket};
 use std::sync::{Arc, Mutex};

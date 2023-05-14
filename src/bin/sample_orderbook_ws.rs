@@ -57,7 +57,7 @@ async fn sync_tickers(
                 let x = ticker_name.clone();
                 {
                     let mut m = mirror.lock().unwrap();
-                    let tickers: &mut Map = &mut (*m);
+                    let tickers: &mut Map = &mut m;
                     if let Some(data) = tickers.get_mut(&x) {
                         // unimplemented!("found");
                         data.symbol = msg.data;

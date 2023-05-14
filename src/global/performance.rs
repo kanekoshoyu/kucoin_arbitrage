@@ -14,15 +14,15 @@ lazy_static::lazy_static! {
 }
 pub fn increment() {
     let mut p = PERFORMANCE.lock().unwrap();
-    (*p).data_count = (*p).data_count + 1;
+    p.data_count += 1;
 }
 
 pub fn data_count() -> u64 {
     let p = PERFORMANCE.lock().unwrap();
-    return (*p).data_count;
+    p.data_count
 }
 
 pub fn reset() {
     let mut p = PERFORMANCE.lock().unwrap();
-    (*p).data_count = 0;
+    p.data_count = 0;
 }

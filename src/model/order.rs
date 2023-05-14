@@ -1,14 +1,11 @@
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
+// Order placement selector, default set as "Sell" for security
 pub enum OrderSide {
     Buy,
+    #[default]
     Sell,
 }
 
-impl Default for OrderSide {
-    fn default() -> Self {
-        OrderSide::Sell
-    }
-}
 
 impl AsRef<str> for OrderSide {
     fn as_ref(&self) -> &str {
@@ -30,16 +27,12 @@ impl ToString for OrderSide {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy)]
+// Market selector, market set to limit order for security
 pub enum OrderType {
+    #[default]
     Limit,
     Market,
-}
-
-impl Default for OrderType {
-    fn default() -> Self {
-        OrderType::Limit
-    }
 }
 
 impl ToString for OrderType {
@@ -71,13 +64,13 @@ pub struct MarketOrder {
 
 impl Order for MarketOrder {
     fn id(&self) -> u128 {
-        self.id.clone()
+        self.id
     }
     fn order_type(&self) -> OrderType {
-        self.order_type.clone()
+        self.order_type
     }
     fn side(&self) -> OrderSide {
-        self.side.clone()
+        self.side
     }
     fn symbol(&self) -> String {
         self.symbol.clone()
@@ -99,13 +92,13 @@ pub struct LimitOrder {
 
 impl Order for LimitOrder {
     fn id(&self) -> u128 {
-        self.id.clone()
+        self.id
     }
     fn order_type(&self) -> OrderType {
-        self.order_type.clone()
+        self.order_type
     }
     fn side(&self) -> OrderSide {
-        self.side.clone()
+        self.side
     }
     fn symbol(&self) -> String {
         self.symbol.clone()

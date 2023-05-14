@@ -13,7 +13,7 @@ use kucoin_arbitrage::event::order::OrderEvent;
 use kucoin_arbitrage::event::orderbook::OrderbookEvent;
 use kucoin_arbitrage::model::orderbook::FullOrderbook;
 use kucoin_arbitrage::strategy::all_taker_btc_usd::task_pub_chance_all_taker_btc_usd;
-use kucoin_arbitrage::translator::translator::OrderBookTranslator;
+use kucoin_arbitrage::translator::traits::OrderBookTranslator;
 use std::sync::{Arc, Mutex};
 use tokio::sync::broadcast::channel;
 

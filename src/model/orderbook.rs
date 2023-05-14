@@ -89,12 +89,12 @@ impl Orderbook {
         }
 
         if let Some((merge_min_ask, _)) = to_merge_clone.ask.first_key_value() {
-            if merge_min_ask.to_owned() <= min_ask {
+            if *merge_min_ask <= min_ask {
                 return Ok(Some(to_merge_clone));
             }
         }
         if let Some((merge_max_bid, _)) = to_merge_clone.bid.last_key_value() {
-            if merge_max_bid.to_owned() >= max_bid {
+            if *merge_max_bid >= max_bid {
                 return Ok(Some(to_merge_clone));
             }
         }

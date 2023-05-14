@@ -21,5 +21,5 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     }
     log::info!("size: {:?}", res.len());
 
-    return Ok(());
+    Ok(())
 }

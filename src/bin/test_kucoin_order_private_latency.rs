@@ -9,7 +9,7 @@ use kucoin_api::{
     model::websocket::{KucoinWebsocketMsg, WSTopic, WSType},
 };
 use kucoin_arbitrage::model::order::OrderSide;
-use kucoin_arbitrage::translator::translator::OrderBookChangeTranslator;
+use kucoin_arbitrage::translator::traits::OrderBookChangeTranslator;
 use uuid::Uuid;
 
 /// main function
@@ -59,7 +59,7 @@ async fn main() -> Result<(), failure::Error> {
                     continue;
                 }
                 // BTC-USDT now, check bid volume
-                if let Some(_) = data.bid.get(&ordered_float::OrderedFloat(test_price)) {
+                if data.bid.get(&ordered_float::OrderedFloat(test_price)).is_some() {
                     // price
                     log::info!("data: {:#?}", data);
                     // volume might not be equal, as they are cumulative with other previous orders

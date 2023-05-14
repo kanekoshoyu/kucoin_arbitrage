@@ -23,26 +23,22 @@ pub async fn task_pub_chance_all_taker_btc_usd(
     loop {
         let event = receiver.recv().await?;
         // log::info!("received orderbook_update");
-        let eth: Option<String>;
-        match event {
+        let eth: Option<String> = match event {
             OrderbookEvent::OrderbookChangeReceived((symbol, _delta)) => {
                 if symbol == btc_usd {
                     continue;
                 }
                 let (coin, _) = split_symbol(symbol).unwrap();
-                eth = Some(coin);
+                Some(coin)
             }
             _ => {
                 log::error!("Unrecognised event {event:?}");
                 continue;
             }
-        }
+        };
         let eth = eth.unwrap();
         let eth_btc = std::format!("{eth}-{btc}");
         let eth_usd = std::format!("{eth}-{usd}");
-
-        // TODO test below
-        // log::info!("Analysing {btc_usd},{eth_btc},{eth_usd}");
 
         let full_orderbook = local_full_orderbook.lock().unwrap();
         let orderbook_btc_usd = (*full_orderbook).get(&btc_usd);
@@ -53,17 +49,24 @@ pub async fn task_pub_chance_all_taker_btc_usd(
             log::warn!("empty orderbook");
             continue;
         }
-        // log::info!("Full orderbook: \n{full_orderbook:#?}");
-        // let orderbook_eth_usd = orderbook_eth_usd.unwrap();
+
+        // clone symbol info from Arc Mutex
+        let (info_btc_usd, info_eth_btc, info_eth_usd) = {
+            let symbol_map = symbol_map.lock().unwrap();
+            (
+                symbol_map.get(&btc_usd).unwrap().clone(),
+                symbol_map.get(&eth_btc).unwrap().clone(),
+                symbol_map.get(&eth_usd).unwrap().clone(),
+            )
+        };
 
         let mut chance = triangular_chance_sequence(
-            &btc_usd,
-            &eth_btc,
-            &eth_usd,
+            info_btc_usd,
+            info_eth_btc,
+            info_eth_usd,
             orderbook_btc_usd.unwrap(),
             orderbook_eth_btc.unwrap(),
             orderbook_eth_usd.unwrap(),
-            symbol_map.clone(),
             usd_budget,
         );
         if chance.actions[1].action.eq(&OrderSide::Buy) {
@@ -89,13 +92,12 @@ pub async fn task_pub_chance_all_taker_btc_usd(
 }
 
 fn triangular_chance_sequence(
-    symbol_btc_usd: &str,
-    symbol_eth_btc: &str,
-    symbol_eth_usd: &str,
+    info_btc_usd: SymbolInfo,
+    info_eth_btc: SymbolInfo,
+    info_eth_usd: SymbolInfo,
     orderbook_btc_usd: &Orderbook,
     orderbook_eth_btc: &Orderbook,
     orderbook_eth_usd: &Orderbook,
-    symbol_map: Arc<Mutex<BTreeMap<String, SymbolInfo>>>,
     usd_amount: f64,
 ) -> TriangularArbitrageChance {
     let (btc_usd_bid, btc_usd_bid_volume) = orderbook_btc_usd.bid.last_key_value().unwrap();
@@ -105,47 +107,41 @@ fn triangular_chance_sequence(
     let (eth_btc_ask, eth_btc_ask_volume) = orderbook_eth_btc.ask.first_key_value().unwrap();
     let (eth_usd_ask, eth_usd_ask_volume) = orderbook_eth_usd.ask.first_key_value().unwrap();
 
-    let symbol_map = symbol_map.lock().unwrap();
-
-    let btc_usd_info = &symbol_map.get(symbol_btc_usd).unwrap();
-    let eth_btc_info = &symbol_map.get(symbol_eth_btc).unwrap();
-    let eth_usd_info = &symbol_map.get(symbol_eth_usd).unwrap();
-
     // This should be obtained from the API
     let trading_fee = 0.001;
 
     triangular_chance_sequence_f64(
         PairProfile {
-            symbol: btc_usd_info.symbol.clone(),
+            symbol: info_btc_usd.symbol,
             ask: btc_usd_ask.into_inner(),
             ask_volume: btc_usd_ask_volume.into_inner(),
             bid: btc_usd_bid.into_inner(),
             bid_volume: btc_usd_bid_volume.into_inner(),
             quote_available: usd_amount,
-            trading_min: *btc_usd_info.base_min,
-            trading_increment: *btc_usd_info.base_increment,
+            trading_min: *info_btc_usd.base_min,
+            trading_increment: *info_btc_usd.base_increment,
             trading_fee,
         },
         PairProfile {
-            symbol: eth_btc_info.symbol.clone(),
+            symbol: info_eth_btc.symbol,
             ask: eth_btc_ask.into_inner(),
             ask_volume: eth_btc_ask_volume.into_inner(),
             bid: eth_btc_bid.into_inner(),
             bid_volume: eth_btc_bid_volume.into_inner(),
             quote_available: 0.0,
-            trading_min: *eth_btc_info.base_min,
-            trading_increment: *eth_btc_info.base_increment,
+            trading_min: *info_eth_btc.base_min,
+            trading_increment: *info_eth_btc.base_increment,
             trading_fee,
         },
         PairProfile {
-            symbol: eth_btc_info.symbol.clone(),
+            symbol: info_eth_usd.symbol,
             ask: eth_usd_ask.into_inner(),
             ask_volume: eth_usd_ask_volume.into_inner(),
             bid: eth_usd_bid.into_inner(),
             bid_volume: eth_usd_bid_volume.into_inner(),
             quote_available: 0.0,
-            trading_min: *eth_usd_info.base_min,
-            trading_increment: *eth_usd_info.base_increment,
+            trading_min: *info_eth_usd.base_min,
+            trading_increment: *info_eth_usd.base_increment,
             trading_fee,
         },
     )
@@ -287,6 +283,7 @@ fn triangular_chance_sequence_f64(
 /// assert_eq!(adjust_amount(10.0, 5.0, 0.1, 10.0), 10.0);
 /// assert_eq!(adjust_amount(10.0, 20.0, 0.1, 10.0), 0.0);
 /// assert_eq!(adjust_amount(10.0, 1.0, 0.1, 5.0), 5.0);
+/// assert_eq!(adjust_amount(3.14, 1.0, 0.5, 5.0), 3.0);
 /// ```
 pub fn adjust_amount(amount: f64, minimum: f64, increment: f64, available: f64) -> f64 {
     // round amount to the multiple of increment

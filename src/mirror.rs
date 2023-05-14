@@ -53,7 +53,7 @@ impl TickerInfo {
         let float_err = "float deparse error";
         let p = self.symbol.best_bid.parse::<f64>().expect(float_err);
         let v = self.symbol.best_bid_size.parse::<f64>().expect(float_err);
-        return (p, v);
+        (p, v)
     }
 
     // return price and size
@@ -61,14 +61,14 @@ impl TickerInfo {
         let float_err = "float deparse error";
         let p = self.symbol.best_ask.parse::<f64>().expect(float_err);
         let v = self.symbol.best_ask_size.parse::<f64>().expect(float_err);
-        return (p, v);
+        (p, v)
     }
 
     // merged so no copy twice
     pub fn get_askbid(&self) -> ((f64, f64), (f64, f64)) {
         let ask = self.get_ask();
         let bid = self.get_bid();
-        return (ask, bid);
+        (ask, bid)
     }
 }
 

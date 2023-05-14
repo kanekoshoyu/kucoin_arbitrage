@@ -9,7 +9,7 @@ use kucoin_arbitrage::event::orderbook::OrderbookEvent;
 use kucoin_arbitrage::model::orderbook::FullOrderbook;
 use kucoin_arbitrage::strategy::all_taker_btc_usd::task_pub_chance_all_taker_btc_usd;
 use kucoin_arbitrage::translator::translator::OrderBookTranslator;
-use kucoin_rs::kucoin::{
+use kucoin_api::{
     client::{Kucoin, KucoinEnv},
     model::market::OrderBookType,
     model::websocket::{WSTopic, WSType},
@@ -29,7 +29,7 @@ fn prune_vector<T>(input_vec: Vec<T>, n: usize) -> Vec<T> {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), kucoin_rs::failure::Error> {
+async fn main() -> Result<(), kucoin_api::failure::Error> {
     // provide logging format
     kucoin_arbitrage::logger::log_init();
     log::info!("Log setup");

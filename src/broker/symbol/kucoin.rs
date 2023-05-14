@@ -1,7 +1,7 @@
 use crate::model::symbol::SymbolInfo;
 use crate::translator::translator::SymbolInfoTranslator;
-use kucoin_rs::kucoin::client::Kucoin;
-use kucoin_rs::kucoin::model::market::SymbolList;
+use kucoin_api::client::Kucoin;
+use kucoin_api::model::market::SymbolList;
 
 /// Uses the KuCoin API to generate a list of symbols
 pub async fn get_symbols(api: Kucoin) -> Vec<SymbolInfo> {

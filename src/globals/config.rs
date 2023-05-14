@@ -1,7 +1,7 @@
 extern crate lazy_static;
 use crate::model::config::Config;
 use ini::{Ini, Properties};
-use kucoin_rs::kucoin::client::Credentials;
+use kucoin_api::client::Credentials;
 use std::sync::Arc;
 
 lazy_static::lazy_static! {

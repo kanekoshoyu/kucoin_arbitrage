@@ -1,9 +1,9 @@
 /// get the Orderbook from REST API
-use kucoin_rs::kucoin::client::{Kucoin, KucoinEnv};
-use kucoin_rs::kucoin::model::market::OrderBookType;
+use kucoin_api::client::{Kucoin, KucoinEnv};
+use kucoin_api::model::market::OrderBookType;
 
 #[tokio::main]
-async fn main() -> Result<(), kucoin_rs::failure::Error> {
+async fn main() -> Result<(), kucoin_api::failure::Error> {
     // provide logging format
     kucoin_arbitrage::logger::log_init();
     log::info!("Hello world");

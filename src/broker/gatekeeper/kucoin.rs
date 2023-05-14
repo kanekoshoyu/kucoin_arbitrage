@@ -13,7 +13,7 @@ use tokio::sync::broadcast::{Receiver, Sender};
 pub async fn task_gatekeep_chances(
     mut receiver: Receiver<ChanceEvent>,
     mut _sender: Sender<OrderEvent>,
-) -> Result<(), kucoin_rs::failure::Error> {
+) -> Result<(), kucoin_api::failure::Error> {
     loop {
         let status = receiver.recv().await;
         if status.is_err() {

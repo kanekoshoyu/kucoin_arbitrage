@@ -59,7 +59,11 @@ async fn main() -> Result<(), failure::Error> {
                     continue;
                 }
                 // BTC-USDT now, check bid volume
-                if data.bid.get(&ordered_float::OrderedFloat(test_price)).is_some() {
+                if data
+                    .bid
+                    .get(&ordered_float::OrderedFloat(test_price))
+                    .is_some()
+                {
                     // price
                     log::info!("data: {:#?}", data);
                     // volume might not be equal, as they are cumulative with other previous orders

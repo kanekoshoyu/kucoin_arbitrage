@@ -46,13 +46,14 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     let symbol_infos = symbol_with_quotes(&symbol_list, "BTC", "USDT");
     let hash_symbols = Arc::new(Mutex::new(vector_to_hash(&symbol_infos)));
 
+    log::info!("Total symbols: {:?}", symbol_infos.len());
+
     // prune to smaller dataset for testing. size is 1+2N
     let symbol_infos = prune_vector(symbol_infos, 99);
     let mut symbols = Vec::new();
     for symbol_info in symbol_infos {
         symbols.push(symbol_info.symbol);
     }
-    log::info!("{symbols:#?}");
 
     // Initialize the websocket
     let mut ws = api.websocket();

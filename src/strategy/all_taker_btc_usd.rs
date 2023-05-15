@@ -1,6 +1,5 @@
 use crate::event::{chance::ChanceEvent, orderbook::OrderbookEvent};
 use crate::model::chance::{ActionInfo, TriangularArbitrageChance};
-use crate::model::order::OrderSide;
 use crate::model::orderbook::{FullOrderbook, Orderbook};
 use crate::model::symbol::SymbolInfo;
 use crate::strings::split_symbol;
@@ -60,7 +59,7 @@ pub async fn task_pub_chance_all_taker_btc_usd(
             )
         };
 
-        let mut chance = triangular_chance_sequence(
+        let chance = triangular_chance_sequence(
             info_btc_usd,
             info_eth_btc,
             info_eth_usd,
@@ -69,17 +68,11 @@ pub async fn task_pub_chance_all_taker_btc_usd(
             orderbook_eth_usd.unwrap(),
             usd_budget,
         );
-        if chance.actions[1].action.eq(&OrderSide::Buy) {
-            // bbs
-            chance.actions[0].ticker = btc_usd.clone();
-            chance.actions[1].ticker = eth_btc.clone();
-            chance.actions[2].ticker = eth_usd.clone();
-        } else {
-            // bss
-            chance.actions[0].ticker = eth_usd.clone();
-            chance.actions[1].ticker = eth_btc.clone();
-            chance.actions[2].ticker = btc_usd.clone();
+
+        if chance.is_none() {
+            continue;
         }
+        let chance = chance.unwrap();
 
         // found profitable chance
         if chance.profit > OrderedFloat(0.0) {
@@ -99,7 +92,7 @@ fn triangular_chance_sequence(
     orderbook_eth_btc: &Orderbook,
     orderbook_eth_usd: &Orderbook,
     usd_amount: f64,
-) -> TriangularArbitrageChance {
+) -> Option<TriangularArbitrageChance> {
     let (btc_usd_bid, btc_usd_bid_volume) = orderbook_btc_usd.bid.last_key_value().unwrap();
     let (eth_btc_bid, eth_btc_bid_volume) = orderbook_eth_btc.bid.last_key_value().unwrap();
     let (eth_usd_bid, eth_usd_bid_volume) = orderbook_eth_usd.bid.last_key_value().unwrap();
@@ -169,7 +162,7 @@ fn triangular_chance_sequence_f64(
     btc_usd: PairProfile,
     eth_btc: PairProfile,
     eth_usd: PairProfile,
-) -> TriangularArbitrageChance {
+) -> Option<TriangularArbitrageChance> {
     // verify the PairProfile data inputs
     // log::info!("btc_usd:\n{btc_usd:#?}");
     // log::info!("eth_btc:\n{eth_btc:#?}");
@@ -187,6 +180,9 @@ fn triangular_chance_sequence_f64(
         btc_usd.trading_increment,
         btc_usd.ask_volume,
     );
+    if 0.0 == bbs_1_btc {
+        return None;
+    }
 
     let mut bbs_2_eth = after_fee(bbs_1_btc, btc_usd.trading_fee) / eth_btc.ask;
     bbs_2_eth = adjust_amount(
@@ -195,6 +191,9 @@ fn triangular_chance_sequence_f64(
         eth_btc.trading_increment,
         eth_btc.ask_volume,
     );
+    if 0.0 == bbs_2_eth {
+        return None;
+    }
 
     let mut bbs_3_eth = after_fee(bbs_2_eth, eth_btc.trading_fee);
     bbs_3_eth = adjust_amount(
@@ -203,6 +202,9 @@ fn triangular_chance_sequence_f64(
         eth_usd.trading_increment,
         eth_usd.bid_volume,
     );
+    if 0.0 == bbs_3_eth {
+        return None;
+    }
 
     let profit_bbs =
         bbs_3_eth * eth_usd.bid - after_fee(bbs_3_eth, eth_usd.trading_fee) - usd_amount;
@@ -215,6 +217,9 @@ fn triangular_chance_sequence_f64(
         eth_usd.trading_increment,
         eth_usd.ask_volume,
     );
+    if 0.0 == bss_1_eth {
+        return None;
+    }
 
     let mut bss_2_eth = after_fee(bss_1_eth, eth_usd.trading_fee) * eth_btc.bid;
     bss_2_eth = adjust_amount(
@@ -223,6 +228,9 @@ fn triangular_chance_sequence_f64(
         eth_btc.trading_increment,
         eth_btc.bid_volume,
     );
+    if 0.0 == bss_2_eth {
+        return None;
+    }
 
     let mut bss_3_btc = after_fee(bss_2_eth, eth_btc.trading_fee);
     bss_3_btc = adjust_amount(
@@ -231,6 +239,9 @@ fn triangular_chance_sequence_f64(
         btc_usd.trading_increment,
         btc_usd.bid_volume,
     );
+    if 0.0 == bss_3_btc {
+        return None;
+    }
 
     let profit_bss =
         bss_3_btc * btc_usd.bid - after_fee(bss_3_btc, btc_usd.trading_fee) - usd_amount;
@@ -254,24 +265,48 @@ fn triangular_chance_sequence_f64(
     // return the max profit chance
     if profit_bbs >= profit_bss {
         // USD -> BTC -> ETH -> USD
-        TriangularArbitrageChance {
+        Some(TriangularArbitrageChance {
             profit: OrderedFloat(profit_bbs),
             actions: [
-                ActionInfo::buy(OrderedFloat(btc_usd.ask), OrderedFloat(bbs_1_btc)),
-                ActionInfo::buy(OrderedFloat(eth_btc.ask), OrderedFloat(bbs_2_eth)),
-                ActionInfo::sell(OrderedFloat(eth_usd.bid), OrderedFloat(bbs_3_eth)),
+                ActionInfo::buy(
+                    btc_usd.symbol,
+                    OrderedFloat(btc_usd.ask),
+                    OrderedFloat(bbs_1_btc),
+                ),
+                ActionInfo::buy(
+                    eth_btc.symbol,
+                    OrderedFloat(eth_btc.ask),
+                    OrderedFloat(bbs_2_eth),
+                ),
+                ActionInfo::sell(
+                    eth_usd.symbol,
+                    OrderedFloat(eth_usd.bid),
+                    OrderedFloat(bbs_3_eth),
+                ),
             ],
-        }
+        })
     } else {
         // USD -> ETH -> BTC -> USD
-        TriangularArbitrageChance {
+        Some(TriangularArbitrageChance {
             profit: OrderedFloat(profit_bss),
             actions: [
-                ActionInfo::buy(OrderedFloat(eth_usd.ask), OrderedFloat(bss_1_eth)),
-                ActionInfo::sell(OrderedFloat(eth_btc.bid), OrderedFloat(bss_2_eth)),
-                ActionInfo::sell(OrderedFloat(btc_usd.bid), OrderedFloat(bss_3_btc)),
+                ActionInfo::buy(
+                    eth_usd.symbol,
+                    OrderedFloat(eth_usd.ask),
+                    OrderedFloat(bss_1_eth),
+                ),
+                ActionInfo::sell(
+                    eth_btc.symbol,
+                    OrderedFloat(eth_btc.bid),
+                    OrderedFloat(bss_2_eth),
+                ),
+                ActionInfo::sell(
+                    btc_usd.symbol,
+                    OrderedFloat(btc_usd.bid),
+                    OrderedFloat(bss_3_btc),
+                ),
             ],
-        }
+        })
     }
 }
 

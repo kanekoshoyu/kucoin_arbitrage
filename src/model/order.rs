@@ -6,7 +6,6 @@ pub enum OrderSide {
     Sell,
 }
 
-
 impl AsRef<str> for OrderSide {
     fn as_ref(&self) -> &str {
         match self {

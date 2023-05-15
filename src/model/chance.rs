@@ -12,18 +12,18 @@ pub struct ActionInfo {
 }
 
 impl ActionInfo {
-    pub fn buy(price: OrderedFloat<f64>, volume: OrderedFloat<f64>) -> ActionInfo {
+    pub fn buy(ticker: String, price: OrderedFloat<f64>, volume: OrderedFloat<f64>) -> ActionInfo {
         ActionInfo {
             action: OrderSide::Buy,
-            ticker: String::new(),
+            ticker,
             price,
             volume,
         }
     }
-    pub fn sell(price: OrderedFloat<f64>, volume: OrderedFloat<f64>) -> ActionInfo {
+    pub fn sell(ticker: String, price: OrderedFloat<f64>, volume: OrderedFloat<f64>) -> ActionInfo {
         ActionInfo {
             action: OrderSide::Sell,
-            ticker: String::new(),
+            ticker,
             price,
             volume,
         }

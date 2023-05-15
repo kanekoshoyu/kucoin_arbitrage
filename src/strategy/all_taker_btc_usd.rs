@@ -39,13 +39,21 @@ pub async fn task_pub_chance_all_taker_btc_usd(
         let eth_btc = std::format!("{eth}-{btc}");
         let eth_usd = std::format!("{eth}-{usd}");
 
+        // get orderbook
         let full_orderbook = local_full_orderbook.lock().unwrap();
         let orderbook_btc_usd = (*full_orderbook).get(&btc_usd);
+        if orderbook_btc_usd.is_none() {
+            log::warn!("empty orderbook [{}]", btc_usd);
+            continue;
+        }
         let orderbook_eth_btc = (*full_orderbook).get(&eth_btc);
+        if orderbook_eth_btc.is_none() {
+            log::warn!("empty orderbook [{}]", eth_btc);
+            continue;
+        }
         let orderbook_eth_usd = (*full_orderbook).get(&eth_usd);
-        if orderbook_btc_usd.is_none() || orderbook_eth_btc.is_none() || orderbook_eth_usd.is_none()
-        {
-            log::warn!("empty orderbook");
+        if orderbook_eth_usd.is_none() {
+            log::warn!("empty orderbook [{}]", eth_usd);
             continue;
         }
 
@@ -168,8 +176,6 @@ fn triangular_chance_sequence_f64(
     // log::info!("eth_btc:\n{eth_btc:#?}");
     // log::info!("eth_usd:\n{eth_usd:#?}");
 
-    // TODO one more things things
-    // - we should check the full circle with ask_volume and bid_volume
     let usd_amount = btc_usd.quote_available;
 
     // Buy/Buy/Sell path: USD -> BTC -> ETH -> USD

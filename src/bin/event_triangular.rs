@@ -115,6 +115,6 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     log::info!("task_pub_orderevent setup");
 
     log::info!("all application tasks setup");
-    let _res = tokio::join!(kucoin_arbitrage::tasks::background_routine());
+    let _res = tokio::join!(kucoin_arbitrage::global::task::background_routine());
     panic!("Program should not arrive here")
 }

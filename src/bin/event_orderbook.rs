@@ -46,5 +46,5 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     tokio::spawn(async move { task_sync_orderbook(receiver, sender_best, full_orderbook).await });
     log::info!("task_sync_orderbook setup");
 
-    kucoin_arbitrage::tasks::background_routine().await
+    kucoin_arbitrage::global::task::background_routine().await
 }

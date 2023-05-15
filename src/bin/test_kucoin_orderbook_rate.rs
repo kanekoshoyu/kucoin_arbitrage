@@ -31,7 +31,7 @@ async fn main() -> Result<(), failure::Error> {
 
     log::info!("Async polling");
     tokio::spawn(async move { sync_tickers(ws).await });
-    kucoin_arbitrage::tasks::background_routine().await
+    kucoin_arbitrage::global::task::background_routine().await
 }
 
 async fn sync_tickers(mut ws: KucoinWebsocket) -> Result<(), failure::Error> {

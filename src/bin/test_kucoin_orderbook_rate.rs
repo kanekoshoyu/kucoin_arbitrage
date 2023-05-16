@@ -39,7 +39,7 @@ async fn sync_tickers(mut ws: KucoinWebsocket) -> Result<(), failure::Error> {
         match msg {
             KucoinWebsocketMsg::OrderBookMsg(_msg) => {
                 // TODO make counter more generic
-                kucoin_arbitrage::global::performance::increment();
+                kucoin_arbitrage::global::performance::increment().await;
             }
             KucoinWebsocketMsg::PongMsg(_) => continue,
             KucoinWebsocketMsg::WelcomeMsg(_) => continue,

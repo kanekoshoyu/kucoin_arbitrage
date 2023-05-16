@@ -5,8 +5,9 @@ use crate::model::symbol::SymbolInfo;
 use crate::strings::split_symbol;
 use ordered_float::OrderedFloat;
 use std::collections::BTreeMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use tokio::sync::broadcast::{Receiver, Sender};
+use tokio::sync::Mutex;
 
 /// Async Task to subscribe to hte websocket events, calculate chances,  
 pub async fn task_pub_chance_all_taker_btc_usd(
@@ -40,7 +41,7 @@ pub async fn task_pub_chance_all_taker_btc_usd(
         let eth_usd = std::format!("{eth}-{usd}");
 
         // get orderbook
-        let full_orderbook = local_full_orderbook.lock().unwrap();
+        let full_orderbook = local_full_orderbook.lock().await;
         let orderbook_btc_usd = (*full_orderbook).get(&btc_usd);
         if orderbook_btc_usd.is_none() {
             log::warn!("empty orderbook [{}]", btc_usd);
@@ -59,7 +60,7 @@ pub async fn task_pub_chance_all_taker_btc_usd(
 
         // clone symbol info from Arc Mutex
         let (info_btc_usd, info_eth_btc, info_eth_usd) = {
-            let symbol_map = symbol_map.lock().unwrap();
+            let symbol_map = symbol_map.lock().await;
             (
                 symbol_map.get(&btc_usd).unwrap().clone(),
                 symbol_map.get(&eth_btc).unwrap().clone(),

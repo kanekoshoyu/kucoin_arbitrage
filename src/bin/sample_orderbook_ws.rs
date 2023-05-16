@@ -46,7 +46,7 @@ async fn sync_tickers(mut ws: KucoinWebsocket) -> Result<(), failure::Error> {
                 let ticker_name = topic_to_symbol(msg.topic).expect("wrong ticker format");
                 log::info!("Ticker received: {ticker_name}");
                 log::info!("{:?}", msg.data);
-                kucoin_arbitrage::global::performance::increment();
+                kucoin_arbitrage::global::performance::increment().await;
             }
             KucoinWebsocketMsg::PongMsg(_) => continue,
             KucoinWebsocketMsg::WelcomeMsg(_) => continue,

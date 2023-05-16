@@ -14,8 +14,9 @@ use kucoin_arbitrage::event::orderbook::OrderbookEvent;
 use kucoin_arbitrage::model::orderbook::FullOrderbook;
 use kucoin_arbitrage::strategy::all_taker_btc_usd::task_pub_chance_all_taker_btc_usd;
 use kucoin_arbitrage::translator::traits::OrderBookTranslator;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use tokio::sync::broadcast::channel;
+use tokio::sync::Mutex;
 
 fn prune_vector<T>(input_vec: Vec<T>, n: usize) -> Vec<T> {
     let mut output_vec = Vec::new();
@@ -92,8 +93,9 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
 
     // use REST to obtain the initial orderbook before subscribing to websocket
     let full_orderbook_2 = full_orderbook.clone();
+
     for symbol in symbols.iter() {
-        log::info!("obtaining initial orderbook[{symbol}] from REST");
+        log::info!("btaining initial orderbook[{symbol}] from REST");
         // OrderBookType::Full fails
         let res = api
             .clone()
@@ -103,8 +105,8 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
         if let Some(data) = res.data {
             // log::info!("orderbook[{symbol}] {:#?}", data);
             log::info!("Initial sequence {}:{}", symbol, data.sequence);
-            let mut x = full_orderbook_2.lock().unwrap();
-            (*x).insert(symbol.to_string(), data.to_internal());
+            let mut x = full_orderbook_2.lock().await;
+            x.insert(symbol.to_string(), data.to_internal());
         } else {
             log::warn!("orderbook[{symbol}] received none")
         }

@@ -3,7 +3,8 @@
 */
 extern crate lazy_static;
 use crate::model::performance::Performance;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 // Arc is the smart pointer used when we want to share the ownership across async functions
 // Mutex is used when we want to ensure correctness of data with lock
@@ -12,17 +13,17 @@ lazy_static::lazy_static! {
     static ref PERFORMANCE: Arc<Mutex<Performance>> =
         Arc::new(Mutex::new(Performance { data_count: 0 }));
 }
-pub fn increment() {
-    let mut p = PERFORMANCE.lock().unwrap();
+pub async fn increment() {
+    let mut p = PERFORMANCE.lock().await;
     p.data_count += 1;
 }
 
-pub fn data_count() -> u64 {
-    let p = PERFORMANCE.lock().unwrap();
+pub async fn data_count() -> u64 {
+    let p = PERFORMANCE.lock().await;
     p.data_count
 }
 
-pub fn reset() {
-    let mut p = PERFORMANCE.lock().unwrap();
+pub async fn reset() {
+    let mut p = PERFORMANCE.lock().await;
     p.data_count = 0;
 }

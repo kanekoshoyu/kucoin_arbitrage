@@ -4,8 +4,9 @@ use kucoin_api::{
 };
 use kucoin_arbitrage::broker::orderbook::kucoin::{task_pub_orderbook_event, task_sync_orderbook};
 use kucoin_arbitrage::model::orderbook::FullOrderbook;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use tokio::sync::broadcast::channel;
+use tokio::sync::Mutex;
 
 #[tokio::main]
 async fn main() -> Result<(), kucoin_api::failure::Error> {

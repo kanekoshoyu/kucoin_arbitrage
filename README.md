@@ -25,11 +25,12 @@ cargo run --bin event_triangular
 
 ## Overview
 The project is split into these components:
-- `bin` contains example executable codes.
+###### Example Executables
+- `bin` contains example executable codes. Some of them are for network testing purpose.
 ###### Internal Structure (Independent of Exchange APIs)
-- `model` has internal generic data structures used for abstracted representations of markets. This should be generic from exchanges so that the the arbitrage algorithms can be conducted across different exchange APIs.
-- `events` has the events used to pass states and data passed across different components. This should again be generic from the exchange APIs. It uses the internal model.
-- `strategy` has the implementations of arbitrage algorithms. The algorithms should only be using internal model and events so that the strategy algorithms are cross platform. 
+- `model` has internal generic data structures used for abstracted representations of markets. This should be independent of exchange APIs so that the the arbitrage strategy algorithm can be conducted across different exchanges.
+- `event` has the events used to pass states and data passed across different components. It uses the internal model for the same reason.
+- `strategy` has the implementations of arbitrage strategy algorithm. The algorithms are built upon internal model and event. 
 - `global` has the lazy_static globals that is used across the code. This may get replaced by passing Arc/Mutex to functions soon. I just wanted the code to be simple and readable with this way first.
   
 ###### Link to Exchange APIs (e.g. KuCoin)
@@ -41,7 +42,8 @@ The project is split into these components:
 - WebSocket subscription of real-time order books to get all the latest maker/taker ask/bid
 - Only take a taker position based on the latest best-bid/ask price/size
 - Implement both data bandwidth monitor and arbitrage performance monitor as tasks
-- Abstraction and modularization of orderbook sync and arbitrage strategies using events and channel, for interoperability
+- Abstraction of orderbook sync and arbitrage strategies using internal model and event
+- Concurrency of syncing and strategy tasks
   
 ## Feature Progress List
 | Feature                                                                                            | Status    |

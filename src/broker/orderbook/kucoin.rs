@@ -21,7 +21,9 @@ pub async fn task_pub_orderbook_event(
             // log::info!("WS: {msg:#?}");
             let (str, data) = msg.data.to_internal(serial);
             let event = OrderbookEvent::OrderbookChangeReceived((str, data));
-            sender.send(event).unwrap();
+            if sender.send(event).is_err() {
+                log::error!("Orderbook event publish error, check receiver");
+            }
         } else if let KucoinWebsocketMsg::TickerMsg(msg) = msg {
             log::info!("TickerMsg: {msg:#?}")
         } else if let KucoinWebsocketMsg::OrderBookChangeMsg(msg) = msg {

@@ -44,7 +44,7 @@ pub async fn task_pub_chance_all_taker_btc_usd(
         let full_orderbook = local_full_orderbook.lock().await;
         let orderbook_btc_usd = (*full_orderbook).get(&btc_usd);
         if orderbook_btc_usd.is_none() {
-            log::warn!("empty orderbook [{}]", btc_usd);
+            log::warn!("trying to get from unregistered orderbook [{}]", btc_usd);
             continue;
         }
         let orderbook_eth_btc = (*full_orderbook).get(&eth_btc);

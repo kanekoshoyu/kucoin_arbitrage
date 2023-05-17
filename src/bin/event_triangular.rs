@@ -44,12 +44,15 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     // TODO use tokio_spawn to get the below data concurrently
     // get symbol lists
     let symbol_list = get_symbols(api.clone()).await;
+    log::info!("total exchange symbols: {:?}", symbol_list.len());
+
     let symbol_infos = symbol_with_quotes(&symbol_list, "BTC", "USDT");
     let hash_symbols = Arc::new(Mutex::new(vector_to_hash(&symbol_infos)));
 
-    log::info!("Total symbols: {:?}", symbol_infos.len());
+    log::info!("total symbols with both btc and usdt quote: {:?}", symbol_infos.len());
 
     // prune to smaller dataset for testing. size is 1+2N
+    // max subscription count is 100, thus 99 symbols here
     let symbol_infos = prune_vector(symbol_infos, 99);
     let mut symbols = Vec::new();
     for symbol_info in symbol_infos {
@@ -71,10 +74,10 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     let (tx_chance, rx_chance) = channel::<ChanceEvent>(64);
     // for placing order
     let (tx_order, rx_order) = channel::<OrderEvent>(16);
-    log::info!("broadcast channels setup");
+    log::info!("Broadcast channels setup");
 
     let full_orderbook = Arc::new(Mutex::new(FullOrderbook::new()));
-    log::info!("Local Orderbook setup");
+    log::info!("Local orderbook setup");
 
     // Infrastructure tasks
     tokio::spawn(task_sync_orderbook(
@@ -91,26 +94,33 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     tokio::spawn(task_gatekeep_chances(rx_chance, tx_order));
     tokio::spawn(task_place_order(rx_order, api.clone()));
 
+    // TODO place below in broker
     // use REST to obtain the initial orderbook before subscribing to websocket
-    let full_orderbook_2 = full_orderbook.clone();
-
-    for symbol in symbols.iter() {
-        log::info!("btaining initial orderbook[{symbol}] from REST");
-        // OrderBookType::Full fails
-        let res = api
-            .clone()
-            .get_orderbook(symbol.as_str(), OrderBookType::L100)
-            .await
-            .expect("invalid data");
-        if let Some(data) = res.data {
-            // log::info!("orderbook[{symbol}] {:#?}", data);
-            log::info!("Initial sequence {}:{}", symbol, data.sequence);
-            let mut x = full_orderbook_2.lock().await;
-            x.insert(symbol.to_string(), data.to_internal());
-        } else {
-            log::warn!("orderbook[{symbol}] received none")
-        }
-    }
+    let tasks: Vec<_> = symbols.iter().map(|symbol| {
+        // clone variables per task before spawn 
+        let api = api.clone();
+        let full_orderbook_2 = full_orderbook.clone();
+        let symbol = symbol.clone();
+    
+        tokio::spawn(async move {
+            log::info!("Obtaining initial orderbook[{}] from REST", symbol);
+            // OrderBookType::Full fails
+            let res = api
+                .get_orderbook(&symbol, OrderBookType::L100)
+                .await
+                .expect("invalid data");
+    
+            if let Some(data) = res.data {
+                log::info!("Initial sequence {}:{}",&symbol, data.sequence);
+                let mut x = full_orderbook_2.lock().await;
+                x.insert(symbol.to_string(), data.to_internal());
+            } else {
+                log::warn!("orderbook[{}] received none", &symbol);
+            }
+        })
+    }).collect();
+    futures::future::join_all(tasks).await;
+    log::info!("collected all the symbols");
 
     // task_pub_orderevent is the source of data (websocket)
     tokio::spawn(task_pub_orderbook_event(ws, tx_orderbook));

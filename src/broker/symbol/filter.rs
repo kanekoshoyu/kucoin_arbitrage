@@ -18,6 +18,7 @@ pub fn symbol_with_quotes(symbols: &Vec<SymbolInfo>, btc: &str, usd: &str) -> Ve
     let mut base_map: BTreeMap<String, (Option<SymbolInfo>, Option<SymbolInfo>)> = BTreeMap::new();
 
     for symbol in symbols {
+        // check symbol.quote
         if symbol.quote != *btc && symbol.quote != *usd {
             continue;
         }
@@ -25,9 +26,10 @@ pub fn symbol_with_quotes(symbols: &Vec<SymbolInfo>, btc: &str, usd: &str) -> Ve
         if symbol.quote == *btc {
             // btc
             entry.0 = Some(symbol.clone());
-        }
-        // usd
-        entry.1 = Some(symbol.clone());
+        } else if symbol.quote == *usd{
+            // usd
+            entry.1 = Some(symbol.clone());            
+        } 
     }
 
     let mut result = Vec::new();

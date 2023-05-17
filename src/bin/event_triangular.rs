@@ -49,7 +49,10 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     let symbol_infos = symbol_with_quotes(&symbol_list, "BTC", "USDT");
     let hash_symbols = Arc::new(Mutex::new(vector_to_hash(&symbol_infos)));
 
-    log::info!("total symbols with both btc and usdt quote: {:?}", symbol_infos.len());
+    log::info!(
+        "total symbols with both btc and usdt quote: {:?}",
+        symbol_infos.len()
+    );
 
     // prune to smaller dataset for testing. size is 1+2N
     // max subscription count is 100, thus 99 symbols here
@@ -96,29 +99,32 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
 
     // TODO place below in broker
     // use REST to obtain the initial orderbook before subscribing to websocket
-    let tasks: Vec<_> = symbols.iter().map(|symbol| {
-        // clone variables per task before spawn 
-        let api = api.clone();
-        let full_orderbook_2 = full_orderbook.clone();
-        let symbol = symbol.clone();
-    
-        tokio::spawn(async move {
-            log::info!("Obtaining initial orderbook[{}] from REST", symbol);
-            // OrderBookType::Full fails
-            let res = api
-                .get_orderbook(&symbol, OrderBookType::L100)
-                .await
-                .expect("invalid data");
-    
-            if let Some(data) = res.data {
-                log::info!("Initial sequence {}:{}",&symbol, data.sequence);
-                let mut x = full_orderbook_2.lock().await;
-                x.insert(symbol.to_string(), data.to_internal());
-            } else {
-                log::warn!("orderbook[{}] received none", &symbol);
-            }
+    let tasks: Vec<_> = symbols
+        .iter()
+        .map(|symbol| {
+            // clone variables per task before spawn
+            let api = api.clone();
+            let full_orderbook_2 = full_orderbook.clone();
+            let symbol = symbol.clone();
+
+            tokio::spawn(async move {
+                log::info!("Obtaining initial orderbook[{}] from REST", symbol);
+                // OrderBookType::Full fails
+                let res = api
+                    .get_orderbook(&symbol, OrderBookType::L100)
+                    .await
+                    .expect("invalid data");
+
+                if let Some(data) = res.data {
+                    log::info!("Initial sequence {}:{}", &symbol, data.sequence);
+                    let mut x = full_orderbook_2.lock().await;
+                    x.insert(symbol.to_string(), data.to_internal());
+                } else {
+                    log::warn!("orderbook[{}] received none", &symbol);
+                }
+            })
         })
-    }).collect();
+        .collect();
     futures::future::join_all(tasks).await;
     log::info!("collected all the symbols");
 

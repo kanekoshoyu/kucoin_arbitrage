@@ -26,10 +26,10 @@ pub fn symbol_with_quotes(symbols: &Vec<SymbolInfo>, btc: &str, usd: &str) -> Ve
         if symbol.quote == *btc {
             // btc
             entry.0 = Some(symbol.clone());
-        } else if symbol.quote == *usd{
+        } else if symbol.quote == *usd {
             // usd
-            entry.1 = Some(symbol.clone());            
-        } 
+            entry.1 = Some(symbol.clone());
+        }
     }
 
     let mut result = Vec::new();

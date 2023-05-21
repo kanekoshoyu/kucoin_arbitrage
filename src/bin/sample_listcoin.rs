@@ -1,6 +1,6 @@
+use kucoin_api::client::{Kucoin, KucoinEnv};
 /// Get the Symbol list, and blacklist a few weird looking ones
 use kucoin_arbitrage::broker::symbol::{filter::symbol_with_quotes, kucoin::get_symbols};
-use kucoin_api::client::{Kucoin, KucoinEnv};
 
 #[tokio::main]
 async fn main() -> Result<(), kucoin_api::failure::Error> {
@@ -9,7 +9,7 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     log::info!("Hello world");
 
     // set credentials
-    let credentials = kucoin_arbitrage::globals::config::credentials();
+    let credentials = kucoin_arbitrage::global::config::credentials();
     let api = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
 
     // get symbol lists
@@ -21,5 +21,5 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     }
     log::info!("size: {:?}", res.len());
 
-    return Ok(());
+    Ok(())
 }

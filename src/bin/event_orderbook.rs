@@ -1,11 +1,12 @@
-use kucoin_arbitrage::broker::orderbook::kucoin::{task_pub_orderbook_event, task_sync_orderbook};
-use kucoin_arbitrage::model::orderbook::FullOrderbook;
 use kucoin_api::{
     client::{Kucoin, KucoinEnv},
     model::websocket::{WSTopic, WSType},
 };
-use std::sync::{Arc, Mutex};
+use kucoin_arbitrage::broker::orderbook::kucoin::{task_pub_orderbook_event, task_sync_orderbook};
+use kucoin_arbitrage::model::orderbook::FullOrderbook;
+use std::sync::Arc;
 use tokio::sync::broadcast::channel;
+use tokio::sync::Mutex;
 
 #[tokio::main]
 async fn main() -> Result<(), kucoin_api::failure::Error> {
@@ -14,7 +15,7 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     log::info!("Log setup");
 
     // credentials
-    let credentials = kucoin_arbitrage::globals::config::credentials();
+    let credentials = kucoin_arbitrage::global::config::credentials();
     let api = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
     let url = api.get_socket_endpoint(WSType::Public).await?;
     log::info!("Credentials setup");
@@ -46,5 +47,5 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     tokio::spawn(async move { task_sync_orderbook(receiver, sender_best, full_orderbook).await });
     log::info!("task_sync_orderbook setup");
 
-    kucoin_arbitrage::tasks::background_routine().await
+    kucoin_arbitrage::global::task::background_routine().await
 }

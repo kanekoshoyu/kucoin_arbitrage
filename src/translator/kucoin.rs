@@ -3,11 +3,11 @@
 */
 
 use crate::model as internal_model;
-use crate::translator::translator;
+use crate::translator::traits;
 use kucoin_api::model as kucoin_api_model;
 use ordered_float::OrderedFloat;
 
-impl translator::OrderBookTranslator for kucoin_api_model::market::OrderBook {
+impl traits::OrderBookTranslator for kucoin_api_model::market::OrderBook {
     fn to_internal(&self) -> internal_model::orderbook::Orderbook {
         let parse_err_msg = "Failed to parse input";
         let sequence = self.sequence.parse::<u64>().unwrap();
@@ -28,7 +28,7 @@ impl translator::OrderBookTranslator for kucoin_api_model::market::OrderBook {
     }
 }
 
-impl translator::OrderBookChangeTranslator for kucoin_api_model::websocket::Level2 {
+impl traits::OrderBookChangeTranslator for kucoin_api_model::websocket::Level2 {
     fn to_internal(&self, last_serial: u64) -> (String, internal_model::orderbook::Orderbook) {
         // return Orderbook::new();
         let mut ask = internal_model::orderbook::PVMap::new();
@@ -51,7 +51,7 @@ impl translator::OrderBookChangeTranslator for kucoin_api_model::websocket::Leve
                 bid.insert(price, volume);
             }
         }
-        let sequence = self.sequence_end.clone() as u64;
+        let sequence = self.sequence_end as u64;
         (
             self.symbol.clone(),
             internal_model::orderbook::Orderbook { ask, bid, sequence },
@@ -59,7 +59,7 @@ impl translator::OrderBookChangeTranslator for kucoin_api_model::websocket::Leve
     }
 }
 
-impl translator::SymbolInfoTranslator for kucoin_api_model::market::SymbolList {
+impl traits::SymbolInfoTranslator for kucoin_api_model::market::SymbolList {
     fn to_internal(&self) -> internal_model::symbol::SymbolInfo {
         internal_model::symbol::SymbolInfo {
             symbol: self.symbol.clone(),

@@ -2,14 +2,14 @@
 /// place extreme order, receive extreme order, check time difference
 extern crate kucoin_api;
 use chrono::prelude::Local;
-use kucoin_arbitrage::model::order::OrderSide;
-use kucoin_arbitrage::translator::translator::OrderBookChangeTranslator;
 use kucoin_api::failure;
 use kucoin_api::futures::TryStreamExt;
 use kucoin_api::{
     client::{Kucoin, KucoinEnv},
     model::websocket::{KucoinWebsocketMsg, WSTopic, WSType},
 };
+use kucoin_arbitrage::model::order::OrderSide;
+use kucoin_arbitrage::translator::traits::OrderBookChangeTranslator;
 use uuid::Uuid;
 
 /// main function
@@ -18,7 +18,7 @@ async fn main() -> Result<(), failure::Error> {
     // provide logging format
     kucoin_arbitrage::logger::log_init();
     log::info!("Testing Kucoin REST-to-WS latency");
-    let credentials = kucoin_arbitrage::globals::config::credentials();
+    let credentials = kucoin_arbitrage::global::config::credentials();
     log::info!("{credentials:#?}");
     // Initialize the Kucoin API struct
     let api = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
@@ -59,7 +59,11 @@ async fn main() -> Result<(), failure::Error> {
                     continue;
                 }
                 // BTC-USDT now, check bid volume
-                if let Some(_) = data.bid.get(&ordered_float::OrderedFloat(test_price)) {
+                if data
+                    .bid
+                    .get(&ordered_float::OrderedFloat(test_price))
+                    .is_some()
+                {
                     // price
                     log::info!("data: {:#?}", data);
                     // volume might not be equal, as they are cumulative with other previous orders

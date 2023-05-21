@@ -10,7 +10,7 @@ pub fn symbol_with_quote(symbols: &Vec<SymbolInfo>, quote: &str) -> Vec<SymbolIn
             result.push(symbol.clone());
         }
     }
-    return result;
+    result
 }
 
 /// Filter the symbol list with a base that has both BTC and USDT as the quote currency
@@ -18,6 +18,7 @@ pub fn symbol_with_quotes(symbols: &Vec<SymbolInfo>, btc: &str, usd: &str) -> Ve
     let mut base_map: BTreeMap<String, (Option<SymbolInfo>, Option<SymbolInfo>)> = BTreeMap::new();
 
     for symbol in symbols {
+        // check symbol.quote
         if symbol.quote != *btc && symbol.quote != *usd {
             continue;
         }
@@ -25,9 +26,10 @@ pub fn symbol_with_quotes(symbols: &Vec<SymbolInfo>, btc: &str, usd: &str) -> Ve
         if symbol.quote == *btc {
             // btc
             entry.0 = Some(symbol.clone());
+        } else if symbol.quote == *usd {
+            // usd
+            entry.1 = Some(symbol.clone());
         }
-        // usd
-        entry.1 = Some(symbol.clone());
     }
 
     let mut result = Vec::new();
@@ -51,5 +53,5 @@ pub fn vector_to_hash(symbols: &Vec<SymbolInfo>) -> BTreeMap<String, SymbolInfo>
     for symbol in symbols {
         result.insert(symbol.symbol.clone(), symbol.clone());
     }
-    return result;
+    result
 }

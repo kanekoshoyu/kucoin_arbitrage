@@ -9,7 +9,7 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     log::info!("Hello world");
 
     // credentials
-    let credentials = kucoin_arbitrage::globals::config::credentials();
+    let credentials = kucoin_arbitrage::global::config::credentials();
     let api = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
 
     let symbol_name = "BTC-USDT";
@@ -20,5 +20,5 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
         log::info!("failed obtaining the proper data")
     }
 
-    return Ok(());
+    Ok(())
 }

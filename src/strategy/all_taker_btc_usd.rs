@@ -23,7 +23,7 @@ pub async fn task_pub_chance_all_taker_btc_usd(
     loop {
         let event = receiver.recv().await?;
         // log::info!("received orderbook_update");
-        let eth: Option<String> = match event {
+        let alt: Option<String> = match event {
             OrderbookEvent::OrderbookChangeReceived((symbol, _delta)) => {
                 if symbol == btc_usd {
                     continue;
@@ -36,9 +36,9 @@ pub async fn task_pub_chance_all_taker_btc_usd(
                 continue;
             }
         };
-        let eth = eth.unwrap();
-        let eth_btc = std::format!("{eth}-{btc}");
-        let eth_usd = std::format!("{eth}-{usd}");
+        let alt = alt.unwrap();
+        let alt_btc = std::format!("{alt}-{btc}");
+        let alt_usd = std::format!("{alt}-{usd}");
 
         // get orderbook
         let full_orderbook = local_full_orderbook.lock().await;
@@ -47,34 +47,34 @@ pub async fn task_pub_chance_all_taker_btc_usd(
             log::warn!("trying to get from unregistered orderbook [{}]", btc_usd);
             continue;
         }
-        let orderbook_eth_btc = (*full_orderbook).get(&eth_btc);
-        if orderbook_eth_btc.is_none() {
-            log::warn!("empty orderbook [{}]", eth_btc);
+        let orderbook_alt_btc = (*full_orderbook).get(&alt_btc);
+        if orderbook_alt_btc.is_none() {
+            log::warn!("trying to get from unregistered orderbook {}]", alt_btc);
             continue;
         }
-        let orderbook_eth_usd = (*full_orderbook).get(&eth_usd);
-        if orderbook_eth_usd.is_none() {
-            log::warn!("empty orderbook [{}]", eth_usd);
+        let orderbook_alt_usd = (*full_orderbook).get(&alt_usd);
+        if orderbook_alt_usd.is_none() {
+            log::warn!("trying to get from unregistered orderbook [{}]", alt_usd);
             continue;
         }
 
         // clone symbol info from Arc Mutex
-        let (info_btc_usd, info_eth_btc, info_eth_usd) = {
+        let (info_btc_usd, info_alt_btc, info_alt_usd) = {
             let symbol_map = symbol_map.lock().await;
             (
                 symbol_map.get(&btc_usd).unwrap().clone(),
-                symbol_map.get(&eth_btc).unwrap().clone(),
-                symbol_map.get(&eth_usd).unwrap().clone(),
+                symbol_map.get(&alt_btc).unwrap().clone(),
+                symbol_map.get(&alt_usd).unwrap().clone(),
             )
         };
 
         let chance = triangular_chance_sequence(
             info_btc_usd,
-            info_eth_btc,
-            info_eth_usd,
+            info_alt_btc,
+            info_alt_usd,
             orderbook_btc_usd.unwrap(),
-            orderbook_eth_btc.unwrap(),
-            orderbook_eth_usd.unwrap(),
+            orderbook_alt_btc.unwrap(),
+            orderbook_alt_usd.unwrap(),
             usd_budget,
         );
 
@@ -95,19 +95,22 @@ pub async fn task_pub_chance_all_taker_btc_usd(
 
 fn triangular_chance_sequence(
     info_btc_usd: SymbolInfo,
-    info_eth_btc: SymbolInfo,
-    info_eth_usd: SymbolInfo,
+    info_alt_btc: SymbolInfo,
+    info_alt_usd: SymbolInfo,
     orderbook_btc_usd: &Orderbook,
-    orderbook_eth_btc: &Orderbook,
-    orderbook_eth_usd: &Orderbook,
+    orderbook_alt_btc: &Orderbook,
+    orderbook_alt_usd: &Orderbook,
     usd_amount: f64,
 ) -> Option<TriangularArbitrageChance> {
-    let (btc_usd_bid, btc_usd_bid_volume) = orderbook_btc_usd.bid.last_key_value().unwrap();
-    let (eth_btc_bid, eth_btc_bid_volume) = orderbook_eth_btc.bid.last_key_value().unwrap();
-    let (eth_usd_bid, eth_usd_bid_volume) = orderbook_eth_usd.bid.last_key_value().unwrap();
+    // log::info!("TSC: {}", info_alt_btc.base);
+    // get the least ask
     let (btc_usd_ask, btc_usd_ask_volume) = orderbook_btc_usd.ask.first_key_value().unwrap();
-    let (eth_btc_ask, eth_btc_ask_volume) = orderbook_eth_btc.ask.first_key_value().unwrap();
-    let (eth_usd_ask, eth_usd_ask_volume) = orderbook_eth_usd.ask.first_key_value().unwrap();
+    let (alt_btc_ask, alt_btc_ask_volume) = orderbook_alt_btc.ask.first_key_value().unwrap();
+    let (alt_usd_ask, alt_usd_ask_volume) = orderbook_alt_usd.ask.first_key_value().unwrap();
+    // get the largest bid
+    let (btc_usd_bid, btc_usd_bid_volume) = orderbook_btc_usd.bid.last_key_value().unwrap();
+    let (alt_btc_bid, alt_btc_bid_volume) = orderbook_alt_btc.bid.last_key_value().unwrap();
+    let (alt_usd_bid, alt_usd_bid_volume) = orderbook_alt_usd.bid.last_key_value().unwrap();
 
     // This should be obtained from the API
     let trading_fee = 0.001;
@@ -119,202 +122,184 @@ fn triangular_chance_sequence(
             ask_volume: btc_usd_ask_volume.into_inner(),
             bid: btc_usd_bid.into_inner(),
             bid_volume: btc_usd_bid_volume.into_inner(),
-            quote_available: usd_amount,
             trading_min: *info_btc_usd.base_min,
             trading_increment: *info_btc_usd.base_increment,
             trading_fee,
         },
         PairProfile {
-            symbol: info_eth_btc.symbol,
-            ask: eth_btc_ask.into_inner(),
-            ask_volume: eth_btc_ask_volume.into_inner(),
-            bid: eth_btc_bid.into_inner(),
-            bid_volume: eth_btc_bid_volume.into_inner(),
-            quote_available: 0.0,
-            trading_min: *info_eth_btc.base_min,
-            trading_increment: *info_eth_btc.base_increment,
+            symbol: info_alt_btc.symbol,
+            ask: alt_btc_ask.into_inner(),
+            ask_volume: alt_btc_ask_volume.into_inner(),
+            bid: alt_btc_bid.into_inner(),
+            bid_volume: alt_btc_bid_volume.into_inner(),
+            trading_min: *info_alt_btc.base_min,
+            trading_increment: *info_alt_btc.base_increment,
             trading_fee,
         },
         PairProfile {
-            symbol: info_eth_usd.symbol,
-            ask: eth_usd_ask.into_inner(),
-            ask_volume: eth_usd_ask_volume.into_inner(),
-            bid: eth_usd_bid.into_inner(),
-            bid_volume: eth_usd_bid_volume.into_inner(),
-            quote_available: 0.0,
-            trading_min: *info_eth_usd.base_min,
-            trading_increment: *info_eth_usd.base_increment,
+            symbol: info_alt_usd.symbol,
+            ask: alt_usd_ask.into_inner(),
+            ask_volume: alt_usd_ask_volume.into_inner(),
+            bid: alt_usd_bid.into_inner(),
+            bid_volume: alt_usd_bid_volume.into_inner(),
+            trading_min: *info_alt_usd.base_min,
+            trading_increment: *info_alt_usd.base_increment,
             trading_fee,
         },
+        usd_amount,
     )
 }
 
 // Struct for easier parsing of the pair
 #[derive(Debug)]
-struct PairProfile {
-    symbol: String,
-    ask: f64,
-    ask_volume: f64,
-    bid: f64,
-    bid_volume: f64,
-    // amount of USD in BTC/USD
-    quote_available: f64,
-    trading_min: f64,
-    trading_increment: f64,
-    trading_fee: f64,
+pub struct PairProfile {
+    pub symbol: String,
+    pub ask: f64,
+    pub ask_volume: f64,
+    pub bid: f64,
+    pub bid_volume: f64,
+    pub trading_min: f64,
+    pub trading_increment: f64,
+    pub trading_fee: f64,
+}
+
+// TODO add more test cases to verify the below functions
+
+/// amount to order (for API use), and amount to obtain (for next use) at best ask
+/// ```
+/// use kucoin_arbitrage::strategy::all_taker_btc_usd::{buy, PairProfile};
+/// let btc_usd = PairProfile { symbol: "BTC-USDT".to_string(), ask: 26875.0, ask_volume: 0.89357531, bid: 26874.9, bid_volume: 2.44038719, trading_min: 1e-5, trading_increment: 1e-8, trading_fee: 0.001 };
+/// let (btc_order, btc_bought) = buy(&btc_usd, 10.0);
+/// assert_eq!(btc_order, 0.00037209);
+/// assert_eq!(btc_bought, 0.00037171791);
+/// ```
+pub fn buy(profile: &PairProfile, quote_amount: f64) -> (f64, f64) {
+    // adjust base for order (after trade at ask, order in base currency)
+    let base_amount = adjust_amount(
+        quote_amount / profile.ask,
+        profile.trading_min,
+        profile.trading_increment,
+        profile.ask_volume,
+    );
+    // return both the trade amount as well as the amount to obtain
+    (base_amount, base_amount * (1.0 - profile.trading_fee))
+}
+
+/// amount to order (for API use), and amount to obtain (for next use) as best bid
+/// ```
+/// use kucoin_arbitrage::strategy::all_taker_btc_usd::{sell, PairProfile};
+/// let btc_usd = PairProfile { symbol: "BTC-USDT".to_string(), ask: 26875.0, ask_volume: 0.89357531, bid: 26874.9, bid_volume: 2.44038719, trading_min: 1e-5, trading_increment: 1e-8, trading_fee: 0.001 };
+/// let (btc_order, btc_bought) = sell(&btc_usd, 0.0004);
+/// assert_eq!(btc_order, 0.0004);
+/// assert_eq!(btc_bought, 10.739210040000001);
+/// ```
+pub fn sell(profile: &PairProfile, base_amount: f64) -> (f64, f64) {
+    // adjust base for order (before trade at bid, order in base currency)
+    let base_amount = adjust_amount(
+        base_amount,
+        profile.trading_min,
+        profile.trading_increment,
+        profile.bid_volume,
+    );
+    // return both the trade amount as well as the amount to obtain
+    let quote_amount = base_amount * profile.bid;
+    (base_amount, quote_amount * (1.0 - profile.trading_fee))
 }
 
 /// internal chance function, stripped down for doctest
 /// >>> triangular_chance_sequence_f64()
-///
 fn triangular_chance_sequence_f64(
     btc_usd: PairProfile,
-    eth_btc: PairProfile,
-    eth_usd: PairProfile,
+    alt_btc: PairProfile,
+    alt_usd: PairProfile,
+    usd_amount: f64,
 ) -> Option<TriangularArbitrageChance> {
-    // verify the PairProfile data inputs
-    // log::info!("btc_usd:\n{btc_usd:#?}");
-    // log::info!("eth_btc:\n{eth_btc:#?}");
-    // log::info!("eth_usd:\n{eth_usd:#?}");
-
-    let usd_amount = btc_usd.quote_available;
-
-    // Buy/Buy/Sell path: USD -> BTC -> ETH -> USD
-    let mut bbs_1_btc = usd_amount / btc_usd.ask;
-    bbs_1_btc = adjust_amount(
-        bbs_1_btc,
-        btc_usd.trading_min,
-        btc_usd.trading_increment,
-        btc_usd.ask_volume,
-    );
-    if 0.0 == bbs_1_btc {
-        return None;
-    }
-
-    let mut bbs_2_eth = after_fee(bbs_1_btc, btc_usd.trading_fee) / eth_btc.ask;
-    bbs_2_eth = adjust_amount(
-        bbs_2_eth,
-        eth_btc.trading_min,
-        eth_btc.trading_increment,
-        eth_btc.ask_volume,
-    );
-    if 0.0 == bbs_2_eth {
-        return None;
-    }
-
-    let mut bbs_3_eth = after_fee(bbs_2_eth, eth_btc.trading_fee);
-    bbs_3_eth = adjust_amount(
-        bbs_3_eth,
-        eth_usd.trading_min,
-        eth_usd.trading_increment,
-        eth_usd.bid_volume,
-    );
-    if 0.0 == bbs_3_eth {
-        return None;
-    }
-
-    let profit_bbs =
-        bbs_3_eth * eth_usd.bid - after_fee(bbs_3_eth, eth_usd.trading_fee) - usd_amount;
-
-    // Buy/Sell/Sell path: USD -> ETH -> BTC -> USD
-    let mut bss_1_eth = usd_amount / eth_usd.ask;
-    bss_1_eth = adjust_amount(
-        bss_1_eth,
-        eth_usd.trading_min,
-        eth_usd.trading_increment,
-        eth_usd.ask_volume,
-    );
-    if 0.0 == bss_1_eth {
-        return None;
-    }
-
-    let mut bss_2_eth = after_fee(bss_1_eth, eth_usd.trading_fee) * eth_btc.bid;
-    bss_2_eth = adjust_amount(
-        bss_2_eth,
-        eth_btc.trading_min,
-        eth_btc.trading_increment,
-        eth_btc.bid_volume,
-    );
-    if 0.0 == bss_2_eth {
-        return None;
-    }
-
-    let mut bss_3_btc = after_fee(bss_2_eth, eth_btc.trading_fee);
-    bss_3_btc = adjust_amount(
-        bss_3_btc,
-        btc_usd.trading_min,
-        btc_usd.trading_increment,
-        btc_usd.bid_volume,
-    );
-    if 0.0 == bss_3_btc {
-        return None;
-    }
-
-    let profit_bss =
-        bss_3_btc * btc_usd.bid - after_fee(bss_3_btc, btc_usd.trading_fee) - usd_amount;
-
-    // print profits
     log::info!(
-        "{},{},{} [BBS]: {}",
+        "Analysing {:?},{:?},{:?}",
         btc_usd.symbol,
-        eth_btc.symbol,
-        eth_usd.symbol,
-        profit_bbs
+        alt_btc.symbol,
+        alt_usd.symbol
     );
-    log::info!(
-        "{},{},{} [BSS]: {}",
-        eth_usd.symbol,
-        eth_btc.symbol,
-        btc_usd.symbol,
-        profit_bss
-    );
+    log::info!("Analysing {:?}", btc_usd);
+    log::info!("Analysing {:?}", alt_btc);
+    log::info!("Analysing {:?}", alt_usd);
 
-    // return the max profit chance
-    if profit_bbs >= profit_bss {
-        // USD -> BTC -> ETH -> USD
-        Some(TriangularArbitrageChance {
-            profit: OrderedFloat(profit_bbs),
+    // Buy/Buy/Sell path: USD -> BTC -> ALT -> USD
+    let (bbs_b_btc_amount, bbs_btc_bought) = buy(&btc_usd, usd_amount);
+    let (bbs_b_alt_amount, bbs_alt_bought) = buy(&alt_btc, bbs_btc_bought);
+    let (bbs_s_alt_amount, bbs_usd_bought) = sell(&alt_usd, bbs_alt_bought);
+    // BBS proft
+    let bbs_profit: f64 = bbs_usd_bought - usd_amount;
+
+    // Buy/Sell/Sell path: USD -> ALT -> BTC -> USD
+    let (bss_b_alt_amount, bss_alt_bought) = buy(&alt_usd, usd_amount);
+    let (bss_s_alt_amount, bss_btc_bought) = sell(&alt_btc, bss_alt_bought);
+    let (bss_s_btc_amount, bss_usd_bought) = sell(&btc_usd, bss_btc_bought);
+    // BSS proft
+    let bss_profit: f64 = bss_usd_bought - usd_amount;
+
+    // print profits for debugging purpose
+    // log::info!(
+    //     "{},{},{} [BBS]: {}",
+    //     btc_usd.symbol,
+    //     alt_btc.symbol,
+    //     alt_usd.symbol,
+    //     bss_profit
+    // );
+    // log::info!(
+    //     "{},{},{} [BSS]: {}",
+    //     alt_usd.symbol,
+    //     alt_btc.symbol,
+    //     btc_usd.symbol,
+    //     bss_profit
+    // );
+
+    if bbs_profit > 0.0 && bbs_profit > bss_profit {
+        return Some(TriangularArbitrageChance {
+            profit: OrderedFloat(bbs_profit),
             actions: [
                 ActionInfo::buy(
                     btc_usd.symbol,
                     OrderedFloat(btc_usd.ask),
-                    OrderedFloat(bbs_1_btc),
+                    OrderedFloat(bbs_b_btc_amount),
                 ),
                 ActionInfo::buy(
-                    eth_btc.symbol,
-                    OrderedFloat(eth_btc.ask),
-                    OrderedFloat(bbs_2_eth),
+                    alt_btc.symbol,
+                    OrderedFloat(alt_btc.ask),
+                    OrderedFloat(bbs_b_alt_amount),
                 ),
                 ActionInfo::sell(
-                    eth_usd.symbol,
-                    OrderedFloat(eth_usd.bid),
-                    OrderedFloat(bbs_3_eth),
+                    alt_usd.symbol,
+                    OrderedFloat(alt_usd.bid),
+                    OrderedFloat(bbs_s_alt_amount),
                 ),
             ],
-        })
-    } else {
-        // USD -> ETH -> BTC -> USD
-        Some(TriangularArbitrageChance {
-            profit: OrderedFloat(profit_bss),
+        });
+    }
+
+    if bss_profit > 0.0 && bss_profit > bbs_profit {
+        return Some(TriangularArbitrageChance {
+            profit: OrderedFloat(bss_profit),
             actions: [
                 ActionInfo::buy(
-                    eth_usd.symbol,
-                    OrderedFloat(eth_usd.ask),
-                    OrderedFloat(bss_1_eth),
+                    alt_usd.symbol,
+                    OrderedFloat(alt_usd.ask),
+                    OrderedFloat(bss_b_alt_amount),
                 ),
                 ActionInfo::sell(
-                    eth_btc.symbol,
-                    OrderedFloat(eth_btc.bid),
-                    OrderedFloat(bss_2_eth),
+                    alt_btc.symbol,
+                    OrderedFloat(alt_btc.bid),
+                    OrderedFloat(bss_s_alt_amount),
                 ),
                 ActionInfo::sell(
                     btc_usd.symbol,
                     OrderedFloat(btc_usd.bid),
-                    OrderedFloat(bss_3_btc),
+                    OrderedFloat(bss_s_btc_amount),
                 ),
             ],
-        })
+        });
     }
+    None
 }
 
 /// rounds the trade volume based on mimimum, increment and the avaiable volume
@@ -339,8 +324,4 @@ pub fn adjust_amount(amount: f64, minimum: f64, increment: f64, available: f64) 
     } else {
         available
     }
-}
-
-fn after_fee(amount: f64, fee: f64) -> f64 {
-    amount - amount * fee
 }

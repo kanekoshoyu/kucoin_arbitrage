@@ -1,7 +1,7 @@
 # Event-Driven KuCoin Triangular Arbitrage Framework in Async Rust
 [![](https://img.shields.io/crates/v/kucoin-arbitrage)](https://crates.io/crates/kucoin-arbitrage)
+[![](https://img.shields.io/docsrs/kucoin_arbitrage)](https://docs.rs/kucoin_arbitrage)
 [![](https://img.shields.io/github/license/kanekoshoyu/kucoin_arbitrage)](https://github.com/kanekoshoyu/kucoin_arbitrage/blob/master/LICENSE)
-
 This is an async Rust project to implement zero-risk crypto trinagular arbitrage, explore technical feasiblity of generating passsive income (i.e. sleep to earn!).  
 ## How the arbitrage works
 Say we hold USDT, it checks all the coins(e.g. ETH) that can trade against BTC and USDT, and compare the profit by either:  

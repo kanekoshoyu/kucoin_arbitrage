@@ -11,7 +11,7 @@ license = "MIT"
 [dependencies]
 kucoin_api = "1.4.6"
 log = "0.4"
-fern = "0.6.0"
+fern = "0.6.2"
 chrono = "0.4"
 env_logger = "0.10.0"
 rust-ini = "0.18"

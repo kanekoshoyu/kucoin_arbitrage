@@ -18,17 +18,6 @@ use std::sync::Arc;
 use tokio::sync::broadcast::channel;
 use tokio::sync::Mutex;
 
-fn prune_vector<T>(input_vec: Vec<T>, n: usize) -> Vec<T> {
-    let mut output_vec = Vec::new();
-    for (index, value) in input_vec.into_iter().enumerate() {
-        if index >= n {
-            break;
-        }
-        output_vec.push(value);
-    }
-    output_vec
-}
-
 #[tokio::main]
 async fn main() -> Result<(), kucoin_api::failure::Error> {
     // provide logging format
@@ -41,11 +30,11 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     let url = api.clone().get_socket_endpoint(WSType::Public).await?;
     log::info!("Credentials setup");
 
-    // TODO use tokio_spawn to get the below data concurrently
-    // get symbol lists
+    // get all symbols concurrently
     let symbol_list = get_symbols(api.clone()).await;
     log::info!("total exchange symbols: {:?}", symbol_list.len());
 
+    // filter with either btc or usdt as quote
     let symbol_infos = symbol_with_quotes(&symbol_list, "BTC", "USDT");
     let hash_symbols = Arc::new(Mutex::new(vector_to_hash(&symbol_infos)));
 
@@ -54,17 +43,49 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
         symbol_infos.len()
     );
 
-    // prune to smaller dataset for testing. size is 1+2N
-    // max subscription count is 100, thus 99 symbols here
-    let symbol_infos = prune_vector(symbol_infos, 99);
+    // extract the names
     let mut symbols = Vec::new();
-    for symbol_info in symbol_infos {
+    for symbol_info in symbol_infos.clone() {
         symbols.push(symbol_info.symbol);
     }
 
+    // setup 2D array of max length 100
+    let max_sub_count = 100;
+    let mut divided_array: Vec<Vec<String>> = Vec::new();
+    let mut current_subarray: Vec<String> = Vec::new();
+
+    // feed into the 2D array
+    for symbol in symbols.clone() {
+        current_subarray.push(symbol);
+        // 99 for the first one, because of the special BTC-USDT
+        if divided_array.is_empty() && current_subarray.len() == max_sub_count - 1 {
+            divided_array.push(current_subarray);
+            current_subarray = Vec::new();
+            continue;
+        }
+        // otherwise 100
+        if current_subarray.len() == max_sub_count {
+            divided_array.push(current_subarray);
+            current_subarray = Vec::new();
+        }
+    }
+
+    // last array in current_subarray
+    if !current_subarray.is_empty() {
+        divided_array.push(current_subarray);
+    }
+
+    let mut subs: Vec<WSTopic> = Vec::new();
+    for sub_array in divided_array {
+        subs.push(WSTopic::OrderBook(sub_array));
+        if subs.len() == 3 {
+            break;
+        }
+    }
+    log::info!("subs.len(): {:?}", subs.len());
+
     // Initialize the websocket
     let mut ws = api.websocket();
-    let subs = vec![WSTopic::OrderBook(symbols.to_vec())];
     ws.subscribe(url, subs).await?;
     log::info!("Websocket subscription setup");
 

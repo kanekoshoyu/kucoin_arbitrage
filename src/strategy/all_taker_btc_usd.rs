@@ -12,14 +12,14 @@ use tokio::sync::Mutex;
 /// Async Task to subscribe to hte websocket events, calculate chances,  
 pub async fn task_pub_chance_all_taker_btc_usd(
     mut receiver: Receiver<OrderbookEvent>,
-    _sender: Sender<ChanceEvent>,
+    sender: Sender<ChanceEvent>,
     local_full_orderbook: Arc<Mutex<FullOrderbook>>,
     symbol_map: Arc<Mutex<BTreeMap<String, SymbolInfo>>>,
 ) -> Result<(), kucoin_api::failure::Error> {
     let btc = String::from("BTC");
     let usd = String::from("USDT");
     let btc_usd = std::format!("{btc}-{usd}");
-    let usd_budget = 10.0;
+    let usd_budget = 100.0;
     loop {
         let event = receiver.recv().await?;
         // log::info!("received orderbook_update");
@@ -85,10 +85,7 @@ pub async fn task_pub_chance_all_taker_btc_usd(
 
         // found profitable chance
         if chance.profit > OrderedFloat(0.0) {
-            log::info!("profit: {}", chance.profit.into_inner());
-            log::info!("full_orderbook: \n{:#?}", (*full_orderbook));
-            log::info!("chance \n{chance:#?}");
-            panic!()
+            sender.send(ChanceEvent::AllTaker(chance)).unwrap();
         }
     }
 }
@@ -214,16 +211,13 @@ fn triangular_chance_sequence_f64(
     alt_usd: PairProfile,
     usd_amount: f64,
 ) -> Option<TriangularArbitrageChance> {
-    log::info!(
-        "Analysing {:?},{:?},{:?}",
-        btc_usd.symbol,
-        alt_btc.symbol,
-        alt_usd.symbol
-    );
-    log::info!("Analysing {:?}", btc_usd);
-    log::info!("Analysing {:?}", alt_btc);
-    log::info!("Analysing {:?}", alt_usd);
-
+    // log::info!(
+    //     "Analysing {:?},{:?},{:?}",
+    //     btc_usd.symbol,
+    //     alt_btc.symbol,
+    //     alt_usd.symbol
+    // );
+    
     // Buy/Buy/Sell path: USD -> BTC -> ALT -> USD
     let (bbs_b_btc_amount, bbs_btc_bought) = buy(&btc_usd, usd_amount);
     let (bbs_b_alt_amount, bbs_alt_bought) = buy(&alt_btc, bbs_btc_bought);

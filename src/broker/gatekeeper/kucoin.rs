@@ -17,13 +17,17 @@ pub async fn task_gatekeep_chances(
     loop {
         let status = receiver.recv().await;
         if status.is_err() {
+            log::error!("task_gatekeep_chances error {:?}", status.err().unwrap());
             continue;
-            // TODO return the error as we want here
-            // panic!("{:?}", status.err());
         }
         let event = status.unwrap();
         match event {
-            ChanceEvent::AllTaker(_actions) => {}
+            ChanceEvent::AllTaker(actions) => {
+                log::info!("All Taker Chance found!\n{actions:?}");
+                // TODO conduct profit maximization here
+
+                // TODO push to order manager
+            }
             ChanceEvent::MakerTakerTaker(_actions) => {}
         }
     }

@@ -64,21 +64,27 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
         divided_array.push(current_subarray);
     }
 
-    let mut subs: Vec<WSTopic> = Vec::new();
+    let mut subs: Vec<Vec<WSTopic>> = Vec::new();
+    let mut sub: Vec<WSTopic> = Vec::new();
     for sub_array in divided_array {
-        subs.push(WSTopic::OrderBook(sub_array));
-        if subs.len() == 3 {
-            break;
+        sub.push(WSTopic::OrderBook(sub_array));
+        if sub.len() == 3 {
+            subs.push(sub);
+            sub = Vec::new();
         }
     }
+
     log::info!("subs.len(): {:?}", subs.len());
 
     // Initialize the websocket
     let mut ws = api.websocket();
-    ws.subscribe(url, subs).await?;
+    let mut ws2 = api.websocket();
+    ws.subscribe(url.clone(), subs[0].clone()).await?;
+    ws2.subscribe(url.clone(), subs[1].clone()).await?;
     log::info!("Websocket subscription setup");
 
     tokio::spawn(async move { sync_tickers(ws).await });
+    tokio::spawn(async move { sync_tickers(ws2).await });
     kucoin_arbitrage::global::task::background_routine().await
 }
 
@@ -86,8 +92,12 @@ async fn sync_tickers(mut ws: KucoinWebsocket) -> Result<(), kucoin_api::failure
     while let Some(msg) = ws.try_next().await? {
         // add matches for multi-subscribed sockets handling
         match msg {
-            KucoinWebsocketMsg::PongMsg(_) => continue,
-            KucoinWebsocketMsg::WelcomeMsg(_) => continue,
+            KucoinWebsocketMsg::PongMsg(_) => {
+                log::info!("Connection maintained")
+            },
+            KucoinWebsocketMsg::WelcomeMsg(_) => {
+                log::info!("Connection setup")
+            },
             KucoinWebsocketMsg::OrderBookMsg(msg) => {
                 let _ = msg.data;
                 kucoin_arbitrage::global::performance::increment().await;

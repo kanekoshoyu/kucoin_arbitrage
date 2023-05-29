@@ -31,7 +31,7 @@ pub fn log_init() {
         .level(log::LevelFilter::Info)
         .chain(fern::log_file(filename).unwrap());
 
-    // TODO add color to the terminal upon the release of fern 0.7 
+    // TODO add color to the terminal upon the release of fern 0.7
     console_logger
         .chain(file_logger)
         .apply()

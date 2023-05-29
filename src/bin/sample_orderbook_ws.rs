@@ -7,6 +7,7 @@ use kucoin_api::{
 };
 use kucoin_arbitrage::broker::symbol::filter::symbol_with_quotes;
 use kucoin_arbitrage::broker::symbol::kucoin::get_symbols;
+use kucoin_arbitrage::model::symbol::SymbolInfo;
 
 #[tokio::main]
 async fn main() -> Result<(), kucoin_api::failure::Error> {
@@ -22,69 +23,24 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
 
     // get all symbols concurrently
     let symbol_list = get_symbols(api.clone()).await;
-    log::info!("total exchange symbols: {:?}", symbol_list.len());
+    log::info!("Total exchange symbols: {:?}", symbol_list.len());
 
     // filter with either btc or usdt as quote
     let symbol_infos = symbol_with_quotes(&symbol_list, "BTC", "USDT");
+    log::info!("Total symbols in scope: {:?}", symbol_infos.len());
 
-    log::info!(
-        "total symbols with both btc and usdt quote: {:?}",
-        symbol_infos.len()
-    );
+    // change a list of SymbolInfo into a 2D list of WSTopic per session in max 100 index
+    let subs = format_subscription_list(&symbol_infos);
+    log::info!("Total orderbook WS sessions: {:?}", subs.len());
 
-    // extract the names
-    let mut symbols = Vec::new();
-    for symbol_info in symbol_infos.clone() {
-        symbols.push(symbol_info.symbol);
+    // setup subscription and tasks per session
+    for (i, sub) in subs.iter().enumerate() {
+        let mut ws = api.websocket();
+        ws.subscribe(url.clone(), sub.clone()).await?;
+        tokio::spawn(async move { sync_tickers(ws).await });
+        log::info!("{i:?}-th session of WS subscription setup");
     }
 
-    // setup 2D array of max length 100
-    let max_sub_count = 100;
-    let mut divided_array: Vec<Vec<String>> = Vec::new();
-    let mut current_subarray: Vec<String> = Vec::new();
-
-    // feed into the 2D array
-    for symbol in symbols {
-        current_subarray.push(symbol);
-        // 99 for the first one, because of the special BTC-USDT
-        if divided_array.is_empty() && current_subarray.len() == max_sub_count - 1 {
-            divided_array.push(current_subarray);
-            current_subarray = Vec::new();
-            continue;
-        }
-        // otherwise 100
-        if current_subarray.len() == max_sub_count {
-            divided_array.push(current_subarray);
-            current_subarray = Vec::new();
-        }
-    }
-
-    // last array in current_subarray
-    if !current_subarray.is_empty() {
-        divided_array.push(current_subarray);
-    }
-
-    let mut subs: Vec<Vec<WSTopic>> = Vec::new();
-    let mut sub: Vec<WSTopic> = Vec::new();
-    for sub_array in divided_array {
-        sub.push(WSTopic::OrderBook(sub_array));
-        if sub.len() == 3 {
-            subs.push(sub);
-            sub = Vec::new();
-        }
-    }
-
-    log::info!("subs.len(): {:?}", subs.len());
-
-    // Initialize the websocket
-    let mut ws = api.websocket();
-    let mut ws2 = api.websocket();
-    ws.subscribe(url.clone(), subs[0].clone()).await?;
-    ws2.subscribe(url.clone(), subs[1].clone()).await?;
-    log::info!("Websocket subscription setup");
-
-    tokio::spawn(async move { sync_tickers(ws).await });
-    tokio::spawn(async move { sync_tickers(ws2).await });
     kucoin_arbitrage::global::task::background_routine().await
 }
 
@@ -94,10 +50,10 @@ async fn sync_tickers(mut ws: KucoinWebsocket) -> Result<(), kucoin_api::failure
         match msg {
             KucoinWebsocketMsg::PongMsg(_) => {
                 log::info!("Connection maintained")
-            },
+            }
             KucoinWebsocketMsg::WelcomeMsg(_) => {
                 log::info!("Connection setup")
-            },
+            }
             KucoinWebsocketMsg::OrderBookMsg(msg) => {
                 let _ = msg.data;
                 kucoin_arbitrage::global::performance::increment().await;
@@ -108,4 +64,47 @@ async fn sync_tickers(mut ws: KucoinWebsocket) -> Result<(), kucoin_api::failure
         }
     }
     Ok(())
+}
+
+// TODO this bridges between API and the internal model, it should be placed in broker
+fn format_subscription_list(infos: &Vec<SymbolInfo>) -> Vec<Vec<WSTopic>> {
+    // extract the names
+    let symbols: Vec<String> = infos.into_iter().map(|info| info.symbol.clone()).collect();
+
+    // setup 2D array of max length 100
+    let max_sub_count = 100;
+    let mut hundred_arrays: Vec<Vec<String>> = Vec::new();
+    let mut hundred_array: Vec<String> = Vec::new();
+
+    // feed into the 2D array
+    for symbol in symbols {
+        hundred_array.push(symbol);
+        // 99 for the first one, because of the special BTC-USDT
+        if hundred_arrays.is_empty() && hundred_array.len() == max_sub_count - 1 {
+            hundred_arrays.push(hundred_array);
+            hundred_array = Vec::new();
+            continue;
+        }
+        // otherwise 100
+        if hundred_array.len() == max_sub_count {
+            hundred_arrays.push(hundred_array);
+            hundred_array = Vec::new();
+        }
+    }
+
+    // last array in current_subarray
+    if !hundred_array.is_empty() {
+        hundred_arrays.push(hundred_array);
+    }
+
+    let mut subs: Vec<Vec<WSTopic>> = Vec::new();
+    let mut sub: Vec<WSTopic> = Vec::new();
+    for sub_array in hundred_arrays {
+        sub.push(WSTopic::OrderBook(sub_array));
+        if sub.len() == 3 {
+            subs.push(sub);
+            sub = Vec::new();
+        }
+    }
+    subs
 }

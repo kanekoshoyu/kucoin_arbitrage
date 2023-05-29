@@ -217,7 +217,7 @@ fn triangular_chance_sequence_f64(
     //     alt_btc.symbol,
     //     alt_usd.symbol
     // );
-    
+
     // Buy/Buy/Sell path: USD -> BTC -> ALT -> USD
     let (bbs_b_btc_amount, bbs_btc_bought) = buy(&btc_usd, usd_amount);
     let (bbs_b_alt_amount, bbs_alt_bought) = buy(&alt_btc, bbs_btc_bought);

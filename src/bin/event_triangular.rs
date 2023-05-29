@@ -122,9 +122,9 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
 }
 
 // TODO this bridges between API and the internal model, it should be placed in broker
-fn format_subscription_list(infos: &Vec<SymbolInfo>) -> Vec<Vec<WSTopic>> {
+fn format_subscription_list(infos: &[SymbolInfo]) -> Vec<Vec<WSTopic>> {
     // extract the names
-    let symbols: Vec<String> = infos.into_iter().map(|info| info.symbol.clone()).collect();
+    let symbols: Vec<String> = infos.iter().map(|info| info.symbol.clone()).collect();
     // setup 2D array of max length 100
     let max_sub_count = 100;
     let mut hundred_arrays: Vec<Vec<String>> = Vec::new();

@@ -48,14 +48,18 @@ impl Orderbook {
         }
     }
 
+    /// Merges another Orderbook, returns Orderbook when there is increase in the best price (i.e. lowest ask or highest bid)
     pub fn merge(&mut self, to_merge: Orderbook) -> Result<Option<Orderbook>, String> {
-        let to_merge_clone = to_merge.clone();
+        let to_merge_clone = to_merge.to_owned();
 
         // log::info!("to_merge: {to_merge_clone:?}");
         let zero = 0.0;
-        let min_ask = self.ask.first_key_value().unwrap().0.to_owned();
-        let max_bid = self.bid.last_key_value().unwrap().0.to_owned();
 
+        // clone the best ask/bid
+        let best_ask = self.ask.first_key_value().unwrap();
+        let (min_ask, min_ask_volume) = (best_ask.0.to_owned(), best_ask.1.to_owned());
+        let best_bid = self.bid.last_key_value().unwrap();
+        let (max_bid, max_bid_volume) = (best_bid.0.to_owned(), best_bid.1.to_owned());
         if self.sequence > to_merge.sequence {
             // This happen in the beginning when older orderbook in websocket is received after REST
             return Err(std::format!(
@@ -67,8 +71,8 @@ impl Orderbook {
         // make sure that to_merge's PVMaps are already filtered such that
         // it is all behind the starting sequence
         self.sequence = to_merge.sequence;
-        // return the value when to_merge is the best (i.e. lowest ask or highest bid)
-        // TODO find breaking record here
+
+        // merge BTreeMap with insert
         for (price, volume) in to_merge.ask.into_iter() {
             if volume.eq(&zero) {
                 if self.ask.remove(&price).is_none() {
@@ -88,13 +92,22 @@ impl Orderbook {
             self.bid.insert(price, volume);
         }
 
-        if let Some((merge_min_ask, _)) = to_merge_clone.ask.first_key_value() {
-            if *merge_min_ask <= min_ask {
+        // if best ask exists in merge
+        if let Some((&merge_min_ask, &merge_min_ask_volume)) = to_merge_clone.ask.first_key_value()
+        {
+            // either the merge has lower ask, or merge has same ask but increased in volume
+            if merge_min_ask < min_ask
+                || merge_min_ask == min_ask && merge_min_ask_volume > min_ask_volume
+            {
                 return Ok(Some(to_merge_clone));
             }
         }
-        if let Some((merge_max_bid, _)) = to_merge_clone.bid.last_key_value() {
-            if *merge_max_bid >= max_bid {
+        // if best bid exists in merge
+        if let Some((&merge_max_bid, &merge_max_bid_volume)) = to_merge_clone.bid.last_key_value() {
+            // either the merge has higher bid, or merge has same bid but increased in volume
+            if merge_max_bid > max_bid
+                || merge_max_bid == max_bid && merge_max_bid_volume > max_bid_volume
+            {
                 return Ok(Some(to_merge_clone));
             }
         }

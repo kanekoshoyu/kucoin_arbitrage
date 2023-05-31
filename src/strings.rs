@@ -31,5 +31,5 @@ pub fn split_symbol(symbol: String) -> Option<(String, String)> {
         .split(delimiter)
         .map(|s| s.trim().to_string())
         .collect();
-    Some((substrings[0].clone(), substrings[1].clone()))
+    Some((substrings[0].to_owned(), substrings[1].to_owned()))
 }

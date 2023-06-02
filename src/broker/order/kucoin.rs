@@ -39,6 +39,7 @@ pub async fn task_place_order(
                 // }
             }
             OrderEvent::PostOrder(order) => {
+                log::info!("order placement\n{order:?}");
                 if let Err(e) = kucoin
                     .post_limit_order(
                         order.id().to_string().as_str(),

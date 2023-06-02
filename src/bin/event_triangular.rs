@@ -48,7 +48,7 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     // for syncing
     let (tx_orderbook, rx_orderbook) = channel::<OrderbookEvent>(1024 * 2);
     // for getting notable orderbook after syncing
-    let (tx_orderbook_best, rx_orderbook_best) = channel::<OrderbookEvent>(1024);
+    let (tx_orderbook_best, rx_orderbook_best) = channel::<OrderbookEvent>(512);
     // for getting chance
     let (tx_chance, rx_chance) = channel::<ChanceEvent>(64);
     // for placing order

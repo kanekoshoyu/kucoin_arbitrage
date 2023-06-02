@@ -1,3 +1,4 @@
+/// Config parameters, direct representation of config.ini
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Config {
     pub monitor_interval_sec: u64,

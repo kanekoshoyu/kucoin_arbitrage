@@ -1,7 +1,12 @@
+use std::sync::Arc;
+
 use crate::event::order::OrderEvent;
+use crate::global::performance;
+use crate::model::counter::Counter;
 use crate::model::order::LimitOrder;
 use crate::{event::chance::ChanceEvent, model::order::OrderType};
 use tokio::sync::broadcast::{Receiver, Sender};
+use tokio::sync::Mutex;
 
 // TODO implement when all_taker_btc_usdt is done
 
@@ -14,10 +19,11 @@ use tokio::sync::broadcast::{Receiver, Sender};
 pub async fn task_gatekeep_chances(
     mut receiver: Receiver<ChanceEvent>,
     sender: Sender<OrderEvent>,
+    counter: Arc<Mutex<Counter>>,
 ) -> Result<(), kucoin_api::failure::Error> {
     let mut serial: u128 = 0;
-
     loop {
+        performance::increment(counter.clone()).await;
         let status = receiver.recv().await;
         if status.is_err() {
             log::error!("task_gatekeep_chances error {:?}", status.err().unwrap());

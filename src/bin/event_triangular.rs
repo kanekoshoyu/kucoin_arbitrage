@@ -11,6 +11,7 @@ use kucoin_arbitrage::broker::symbol::kucoin::get_symbols;
 use kucoin_arbitrage::event::chance::ChanceEvent;
 use kucoin_arbitrage::event::order::OrderEvent;
 use kucoin_arbitrage::event::orderbook::OrderbookEvent;
+use kucoin_arbitrage::model::counter::Counter;
 use kucoin_arbitrage::model::orderbook::FullOrderbook;
 use kucoin_arbitrage::model::symbol::SymbolInfo;
 use kucoin_arbitrage::strategy::all_taker_btc_usd::task_pub_chance_all_taker_btc_usd;
@@ -24,6 +25,12 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     // provide logging format
     kucoin_arbitrage::logger::log_init();
     log::info!("Log setup");
+
+    // declare all the system counters
+    let api_input_counter = Arc::new(Mutex::new(Counter::new("api_input")));
+    let best_price_counter = Arc::new(Mutex::new(Counter::new("best_price")));
+    let chance_counter = Arc::new(Mutex::new(Counter::new("chance")));
+    let order_counter = Arc::new(Mutex::new(Counter::new("order")));
 
     // credentials
     let credentials = kucoin_arbitrage::global::config::credentials();
@@ -63,15 +70,25 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
         rx_orderbook,
         tx_orderbook_best,
         full_orderbook.clone(),
+        api_input_counter.clone(),
     ));
     tokio::spawn(task_pub_chance_all_taker_btc_usd(
         rx_orderbook_best,
         tx_chance,
         full_orderbook.clone(),
         hash_symbols,
+        best_price_counter.clone(),
     ));
-    tokio::spawn(task_gatekeep_chances(rx_chance, tx_order));
-    tokio::spawn(task_place_order(rx_order, api.clone()));
+    tokio::spawn(task_gatekeep_chances(
+        rx_chance,
+        tx_order,
+        chance_counter.clone(),
+    ));
+    tokio::spawn(task_place_order(
+        rx_order,
+        api.clone(),
+        order_counter.clone(),
+    ));
 
     // extract the names only
     let symbols: Vec<String> = symbol_infos.into_iter().map(|info| info.symbol).collect();
@@ -105,7 +122,7 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
         })
         .collect();
     futures::future::join_all(tasks).await;
-    log::info!("collected all the symbols");
+    log::info!("Collected all the symbols");
 
     // setup subscription and tasks per session, this is the source of data
     for (i, sub) in subs.iter().enumerate() {
@@ -116,8 +133,13 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
         log::info!("{i:?}-th session of WS subscription setup");
     }
 
-    log::info!("all application tasks setup");
-    let _res = tokio::join!(kucoin_arbitrage::global::task::background_routine());
+    log::info!("All application tasks setup");
+    let _ = tokio::join!(kucoin_arbitrage::global::task::background_routine(vec![
+        api_input_counter.clone(),
+        best_price_counter.clone(),
+        chance_counter.clone(),
+        order_counter.clone()
+    ]));
     panic!("Program should not arrive here")
 }
 

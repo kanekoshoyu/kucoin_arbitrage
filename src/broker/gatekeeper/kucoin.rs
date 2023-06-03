@@ -36,9 +36,9 @@ pub async fn task_gatekeep_chances(
                 // TODO conduct profit maximization here
                 // set up a sized queue here with a timer and a order monitor
                 // if timeout, close order with market price
-                // TODO push to order manager
-
-                for i in 0..2 {
+                // chance.profit
+                // i is [0, 1, 2]
+                for i in 0..3 {
                     let order: LimitOrder = LimitOrder {
                         id: serial,
                         order_type: OrderType::Limit,

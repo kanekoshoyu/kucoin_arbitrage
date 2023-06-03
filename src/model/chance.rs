@@ -46,15 +46,16 @@ impl std::fmt::Debug for ActionInfo {
 // sequence in ascending order
 pub type ThreeActions = [ActionInfo; 3];
 
-/// structure of of arbitrage chances
+/// Structure of triangular arbitrage chances
+/// profit: USD profit in OrderedFloat for ease of comparison
+/// actions: 3 sequence of Actions
 #[derive(Debug, Clone, Default, Eq)]
 pub struct TriangularArbitrageChance {
     pub profit: OrderedFloat<f64>,
     pub actions: ThreeActions,
 }
 
-// TODO implement order for TriangularArbitrageChance, using profit
-
+/// Orders chances with its profit
 impl Ord for TriangularArbitrageChance {
     fn cmp(&self, other: &Self) -> Ordering {
         self.profit.cmp(&other.profit)

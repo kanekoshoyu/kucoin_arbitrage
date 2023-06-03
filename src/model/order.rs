@@ -1,5 +1,5 @@
+/// Order placement selector, default set as "Sell" for security
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
-// Order placement selector, default set as "Sell" for security
 pub enum OrderSide {
     Buy,
     #[default]

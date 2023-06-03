@@ -1,5 +1,6 @@
 use kucoin_api::{
     client::{Kucoin, KucoinEnv},
+    error::APIError,
     model::market::OrderBookType,
     model::websocket::{WSTopic, WSType},
 };
@@ -105,11 +106,15 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
 
             tokio::spawn(async move {
                 log::info!("Obtaining initial orderbook[{}] from REST", symbol);
-                // OrderBookType::Full fails
-                let res = api
-                    .get_orderbook(&symbol, OrderBookType::L100)
-                    .await
-                    .expect("invalid data");
+
+                // repeatedly get orderbook until verified pass
+                let mut res = Err(APIError::Other("Not read".to_string()));
+                while res.is_err() {
+                    // OrderBookType::Full fails
+                    log::info!("Obtaining initial orderbook[{}] from REST", symbol);
+                    res = api.get_orderbook(&symbol, OrderBookType::L100).await;
+                }
+                let res = res.unwrap();
 
                 if let Some(data) = res.data {
                     log::info!("Initial sequence {}:{}", &symbol, data.sequence);

@@ -1,6 +1,12 @@
-use crate::event::chance::ChanceEvent;
+use std::sync::Arc;
+
 use crate::event::order::OrderEvent;
+use crate::global::counter_helper;
+use crate::model::counter::Counter;
+use crate::model::order::LimitOrder;
+use crate::{event::chance::ChanceEvent, model::order::OrderType};
 use tokio::sync::broadcast::{Receiver, Sender};
+use tokio::sync::Mutex;
 
 // TODO implement when all_taker_btc_usdt is done
 
@@ -12,21 +18,38 @@ use tokio::sync::broadcast::{Receiver, Sender};
 /// - 200 active order at once
 pub async fn task_gatekeep_chances(
     mut receiver: Receiver<ChanceEvent>,
-    mut _sender: Sender<OrderEvent>,
+    sender: Sender<OrderEvent>,
+    counter: Arc<Mutex<Counter>>,
 ) -> Result<(), kucoin_api::failure::Error> {
+    let mut serial: u128 = 0;
     loop {
+        counter_helper::increment(counter.clone()).await;
         let status = receiver.recv().await;
         if status.is_err() {
             log::error!("task_gatekeep_chances error {:?}", status.err().unwrap());
             continue;
         }
-        let event = status.unwrap();
+        let event: ChanceEvent = status.unwrap();
         match event {
-            ChanceEvent::AllTaker(actions) => {
-                log::info!("All Taker Chance found!\n{actions:?}");
+            ChanceEvent::AllTaker(chance) => {
+                log::info!("All Taker Chance found!\n{chance:?}");
                 // TODO conduct profit maximization here
-
-                // TODO push to order manager
+                // set up a sized queue here with a timer and a order monitor
+                // if timeout, close order with market price
+                // chance.profit
+                // i is [0, 1, 2]
+                for i in 0..3 {
+                    let order: LimitOrder = LimitOrder {
+                        id: serial,
+                        order_type: OrderType::Limit,
+                        side: chance.actions[i].action,
+                        symbol: chance.actions[i].ticker.clone(),
+                        amount: chance.actions[i].volume.to_string(),
+                        price: chance.actions[i].price.to_string(),
+                    };
+                    serial += 1;
+                    sender.send(OrderEvent::PostOrder(order)).unwrap();
+                }
             }
             ChanceEvent::MakerTakerTaker(_actions) => {}
         }

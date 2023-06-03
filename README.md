@@ -52,8 +52,9 @@ The project is split into these components:
 | Look for arbitrage chance based on best ask/bid price and calculate the profit in percentage       | Available |
 | Copy and sync local orderbook in real-time                                                         | Available |
 | Structurally allow multiple strategies to run in pararrel                                          | Available |
-| Execute on the arbitrage                                                                           | Pending   |
-| Resort against trade execution that could not complete as anticipated                              | Pending   |
+| Order placement upon triangular arbitrage chance                                                   | Available |
+| Resort against limit order that could not get filled                                               | Pending   |
+| Full triangular arbitrage with the middle coin other than BTC (e.g. ETH-USD, ALT-ETH, ALT-USD)     | Pending   |
 
   
 ## To-dos

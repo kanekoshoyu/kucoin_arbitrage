@@ -1,5 +1,7 @@
 use crate::event::{chance::ChanceEvent, orderbook::OrderbookEvent};
+use crate::global::counter_helper;
 use crate::model::chance::{ActionInfo, TriangularArbitrageChance};
+use crate::model::counter::Counter;
 use crate::model::orderbook::{FullOrderbook, Orderbook};
 use crate::model::symbol::SymbolInfo;
 use crate::strings::split_symbol;
@@ -15,12 +17,14 @@ pub async fn task_pub_chance_all_taker_btc_usd(
     sender: Sender<ChanceEvent>,
     local_full_orderbook: Arc<Mutex<FullOrderbook>>,
     symbol_map: Arc<Mutex<BTreeMap<String, SymbolInfo>>>,
+    counter: Arc<Mutex<Counter>>,
 ) -> Result<(), kucoin_api::failure::Error> {
     let btc = String::from("BTC");
     let usd = String::from("USDT");
     let btc_usd = std::format!("{btc}-{usd}");
     let usd_budget = 100.0;
     loop {
+        counter_helper::increment(counter.clone()).await;
         let event = receiver.recv().await?;
         // log::info!("received orderbook_update");
         let alt: Option<String> = match event {
@@ -204,50 +208,27 @@ pub fn sell(profile: &PairProfile, base_amount: f64) -> (f64, f64) {
 }
 
 /// internal chance function, stripped down for doctest
-/// >>> triangular_chance_sequence_f64()
 fn triangular_chance_sequence_f64(
     btc_usd: PairProfile,
     alt_btc: PairProfile,
     alt_usd: PairProfile,
     usd_amount: f64,
 ) -> Option<TriangularArbitrageChance> {
-    // log::info!(
-    //     "Analysing {:?},{:?},{:?}",
-    //     btc_usd.symbol,
-    //     alt_btc.symbol,
-    //     alt_usd.symbol
-    // );
-
     // Buy/Buy/Sell path: USD -> BTC -> ALT -> USD
     let (bbs_b_btc_amount, bbs_btc_bought) = buy(&btc_usd, usd_amount);
     let (bbs_b_alt_amount, bbs_alt_bought) = buy(&alt_btc, bbs_btc_bought);
     let (bbs_s_alt_amount, bbs_usd_bought) = sell(&alt_usd, bbs_alt_bought);
-    // BBS proft
+    // BBS proft (USD)
     let bbs_profit: f64 = bbs_usd_bought - usd_amount;
 
     // Buy/Sell/Sell path: USD -> ALT -> BTC -> USD
     let (bss_b_alt_amount, bss_alt_bought) = buy(&alt_usd, usd_amount);
     let (bss_s_alt_amount, bss_btc_bought) = sell(&alt_btc, bss_alt_bought);
     let (bss_s_btc_amount, bss_usd_bought) = sell(&btc_usd, bss_btc_bought);
-    // BSS proft
+    // BSS proft (USD)
     let bss_profit: f64 = bss_usd_bought - usd_amount;
 
-    // print profits for debugging purpose
-    // log::info!(
-    //     "{},{},{} [BBS]: {}",
-    //     btc_usd.symbol,
-    //     alt_btc.symbol,
-    //     alt_usd.symbol,
-    //     bss_profit
-    // );
-    // log::info!(
-    //     "{},{},{} [BSS]: {}",
-    //     alt_usd.symbol,
-    //     alt_btc.symbol,
-    //     btc_usd.symbol,
-    //     bss_profit
-    // );
-
+    // return BBS
     if bbs_profit > 0.0 && bbs_profit > bss_profit {
         return Some(TriangularArbitrageChance {
             profit: OrderedFloat(bbs_profit),
@@ -271,6 +252,7 @@ fn triangular_chance_sequence_f64(
         });
     }
 
+    // return BSS
     if bss_profit > 0.0 && bss_profit > bbs_profit {
         return Some(TriangularArbitrageChance {
             profit: OrderedFloat(bss_profit),
@@ -293,6 +275,8 @@ fn triangular_chance_sequence_f64(
             ],
         });
     }
+
+    // No profit
     None
 }
 

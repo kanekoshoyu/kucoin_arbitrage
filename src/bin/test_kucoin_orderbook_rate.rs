@@ -8,12 +8,17 @@ use kucoin_api::{
     model::websocket::{KucoinWebsocketMsg, WSTopic, WSType},
     websocket::KucoinWebsocket,
 };
+use kucoin_arbitrage::global::counter_helper;
+use kucoin_arbitrage::model::counter::Counter;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 /// main function
 #[tokio::main]
 async fn main() -> Result<(), failure::Error> {
     // provide logging format
     kucoin_arbitrage::logger::log_init();
+    let counter = Arc::new(Mutex::new(Counter::new("api_input")));
     log::info!("Testing Kucoin WS Message Rate");
     let credentials = kucoin_arbitrage::global::config::credentials();
     log::info!("{credentials:#?}");
@@ -30,16 +35,22 @@ async fn main() -> Result<(), failure::Error> {
     ws.subscribe(url, subs).await?;
 
     log::info!("Async polling");
-    tokio::spawn(async move { sync_tickers(ws).await });
-    kucoin_arbitrage::global::task::background_routine().await
+    tokio::spawn(sync_tickers(ws, counter.clone()));
+    let _res = tokio::join!(kucoin_arbitrage::global::task::background_routine(vec![
+        counter.clone()
+    ]));
+    panic!("Program should not arrive here")
 }
 
-async fn sync_tickers(mut ws: KucoinWebsocket) -> Result<(), failure::Error> {
+async fn sync_tickers(
+    mut ws: KucoinWebsocket,
+    counter: Arc<Mutex<Counter>>,
+) -> Result<(), failure::Error> {
     while let Some(msg) = ws.try_next().await? {
         match msg {
             KucoinWebsocketMsg::OrderBookMsg(_msg) => {
                 // TODO make counter more generic
-                kucoin_arbitrage::global::performance::increment().await;
+                counter_helper::reset(counter.clone()).await;
             }
             KucoinWebsocketMsg::PongMsg(_) => continue,
             KucoinWebsocketMsg::WelcomeMsg(_) => continue,

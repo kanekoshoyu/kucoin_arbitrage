@@ -1,5 +1,5 @@
+/// Order placement selector, default set as "Sell" for security
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
-// Order placement selector, default set as "Sell" for security
 pub enum OrderSide {
     Buy,
     #[default]
@@ -81,12 +81,12 @@ impl Order for MarketOrder {
 
 #[derive(Debug, Clone)]
 pub struct LimitOrder {
-    id: u128,
-    order_type: OrderType,
-    side: OrderSide,
-    symbol: String,
-    amount: String,
-    price: String,
+    pub id: u128,
+    pub order_type: OrderType,
+    pub side: OrderSide,
+    pub symbol: String,
+    pub amount: String,
+    pub price: String,
 }
 
 impl Order for LimitOrder {

@@ -7,13 +7,17 @@ use kucoin_api::{
 };
 use kucoin_arbitrage::broker::symbol::filter::symbol_with_quotes;
 use kucoin_arbitrage::broker::symbol::kucoin::get_symbols;
+use kucoin_arbitrage::model::counter::Counter;
 use kucoin_arbitrage::model::symbol::SymbolInfo;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 #[tokio::main]
 async fn main() -> Result<(), kucoin_api::failure::Error> {
     // provide logging format
     kucoin_arbitrage::logger::log_init();
     log::info!("Log setup");
+    let counter = Arc::new(Mutex::new(Counter::new("api_input")));
 
     // credentials
     let credentials = kucoin_arbitrage::global::config::credentials();
@@ -37,14 +41,19 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     for (i, sub) in subs.iter().enumerate() {
         let mut ws = api.websocket();
         ws.subscribe(url.clone(), sub.clone()).await?;
-        tokio::spawn(async move { sync_tickers(ws).await });
+        tokio::spawn(sync_tickers(ws, counter.clone()));
         log::info!("{i:?}-th session of WS subscription setup");
     }
-
-    kucoin_arbitrage::global::task::background_routine().await
+    let _res = tokio::join!(kucoin_arbitrage::global::task::background_routine(vec![
+        counter.clone(),
+    ]));
+    panic!("Program should not arrive here")
 }
 
-async fn sync_tickers(mut ws: KucoinWebsocket) -> Result<(), kucoin_api::failure::Error> {
+async fn sync_tickers(
+    mut ws: KucoinWebsocket,
+    counter: Arc<Mutex<Counter>>,
+) -> Result<(), kucoin_api::failure::Error> {
     while let Some(msg) = ws.try_next().await? {
         // add matches for multi-subscribed sockets handling
         match msg {
@@ -56,7 +65,7 @@ async fn sync_tickers(mut ws: KucoinWebsocket) -> Result<(), kucoin_api::failure
             }
             KucoinWebsocketMsg::OrderBookMsg(msg) => {
                 let _ = msg.data;
-                kucoin_arbitrage::global::performance::increment().await;
+                kucoin_arbitrage::global::counter_helper::increment(counter.clone()).await;
             }
             _ => {
                 panic!("unexpected msgs received: {msg:?}")

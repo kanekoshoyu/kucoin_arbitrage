@@ -1,5 +1,6 @@
 use crate::event::orderbook::OrderbookEvent;
-use crate::global::performance;
+use crate::global::counter_helper;
+use crate::model::counter::Counter;
 use crate::model::orderbook::FullOrderbook;
 use crate::translator::traits::OrderBookChangeTranslator;
 use kucoin_api::futures::TryStreamExt;
@@ -9,7 +10,7 @@ use tokio::sync::broadcast::{Receiver, Sender};
 use tokio::sync::Mutex;
 //TODO implement the internal trade order task in kucoin
 
-/// Task to puiblish orderbook events from websocket api output
+/// Task to publish orderbook events from websocket api output
 pub async fn task_pub_orderbook_event(
     mut ws: KucoinWebsocket,
     sender: Sender<OrderbookEvent>,
@@ -45,10 +46,11 @@ pub async fn task_sync_orderbook(
     mut receiver: Receiver<OrderbookEvent>,
     sender: Sender<OrderbookEvent>,
     local_full_orderbook: Arc<Mutex<FullOrderbook>>,
+    counter: Arc<Mutex<Counter>>,
 ) -> Result<(), kucoin_api::failure::Error> {
     loop {
+        counter_helper::increment(counter.clone()).await;
         let event = receiver.recv().await?;
-        performance::increment().await;
         let mut full_orderbook = local_full_orderbook.lock().await;
         match event {
             OrderbookEvent::OrderbookReceived((symbol, orderbook)) => {

@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::model::counter::Counter;
 use crate::model::order::Order;
-use crate::{event::order::OrderEvent, global::performance};
+use crate::{event::order::OrderEvent, global::counter_helper};
 use kucoin_api::client::Kucoin;
 use tokio::sync::{broadcast, Mutex};
 
@@ -13,7 +13,7 @@ pub async fn task_place_order(
     counter: Arc<Mutex<Counter>>,
 ) -> Result<(), kucoin_api::failure::Error> {
     loop {
-        performance::increment(counter.clone()).await;
+        counter_helper::increment(counter.clone()).await;
 
         let event = receiver.recv().await?;
         // println!("Received event: {event:?}");

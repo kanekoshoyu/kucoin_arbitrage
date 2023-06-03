@@ -1,5 +1,5 @@
 use crate::event::{chance::ChanceEvent, orderbook::OrderbookEvent};
-use crate::global::performance;
+use crate::global::counter_helper;
 use crate::model::chance::{ActionInfo, TriangularArbitrageChance};
 use crate::model::counter::Counter;
 use crate::model::orderbook::{FullOrderbook, Orderbook};
@@ -24,7 +24,7 @@ pub async fn task_pub_chance_all_taker_btc_usd(
     let btc_usd = std::format!("{btc}-{usd}");
     let usd_budget = 100.0;
     loop {
-        performance::increment(counter.clone()).await;
+        counter_helper::increment(counter.clone()).await;
         let event = receiver.recv().await?;
         // log::info!("received orderbook_update");
         let alt: Option<String> = match event {

@@ -8,7 +8,7 @@ use kucoin_api::{
     model::websocket::{KucoinWebsocketMsg, WSTopic, WSType},
     websocket::KucoinWebsocket,
 };
-use kucoin_arbitrage::global::performance;
+use kucoin_arbitrage::global::counter_helper;
 use kucoin_arbitrage::model::counter::Counter;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -50,7 +50,7 @@ async fn sync_tickers(
         match msg {
             KucoinWebsocketMsg::OrderBookMsg(_msg) => {
                 // TODO make counter more generic
-                performance::reset(counter.clone()).await;
+                counter_helper::reset(counter.clone()).await;
             }
             KucoinWebsocketMsg::PongMsg(_) => continue,
             KucoinWebsocketMsg::WelcomeMsg(_) => continue,

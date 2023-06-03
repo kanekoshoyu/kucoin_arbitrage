@@ -1,5 +1,5 @@
 use crate::event::orderbook::OrderbookEvent;
-use crate::global::performance;
+use crate::global::counter_helper;
 use crate::model::counter::Counter;
 use crate::model::orderbook::FullOrderbook;
 use crate::translator::traits::OrderBookChangeTranslator;
@@ -49,7 +49,7 @@ pub async fn task_sync_orderbook(
     counter: Arc<Mutex<Counter>>,
 ) -> Result<(), kucoin_api::failure::Error> {
     loop {
-        performance::increment(counter.clone()).await;
+        counter_helper::increment(counter.clone()).await;
         let event = receiver.recv().await?;
         let mut full_orderbook = local_full_orderbook.lock().await;
         match event {

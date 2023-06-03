@@ -65,7 +65,7 @@ async fn sync_tickers(
             }
             KucoinWebsocketMsg::OrderBookMsg(msg) => {
                 let _ = msg.data;
-                kucoin_arbitrage::global::performance::increment(counter.clone()).await;
+                kucoin_arbitrage::global::counter_helper::increment(counter.clone()).await;
             }
             _ => {
                 panic!("unexpected msgs received: {msg:?}")

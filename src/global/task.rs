@@ -1,4 +1,4 @@
-use crate::global::{config, performance};
+use crate::global::{config, counter_helper};
 use crate::model::counter::Counter;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -10,10 +10,10 @@ async fn report_status(
     log::info!("Reporting");
     for counter in counters.iter() {
         let data_rate =
-            performance::count(counter.clone()).await / config::CONFIG.monitor_interval_sec;
+            counter_helper::count(counter.clone()).await / config::CONFIG.monitor_interval_sec;
         log::info!("Data rate: {data_rate:?} points/sec");
         // clear the data
-        performance::reset(counter.clone()).await;
+        counter_helper::reset(counter.clone()).await;
     }
     Ok(())
 }

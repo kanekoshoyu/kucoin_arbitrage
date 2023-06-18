@@ -1,7 +1,9 @@
-/// Order Change 
+/// Order change received from exchange
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum OrderChange {
-    OrderReceived(String),
-    OrderOpen(String),
-    OrderbookChangeReceived(String),
+pub enum OrderChangeEvent {
+    OrderReceived((u128, String)),
+    OrderOpen((u128, String)),
+    OrderMatch((u128, String)),
+    OrderFilled((u128, String)),
+    OrderCanceled((u128, String)),
 }

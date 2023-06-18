@@ -5,7 +5,7 @@ pub fn symbol_to_string(base: &str, quote: &str) -> String {
     n.push_str(quote);
     n
 }
- 
+
 /// Gets "BTC-USDT" from KuCoin websocket topic name
 pub fn topic_to_symbol(topic: String) -> Option<String> {
     let n = topic.find(':')? + 1;

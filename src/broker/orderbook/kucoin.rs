@@ -8,9 +8,10 @@ use kucoin_api::{model::websocket::KucoinWebsocketMsg, websocket::KucoinWebsocke
 use std::sync::Arc;
 use tokio::sync::broadcast::{Receiver, Sender};
 use tokio::sync::Mutex;
-//TODO implement the internal trade order task in kucoin
 
-/// Task to publish orderbook events from websocket api output
+/// Task to publish orderbook events.
+/// Subscribes Websocket API.
+/// Publishes OrderbookEvent directly after conversion.
 pub async fn task_pub_orderbook_event(
     mut ws: KucoinWebsocket,
     sender: Sender<OrderbookEvent>,
@@ -41,7 +42,9 @@ pub async fn task_pub_orderbook_event(
     }
 }
 
-/// Task to puiblish orderbook events from websocket api output
+/// Task to sync local orderbook from API.
+/// Subscribes OrderbookEvent.
+/// Publishes OrderbookEvent after sync.
 pub async fn task_sync_orderbook(
     mut receiver: Receiver<OrderbookEvent>,
     sender: Sender<OrderbookEvent>,

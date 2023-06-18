@@ -1,6 +1,6 @@
-/// global
-/// Everything declared with lazy_statics! should come here.
-/// In other words, we should refrain from using much lazy_statics and instead pass the variables.
+/// Config parser
 pub mod config;
+/// Generic counter
 pub mod counter_helper;
+/// Routine tasks
 pub mod task;

@@ -11,7 +11,7 @@ use std::sync::Arc;
 use tokio::sync::broadcast::{Receiver, Sender};
 use tokio::sync::Mutex;
 
-/// Async Task to subscribe to hte websocket events, calculate chances,  
+/// Async task to subscribe to hte websocket events, calculate chances,  
 pub async fn task_pub_chance_all_taker_btc_usd(
     mut receiver: Receiver<OrderbookEvent>,
     sender: Sender<ChanceEvent>,

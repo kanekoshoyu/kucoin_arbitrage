@@ -1,6 +1,6 @@
 use crate::model::chance::TriangularArbitrageChance;
 
-//TODO implement arbitrage chance events below
+/// Arbitrage chance, wraps a chance model
 #[derive(Debug, Clone)]
 pub enum ChanceEvent {
     AllTaker(TriangularArbitrageChance),

@@ -7,14 +7,14 @@ use kucoin_api::{
 use kucoin_arbitrage::broker::gatekeeper::kucoin::task_gatekeep_chances;
 use kucoin_arbitrage::broker::order::kucoin::task_place_order;
 use kucoin_arbitrage::broker::orderbook::kucoin::{task_pub_orderbook_event, task_sync_orderbook};
+use kucoin_arbitrage::broker::orderchange::kucoin::task_pub_orderchange_event;
 use kucoin_arbitrage::broker::symbol::filter::{symbol_with_quotes, vector_to_hash};
 use kucoin_arbitrage::broker::symbol::kucoin::get_symbols;
-use kucoin_arbitrage::event::chance::ChanceEvent;
-use kucoin_arbitrage::event::order::OrderEvent;
-use kucoin_arbitrage::event::orderbook::OrderbookEvent;
-use kucoin_arbitrage::model::counter::Counter;
-use kucoin_arbitrage::model::orderbook::FullOrderbook;
-use kucoin_arbitrage::model::symbol::SymbolInfo;
+use kucoin_arbitrage::event::{
+    chance::ChanceEvent, order::OrderEvent, orderbook::OrderbookEvent,
+    orderchange::OrderChangeEvent,
+};
+use kucoin_arbitrage::model::{counter::Counter, orderbook::FullOrderbook, symbol::SymbolInfo};
 use kucoin_arbitrage::strategy::all_taker_btc_usd::task_pub_chance_all_taker_btc_usd;
 use kucoin_arbitrage::translator::traits::OrderBookTranslator;
 use std::sync::Arc;
@@ -23,37 +23,37 @@ use tokio::sync::Mutex;
 
 #[tokio::main]
 async fn main() -> Result<(), kucoin_api::failure::Error> {
-    // provide logging format
+    // Provides logging format
     kucoin_arbitrage::logger::log_init();
     log::info!("Log setup");
 
-    // declare all the system counters
+    // Declares all the system counters
     let api_input_counter = Arc::new(Mutex::new(Counter::new("api_input")));
     let best_price_counter = Arc::new(Mutex::new(Counter::new("best_price")));
     let chance_counter = Arc::new(Mutex::new(Counter::new("chance")));
     let order_counter = Arc::new(Mutex::new(Counter::new("order")));
 
-    // credentials
+    // Credentials
     let credentials = kucoin_arbitrage::global::config::credentials();
     let api = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
     let url = api.clone().get_socket_endpoint(WSType::Public).await?;
     log::info!("Credentials setup");
 
-    // get all symbols concurrently
+    // Gets all symbols concurrently
     let symbol_list = get_symbols(api.clone()).await;
     log::info!("Total exchange symbols: {:?}", symbol_list.len());
 
-    // filter with either btc or usdt as quote
+    // Filters with either btc or usdt as quote
     let symbol_infos = symbol_with_quotes(&symbol_list, "BTC", "USDT");
     let hash_symbols = Arc::new(Mutex::new(vector_to_hash(&symbol_infos)));
     log::info!("Total symbols in scope: {:?}", symbol_infos.len());
 
-    // change a list of SymbolInfo into a 2D list of WSTopic per session in max 100 index
+    // Changes a list of SymbolInfo into a 2D list of WSTopic per session in max 100 index
     let subs = format_subscription_list(&symbol_infos);
     log::info!("Total orderbook WS sessions: {:?}", subs.len());
 
-    // Create broadcast channels
-    // for syncing
+    // Creates broadcast channels
+    // for syncing public orderbook
     let (tx_orderbook, rx_orderbook) = channel::<OrderbookEvent>(1024 * 2);
     // for getting notable orderbook after syncing
     let (tx_orderbook_best, rx_orderbook_best) = channel::<OrderbookEvent>(512);
@@ -61,8 +61,11 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     let (tx_chance, rx_chance) = channel::<ChanceEvent>(64);
     // for placing order
     let (tx_order, rx_order) = channel::<OrderEvent>(16);
+    // for getting private order changes
+    let (tx_orderchange, _rx_orderchange) = channel::<OrderChangeEvent>(128);
     log::info!("Broadcast channels setup");
 
+    // Creates local orderbook
     let full_orderbook = Arc::new(Mutex::new(FullOrderbook::new()));
     log::info!("Local orderbook setup");
 
@@ -91,11 +94,11 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
         order_counter.clone(),
     ));
 
-    // extract the names only
+    // Extracts the names only
     let symbols: Vec<String> = symbol_infos.into_iter().map(|info| info.symbol).collect();
 
     // TODO place below in broker
-    // use REST to obtain the initial orderbook before subscribing to websocket
+    // Uses REST to obtain the initial orderbook before subscribing to websocket
     let tasks: Vec<_> = symbols
         .iter()
         .map(|symbol| {
@@ -129,7 +132,7 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     futures::future::join_all(tasks).await;
     log::info!("Collected all the symbols");
 
-    // setup subscription and tasks per session, this is the source of data
+    // Subscribes public orderbook WS per session, this is the source of data for the infrastructure tasks
     for (i, sub) in subs.iter().enumerate() {
         let mut ws = api.websocket();
         ws.subscribe(url.clone(), sub.clone()).await?;
@@ -138,7 +141,12 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
         log::info!("{i:?}-th session of WS subscription setup");
     }
 
+    // Subscribes private order change WS
+    tokio::spawn(task_pub_orderchange_event(api.websocket(), tx_orderchange));
+
     log::info!("All application tasks setup");
+
+    // Background routine
     let _ = tokio::join!(kucoin_arbitrage::global::task::background_routine(vec![
         api_input_counter.clone(),
         best_price_counter.clone(),

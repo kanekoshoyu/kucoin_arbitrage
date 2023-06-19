@@ -1,6 +1,5 @@
 use kucoin_api::{
     client::{Kucoin, KucoinEnv},
-    error::APIError,
     model::market::OrderBookType,
     model::websocket::{WSTopic, WSType},
 };
@@ -108,23 +107,23 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
             let symbol = symbol.clone();
 
             tokio::spawn(async move {
-                log::info!("Obtaining initial orderbook[{}] from REST", symbol);
-
-                // repeatedly get orderbook until verified pass
-                let mut res = Err(APIError::Other("Not read".to_string()));
-                while res.is_err() {
-                    // OrderBookType::Full fails
+                loop {
                     log::info!("Obtaining initial orderbook[{}] from REST", symbol);
-                    res = api.get_orderbook(&symbol, OrderBookType::L100).await;
-                }
-                let res = res.unwrap();
-
-                if let Some(data) = res.data {
+                    let res = api.get_orderbook(&symbol, OrderBookType::L100).await;
+                    if res.is_err() {
+                        log::warn!("orderbook[{}] did not respond, retry", &symbol);
+                        continue;
+                    }
+                    let res = res.unwrap().data;
+                    if res.is_none() {
+                        log::warn!("orderbook[{}] received none, retry", &symbol);
+                        continue;
+                    }
+                    let data = res.unwrap();
                     log::info!("Initial sequence {}:{}", &symbol, data.sequence);
                     let mut x = full_orderbook_2.lock().await;
                     x.insert(symbol.to_string(), data.to_internal());
-                } else {
-                    log::warn!("orderbook[{}] received none", &symbol);
+                    break;
                 }
             })
         })
@@ -141,8 +140,11 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
         log::info!("{i:?}-th session of WS subscription setup");
     }
 
-    // Subscribes private order change WS
-    tokio::spawn(task_pub_orderchange_event(api.websocket(), tx_orderchange));
+    // Subscribes private order change websocket
+    let mut ws = api.websocket();
+    ws.subscribe(url.clone(), vec![WSTopic::TradeOrders])
+        .await?;
+    tokio::spawn(task_pub_orderchange_event(ws, tx_orderchange));
 
     log::info!("All application tasks setup");
 

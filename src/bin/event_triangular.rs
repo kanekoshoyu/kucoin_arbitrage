@@ -8,12 +8,12 @@ use kucoin_arbitrage::broker::order::kucoin::task_place_order;
 use kucoin_arbitrage::broker::orderbook::kucoin::{task_pub_orderbook_event, task_sync_orderbook};
 use kucoin_arbitrage::broker::orderchange::kucoin::task_pub_orderchange_event;
 use kucoin_arbitrage::broker::symbol::filter::{symbol_with_quotes, vector_to_hash};
-use kucoin_arbitrage::broker::symbol::kucoin::get_symbols;
+use kucoin_arbitrage::broker::symbol::kucoin::{format_subscription_list, get_symbols};
 use kucoin_arbitrage::event::{
     chance::ChanceEvent, order::OrderEvent, orderbook::OrderbookEvent,
     orderchange::OrderChangeEvent,
 };
-use kucoin_arbitrage::model::{counter::Counter, orderbook::FullOrderbook, symbol::SymbolInfo};
+use kucoin_arbitrage::model::{counter::Counter, orderbook::FullOrderbook};
 use kucoin_arbitrage::strategy::all_taker_btc_usd::task_pub_chance_all_taker_btc_usd;
 use kucoin_arbitrage::translator::traits::OrderBookTranslator;
 use std::sync::Arc;
@@ -131,6 +131,8 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     futures::future::join_all(tasks).await;
     log::info!("Collected all the symbols");
 
+    // TODO revert the flow, we should first setup the infrastructure, then setup the data flow
+
     // Subscribes public orderbook WS per session, this is the source of data for the infrastructure tasks
     for (i, sub) in subs.iter().enumerate() {
         let mut ws = api.websocket();
@@ -156,46 +158,4 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
         order_counter.clone()
     ]));
     panic!("Program should not arrive here")
-}
-
-// TODO this bridges between API and the internal model, it should be placed in broker
-fn format_subscription_list(infos: &[SymbolInfo]) -> Vec<Vec<WSTopic>> {
-    // extract the names
-    let symbols: Vec<String> = infos.iter().map(|info| info.symbol.clone()).collect();
-    // setup 2D array of max length 100
-    let max_sub_count = 100;
-    let mut hundred_arrays: Vec<Vec<String>> = Vec::new();
-    let mut hundred_array: Vec<String> = Vec::new();
-
-    // feed into the 2D array
-    for symbol in symbols {
-        hundred_array.push(symbol);
-        // 99 for the first one, because of the special BTC-USDT
-        if hundred_arrays.is_empty() && hundred_array.len() == max_sub_count - 1 {
-            hundred_arrays.push(hundred_array);
-            hundred_array = Vec::new();
-            continue;
-        }
-        // otherwise 100
-        if hundred_array.len() == max_sub_count {
-            hundred_arrays.push(hundred_array);
-            hundred_array = Vec::new();
-        }
-    }
-
-    // last array in current_subarray
-    if !hundred_array.is_empty() {
-        hundred_arrays.push(hundred_array);
-    }
-
-    let mut subs: Vec<Vec<WSTopic>> = Vec::new();
-    let mut sub: Vec<WSTopic> = Vec::new();
-    for sub_array in hundred_arrays {
-        sub.push(WSTopic::OrderBook(sub_array));
-        if sub.len() == 3 {
-            subs.push(sub);
-            sub = Vec::new();
-        }
-    }
-    subs
 }

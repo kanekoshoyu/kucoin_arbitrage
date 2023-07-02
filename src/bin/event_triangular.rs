@@ -14,6 +14,7 @@ use kucoin_arbitrage::event::{
     chance::ChanceEvent, order::OrderEvent, orderbook::OrderbookEvent,
     orderchange::OrderChangeEvent,
 };
+use kucoin_arbitrage::global::config::CONFIG;
 use kucoin_arbitrage::model::{counter::Counter, orderbook::FullOrderbook};
 use kucoin_arbitrage::strategy::all_taker_btc_usd::task_pub_chance_all_taker_btc_usd;
 use kucoin_arbitrage::translator::traits::OrderBookTranslator;
@@ -70,6 +71,7 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     log::info!("Local orderbook setup");
 
     // Infrastructure tasks
+    // USD cyclic arbitrage budget obtained from CONFIG 
     tokio::spawn(task_sync_orderbook(
         rx_orderbook,
         tx_orderbook_best,
@@ -81,6 +83,7 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
         tx_chance,
         full_orderbook.clone(),
         hash_symbols,
+        CONFIG.usd_cyclic_arbitrage as f64,
         best_price_counter.clone(),
     ));
     tokio::spawn(task_gatekeep_chances(

@@ -1,5 +1,4 @@
 /// Test latency between order and private channel order detection
-/// place extreme order, receive extreme order, check time difference
 extern crate kucoin_api;
 use chrono::prelude::Local;
 use kucoin_api::failure;

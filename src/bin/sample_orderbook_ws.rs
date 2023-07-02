@@ -1,3 +1,4 @@
+// Subscribes orderbook changes in WebSocket API
 extern crate kucoin_api;
 use kucoin_api::futures::TryStreamExt;
 use kucoin_api::{

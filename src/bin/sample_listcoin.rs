@@ -1,5 +1,5 @@
+/// Lists pairs with the "BTC", "USDT" as quote
 use kucoin_api::client::{Kucoin, KucoinEnv};
-/// Get the Symbol list, and blacklist a few weird looking ones
 use kucoin_arbitrage::broker::symbol::{filter::symbol_with_quotes, kucoin::get_symbols};
 
 #[tokio::main]

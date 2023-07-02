@@ -52,6 +52,7 @@ pub trait Order {
     fn order_type(&self) -> OrderType;
 }
 
+// Market Order and Limit order should have predefined OrderType
 #[derive(Debug, Clone)]
 pub struct MarketOrder {
     id: u128,

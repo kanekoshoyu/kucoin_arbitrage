@@ -1,3 +1,4 @@
+/// Executes triangular arbitrage
 use kucoin_api::{
     client::{Kucoin, KucoinEnv},
     model::market::OrderBookType,

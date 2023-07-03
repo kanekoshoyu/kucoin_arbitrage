@@ -1,10 +1,10 @@
 /// Test latency between order and private channel order detection
-/// place extreme order in REST, receive extreme  order in private channel
+/// Places extreme order in REST, receive extreme order in private channel
+/// Please configure the buy price to either the current market price or lower for testing purpose
 use kucoin_api::{
     client::{Kucoin, KucoinEnv},
     model::websocket::{WSTopic, WSType},
 };
-use kucoin_arbitrage::broker::orderchange::kucoin::task_pub_orderchange_event;
 use kucoin_arbitrage::broker::symbol::filter::symbol_with_quotes;
 use kucoin_arbitrage::broker::symbol::kucoin::{format_subscription_list, get_symbols};
 use kucoin_arbitrage::event::{order::OrderEvent, orderchange::OrderChangeEvent};
@@ -12,6 +12,9 @@ use kucoin_arbitrage::model::counter::Counter;
 use kucoin_arbitrage::{
     broker::order::kucoin::task_place_order,
     model::order::{LimitOrder, OrderSide, OrderType},
+};
+use kucoin_arbitrage::{
+    broker::orderchange::kucoin::task_pub_orderchange_event, strings::generate_uid,
 };
 use std::{sync::Arc, time::Duration};
 use tokio::sync::broadcast::channel;
@@ -30,7 +33,7 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     // Credentials
     let credentials = kucoin_arbitrage::global::config::credentials();
     let api = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
-    let url = api.clone().get_socket_endpoint(WSType::Public).await?;
+    let url_private = api.clone().get_socket_endpoint(WSType::Private).await?;
     log::info!("Credentials setup");
 
     // Gets all symbols concurrently
@@ -61,24 +64,33 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
 
     // Subscribes private order change websocket
     let mut ws = api.websocket();
-    ws.subscribe(url.clone(), vec![WSTopic::TradeOrders])
-        .await?;
+    ws.subscribe(
+        url_private.clone(),
+        vec![
+            WSTopic::TradeOrders,
+            WSTopic::Balances,
+            WSTopic::PositionChange,
+        ],
+    )
+    .await?;
     tokio::spawn(task_pub_orderchange_event(ws, tx_orderchange));
 
     log::info!("All application tasks setup");
     loop {
-        // use tx_order.send(); to send extreme order
+        // Sends a post order
         let event = OrderEvent::PostOrder(LimitOrder {
-            id: 0,
+            id: generate_uid(40),
             order_type: OrderType::Limit,
-            side: OrderSide::Sell,
+            side: OrderSide::Buy,
             symbol: "BTC-USDT".to_string(),
-            amount: 1.to_string(),
-            price: 100000.0.to_string(),
+            amount: 0.001.to_string(),
+            price: 15000.0.to_string(),
         });
         if let Err(e) = tx_order.send(event) {
             log::error!("{e}");
         }
-        sleep(Duration::from_secs(10)).await;
+
+        // Waits 5 seconds
+        sleep(Duration::from_secs(5)).await;
     }
 }

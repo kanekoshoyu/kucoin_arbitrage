@@ -37,7 +37,8 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     // Credentials
     let credentials = kucoin_arbitrage::global::config::credentials();
     let api = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
-    let url = api.clone().get_socket_endpoint(WSType::Public).await?;
+    let url_public = api.clone().get_socket_endpoint(WSType::Public).await?;
+    let url_private = api.clone().get_socket_endpoint(WSType::Private).await?;
     log::info!("Credentials setup");
 
     // Gets all symbols concurrently
@@ -71,7 +72,7 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     log::info!("Local orderbook setup");
 
     // Infrastructure tasks
-    // USD cyclic arbitrage budget obtained from CONFIG 
+    // USD cyclic arbitrage budget obtained from CONFIG
     tokio::spawn(task_sync_orderbook(
         rx_orderbook,
         tx_orderbook_best,
@@ -140,7 +141,7 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     // Subscribes public orderbook WS per session, this is the source of data for the infrastructure tasks
     for (i, sub) in subs.iter().enumerate() {
         let mut ws = api.websocket();
-        ws.subscribe(url.clone(), sub.clone()).await?;
+        ws.subscribe(url_public.clone(), sub.clone()).await?;
         // TODO change to task_pub_orderbook_event
         tokio::spawn(task_pub_orderbook_event(ws, tx_orderbook.clone()));
         log::info!("{i:?}-th session of WS subscription setup");
@@ -148,7 +149,7 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
 
     // Subscribes private order change websocket
     let mut ws = api.websocket();
-    ws.subscribe(url.clone(), vec![WSTopic::TradeOrders])
+    ws.subscribe(url_private.clone(), vec![WSTopic::TradeOrders])
         .await?;
     tokio::spawn(task_pub_orderchange_event(ws, tx_orderchange));
 

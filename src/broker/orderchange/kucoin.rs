@@ -22,6 +22,11 @@ pub async fn task_pub_orderchange_event(
             if sender.send(event).is_err() {
                 log::error!("Order change event publish error, check receiver");
             }
+        } else if let KucoinWebsocketMsg::WelcomeMsg(msg) = msg {
+            log::info!("Welcome {:?}", msg);
+        } else if let KucoinWebsocketMsg::Error(msg) = msg {
+            log::error!("Error: {msg:?}");
+            panic!("Error received from KuCoin private channel");
         } else {
             log::info!("Irrelevant Trade messages");
             log::info!("{msg:#?}")

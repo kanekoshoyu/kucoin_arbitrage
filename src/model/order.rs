@@ -45,7 +45,7 @@ impl ToString for OrderType {
 }
 
 pub trait Order {
-    fn id(&self) -> u128;
+    fn id(&self) -> String;
     fn side(&self) -> OrderSide;
     fn symbol(&self) -> String;
     fn amount(&self) -> String;
@@ -55,7 +55,7 @@ pub trait Order {
 // Market Order and Limit order should have predefined OrderType
 #[derive(Debug, Clone)]
 pub struct MarketOrder {
-    id: u128,
+    id: String,
     order_type: OrderType,
     side: OrderSide,
     symbol: String,
@@ -63,8 +63,8 @@ pub struct MarketOrder {
 }
 
 impl Order for MarketOrder {
-    fn id(&self) -> u128 {
-        self.id
+    fn id(&self) -> String {
+        self.id.clone()
     }
     fn order_type(&self) -> OrderType {
         self.order_type
@@ -82,7 +82,7 @@ impl Order for MarketOrder {
 
 #[derive(Debug, Clone)]
 pub struct LimitOrder {
-    pub id: u128,
+    pub id: String,
     pub order_type: OrderType,
     pub side: OrderSide,
     pub symbol: String,
@@ -91,8 +91,8 @@ pub struct LimitOrder {
 }
 
 impl Order for LimitOrder {
-    fn id(&self) -> u128 {
-        self.id
+    fn id(&self) -> String {
+        self.id.clone()
     }
     fn order_type(&self) -> OrderType {
         self.order_type

@@ -4,6 +4,7 @@ use crate::event::order::OrderEvent;
 use crate::global::counter_helper;
 use crate::model::counter::Counter;
 use crate::model::order::LimitOrder;
+use crate::strings::generate_uid;
 use crate::{event::chance::ChanceEvent, model::order::OrderType};
 use tokio::sync::broadcast::{Receiver, Sender};
 use tokio::sync::Mutex;
@@ -21,7 +22,6 @@ pub async fn task_gatekeep_chances(
     sender: Sender<OrderEvent>,
     counter: Arc<Mutex<Counter>>,
 ) -> Result<(), kucoin_api::failure::Error> {
-    let mut serial: u128 = 0;
     loop {
         counter_helper::increment(counter.clone()).await;
         let status = receiver.recv().await;
@@ -40,14 +40,13 @@ pub async fn task_gatekeep_chances(
                 // i is [0, 1, 2]
                 for i in 0..3 {
                     let order: LimitOrder = LimitOrder {
-                        id: serial,
+                        id: generate_uid(40),
                         order_type: OrderType::Limit,
                         side: chance.actions[i].action,
                         symbol: chance.actions[i].ticker.clone(),
                         amount: chance.actions[i].volume.to_string(),
                         price: chance.actions[i].price.to_string(),
                     };
-                    serial += 1;
                     sender.send(OrderEvent::PostOrder(order)).unwrap();
                 }
             }

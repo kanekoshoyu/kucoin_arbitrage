@@ -36,8 +36,6 @@ pub async fn task_pub_orderbook_event(
             log::info!("TickerMsg: {msg:#?}")
         } else if let KucoinWebsocketMsg::OrderBookChangeMsg(msg) = msg {
             log::info!("OrderbookChange: {msg:#?}")
-        } else if let KucoinWebsocketMsg::OrderBookChangeMsg(msg) = msg {
-            log::info!("OrderbookChange: {msg:#?}")
         } else if let KucoinWebsocketMsg::WelcomeMsg(_) = msg {
         } else if let KucoinWebsocketMsg::PongMsg(_) = msg {
             log::info!("Public channel connection maintained")

@@ -18,7 +18,7 @@ pub async fn task_pub_orderchange_event(
             panic!()
         }
         let msg = msg?.unwrap();
-        
+
         if let KucoinWebsocketMsg::TradeReceivedMsg(msg) = msg {
             // TradeReceived is only available to V2.
             // TODO sometimes V2 misses publishing TradeReceivedMsg, arguably due to initialization process issue.
@@ -27,16 +27,21 @@ pub async fn task_pub_orderchange_event(
         } else if let KucoinWebsocketMsg::TradeOpenMsg(msg) = msg {
             log::info!("TradeOpenMsg: {:?}\n{:?}", msg.topic, msg.data);
             // TODO optimize below to something more insightful
-            let event = OrderChangeEvent::OrderReceived((0, format!("{:?}", msg.data.clone())));
-            if sender.send(event).is_err() {
-                log::error!("Order change event publish error, check receiver");
-            }
+            let event: OrderChangeEvent =
+                OrderChangeEvent::OrderOpen((0, format!("{:?}", msg.data.clone())));
+            sender.send(event).expect("Publishing OrderOpen failed");
         } else if let KucoinWebsocketMsg::TradeMatchMsg(msg) = msg {
             log::info!("TradeMatchMsg: {:?}\n{:?}", msg.topic, msg.data);
         } else if let KucoinWebsocketMsg::TradeFilledMsg(msg) = msg {
             log::info!("TradeFilledMsg: {:?}\n{:?}", msg.topic, msg.data);
+            let event: OrderChangeEvent =
+                OrderChangeEvent::OrderFilled((0, format!("{:?}", msg.data.clone())));
+            sender.send(event).expect("Publishing OrderFilled failed");
         } else if let KucoinWebsocketMsg::TradeCanceledMsg(msg) = msg {
             log::info!("TradeCanceledMsg: {:?}\n{:?}", msg.topic, msg.data);
+            let event: OrderChangeEvent =
+                OrderChangeEvent::OrderCanceled((0, format!("{:?}", msg.data.clone())));
+            sender.send(event).expect("Publishing OrderCanceled failed");
         } else if let KucoinWebsocketMsg::BalancesMsg(msg) = msg {
             let delta = msg.data.available_change;
             let currency = msg.data.currency;

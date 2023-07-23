@@ -11,25 +11,40 @@ pub async fn task_pub_orderchange_event(
     sender: Sender<OrderChangeEvent>,
 ) -> Result<(), kucoin_api::failure::Error> {
     loop {
-        // awaits subscription message
-        let msg = ws.try_next().await?.unwrap();
-
-        // matches message type
+        // Awaits subscription message
+        let msg = ws.try_next().await;
+        if let Err(e) = msg {
+            log::error!("task_pub_orderchange_event error: {e}");
+            panic!()
+        }
+        let msg = msg?.unwrap();
+        
         if let KucoinWebsocketMsg::TradeReceivedMsg(msg) = msg {
-            let trade_open = msg.data;
+            // TradeReceived is only available to V2.
+            // TODO sometimes V2 misses publishing TradeReceivedMsg, arguably due to initialization process issue.
+            // Currently using a more stable TradeOpenMsg, although TradeReceived is always ahead of TradeOpen
+            log::info!("TradeReceivedMsg: {:?}\n{:?}", msg.topic, msg.data);
+        } else if let KucoinWebsocketMsg::TradeOpenMsg(msg) = msg {
+            log::info!("TradeOpenMsg: {:?}\n{:?}", msg.topic, msg.data);
             // TODO optimize below to something more insightful
-            let event = OrderChangeEvent::OrderReceived((0, format!("{:?}", trade_open.clone())));
+            let event = OrderChangeEvent::OrderReceived((0, format!("{:?}", msg.data.clone())));
             if sender.send(event).is_err() {
                 log::error!("Order change event publish error, check receiver");
             }
-        } else if let KucoinWebsocketMsg::WelcomeMsg(msg) = msg {
-            log::info!("Welcome {:?}", msg);
-        } else if let KucoinWebsocketMsg::Error(msg) = msg {
-            log::error!("Error: {msg:?}");
-            panic!("Error received from KuCoin private channel");
+        } else if let KucoinWebsocketMsg::TradeMatchMsg(msg) = msg {
+            log::info!("TradeMatchMsg: {:?}\n{:?}", msg.topic, msg.data);
+        } else if let KucoinWebsocketMsg::TradeFilledMsg(msg) = msg {
+            log::info!("TradeFilledMsg: {:?}\n{:?}", msg.topic, msg.data);
+        } else if let KucoinWebsocketMsg::TradeCanceledMsg(msg) = msg {
+            log::info!("TradeCanceledMsg: {:?}\n{:?}", msg.topic, msg.data);
+        } else if let KucoinWebsocketMsg::BalancesMsg(msg) = msg {
+            let delta = msg.data.available_change;
+            let currency = msg.data.currency;
+            log::info!("BalancesMsg: {currency:?}: {delta:?}");
+        } else if let KucoinWebsocketMsg::WelcomeMsg(_) = msg {
+        } else if let KucoinWebsocketMsg::PongMsg(_) = msg {
         } else {
-            log::info!("Irrelevant Trade messages");
-            log::info!("{msg:#?}")
+            log::info!("Irrelevant message in private channel: {:#?}", msg);
         }
     }
 }

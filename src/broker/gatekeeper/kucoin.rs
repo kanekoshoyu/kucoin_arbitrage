@@ -1,11 +1,12 @@
 use std::sync::Arc;
 
+use crate::event::chance::ChanceEvent;
 use crate::event::order::OrderEvent;
+use crate::event::orderchange::OrderChangeEvent;
 use crate::global::counter_helper;
 use crate::model::counter::Counter;
-use crate::model::order::LimitOrder;
+use crate::model::order::{LimitOrder, OrderType};
 use crate::strings::generate_uid;
-use crate::{event::chance::ChanceEvent, model::order::OrderType};
 use tokio::sync::broadcast::{Receiver, Sender};
 use tokio::sync::Mutex;
 
@@ -18,16 +19,17 @@ use tokio::sync::Mutex;
 /// - 45 orders per 3 seconds
 /// - 200 active order at once
 pub async fn task_gatekeep_chances(
-    mut receiver: Receiver<ChanceEvent>,
+    mut receiver_chance: Receiver<ChanceEvent>,
+    mut receiver_order_change: Receiver<OrderChangeEvent>,
     sender: Sender<OrderEvent>,
     counter: Arc<Mutex<Counter>>,
 ) -> Result<(), kucoin_api::failure::Error> {
     loop {
         counter_helper::increment(counter.clone()).await;
-        let status = receiver.recv().await;
-        if status.is_err() {
-            log::error!("task_gatekeep_chances error {:?}", status.err().unwrap());
-            continue;
+        let status = receiver_chance.recv().await;
+        if let Err(e) = status {
+            log::error!("gatekeep chance parsing error {e:?}");
+            return Ok(());
         }
         let event: ChanceEvent = status.unwrap();
         match event {
@@ -47,7 +49,29 @@ pub async fn task_gatekeep_chances(
                         amount: chance.actions[i].volume.to_string(),
                         price: chance.actions[i].price.to_string(),
                     };
+
                     sender.send(OrderEvent::PostOrder(order)).unwrap();
+
+                    let mut amount_untraded = chance.actions[i].price.0;
+                    while amount_untraded > 0.0 {
+                        let order_change_status = receiver_order_change.recv().await;
+                        if order_change_status.is_err() {
+                            log::error!(
+                                "gatekeep change parsing error {:?}",
+                                order_change_status.err().unwrap()
+                            );
+                            continue;
+                        }
+                        let order_change_event = order_change_status.unwrap();
+                        if let OrderChangeEvent::OrderFilled((amount, currency)) =
+                            order_change_event
+                        {
+                            log::info!("{amount}{currency} filled, proceeding to next step");
+                            amount_untraded = 0.0;
+                        }
+                    }
+
+                    // wait until it receives a signal from Kucoin that the order has been complete
                 }
             }
             ChanceEvent::MakerTakerTaker(_actions) => {}

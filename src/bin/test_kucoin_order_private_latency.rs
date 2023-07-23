@@ -63,6 +63,8 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     ));
 
     // Subscribes private order change websocket
+    // NOTE TradeOrdersV2's TradeReceived appears unstable.
+    // Using TradeOrders's TradeOpen instead
     let mut ws = api.websocket();
     ws.subscribe(
         url_private.clone(),
@@ -76,21 +78,22 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     tokio::spawn(task_pub_orderchange_event(ws, tx_orderchange));
 
     log::info!("All application tasks setup");
-    loop {
-        // Sends a post order
-        let event = OrderEvent::PostOrder(LimitOrder {
-            id: generate_uid(40),
-            order_type: OrderType::Limit,
-            side: OrderSide::Buy,
-            symbol: "BTC-USDT".to_string(),
-            amount: 0.001.to_string(),
-            price: 15000.0.to_string(),
-        });
-        if let Err(e) = tx_order.send(event) {
-            log::error!("{e}");
-        }
 
-        // Waits 5 seconds
-        sleep(Duration::from_secs(5)).await;
+    // Sends a post order
+    let event = OrderEvent::PostOrder(LimitOrder {
+        id: generate_uid(40),
+        order_type: OrderType::Limit,
+        side: OrderSide::Buy,
+        symbol: "BTC-USDT".to_string(),
+        amount: 0.001.to_string(),
+        price: 29850.0.to_string(),
+    });
+    if let Err(e) = tx_order.send(event) {
+        log::error!("{e}");
+    }
+
+    loop {
+        // Waits 60 seconds
+        sleep(Duration::from_secs(60)).await;
     }
 }

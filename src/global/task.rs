@@ -7,11 +7,16 @@ use tokio::time::{sleep, Duration};
 async fn report_status(
     counters: Vec<Arc<Mutex<Counter>>>,
 ) -> Result<(), kucoin_api::failure::Error> {
-    log::info!("Reporting");
+    log::info!("Reporting broadcast data rate");
     for counter in counters.iter() {
-        let data_rate =
-            counter_helper::count(counter.clone()).await / config::CONFIG.monitor_interval_sec;
-        log::info!("Data rate: {data_rate:?} points/sec");
+        let (name, count) = {
+            let p = counter.lock().await;
+            (p.name, p.data_count)
+        };
+        log::info!(
+            "{name:?}: {count:?} points ({:?}pps)",
+            count / config::CONFIG.monitor_interval_sec
+        );
         // clear the data
         counter_helper::reset(counter.clone()).await;
     }

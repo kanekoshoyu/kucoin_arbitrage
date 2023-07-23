@@ -64,7 +64,7 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     // for placing order
     let (tx_order, rx_order) = channel::<OrderEvent>(16);
     // for getting private order changes
-    let (tx_orderchange, _rx_orderchange) = channel::<OrderChangeEvent>(128);
+    let (tx_orderchange, rx_orderchange) = channel::<OrderChangeEvent>(128);
     log::info!("Broadcast channels setup");
 
     // Creates local orderbook
@@ -89,6 +89,7 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     ));
     tokio::spawn(task_gatekeep_chances(
         rx_chance,
+        rx_orderchange,
         tx_order,
         chance_counter.clone(),
     ));
@@ -113,7 +114,7 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
 
             tokio::spawn(async move {
                 loop {
-                    log::info!("Obtaining initial orderbook[{}] from REST", symbol);
+                    // log::info!("Obtaining initial orderbook[{}] from REST", symbol);
                     let res = api.get_orderbook(&symbol, OrderBookType::L100).await;
                     if res.is_err() {
                         log::warn!("orderbook[{}] did not respond, retry", &symbol);
@@ -125,7 +126,7 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
                         continue;
                     }
                     let data = res.unwrap();
-                    log::info!("Initial sequence {}:{}", &symbol, data.sequence);
+                    // log::info!("Initial sequence {}:{}", &symbol, data.sequence);
                     let mut x = full_orderbook_2.lock().await;
                     x.insert(symbol.to_string(), data.to_internal());
                     break;

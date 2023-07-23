@@ -728,9 +728,9 @@ dependencies = [
 
 [[package]]
 name = "kucoin_api"
-version = "1.4.8"
+version = "1.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d425de58b80ad763697cea529b80b5006ef3d6c7aa32afc33bec179dd99b45f6"
+checksum = "2ff5d66e5ac5dc52ecadfab32c0ca0389bdf21738407a7b3463db095efe9d0ed"
 dependencies = [
  "base64 0.12.3",
  "failure",

@@ -18,7 +18,12 @@ pub async fn task_pub_orderbook_event(
 ) -> Result<(), kucoin_api::failure::Error> {
     let serial = 0;
     loop {
-        let msg = ws.try_next().await?.unwrap();
+        let msg = ws.try_next().await;
+        if let Err(e) = msg {
+            log::error!("task_pub_orderbook_event error: {e}");
+            panic!()
+        }
+        let msg = msg?.unwrap();
         // add matches for multi-subscribed sockets handling
         if let KucoinWebsocketMsg::OrderBookMsg(msg) = msg {
             // log::info!("WS: {msg:#?}");
@@ -31,10 +36,11 @@ pub async fn task_pub_orderbook_event(
             log::info!("TickerMsg: {msg:#?}")
         } else if let KucoinWebsocketMsg::OrderBookChangeMsg(msg) = msg {
             log::info!("OrderbookChange: {msg:#?}")
-        } else if let KucoinWebsocketMsg::WelcomeMsg(_msg) = msg {
-            log::info!("Connection setup")
-        } else if let KucoinWebsocketMsg::PongMsg(_msg) = msg {
-            log::info!("Connection maintained")
+        } else if let KucoinWebsocketMsg::OrderBookChangeMsg(msg) = msg {
+            log::info!("OrderbookChange: {msg:#?}")
+        } else if let KucoinWebsocketMsg::WelcomeMsg(_) = msg {
+        } else if let KucoinWebsocketMsg::PongMsg(_) = msg {
+            log::info!("Public channel connection maintained")
         } else {
             log::info!("Irrelevant Messages");
             log::info!("{msg:#?}")

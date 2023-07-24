@@ -1,6 +1,7 @@
 use crate::event::orderchange::OrderChangeEvent;
 use kucoin_api::futures::TryStreamExt;
 use kucoin_api::{model::websocket::KucoinWebsocketMsg, websocket::KucoinWebsocket};
+use std::time::SystemTime;
 use tokio::sync::broadcast::Sender;
 
 /// Task to publish order change events.
@@ -23,22 +24,25 @@ pub async fn task_pub_orderchange_event(
             // TradeReceived is only available to V2.
             // TODO sometimes V2 misses publishing TradeReceivedMsg, arguably due to initialization process issue.
             // Currently using a more stable TradeOpenMsg, although TradeReceived is always ahead of TradeOpen
-            log::info!("TradeReceivedMsg: {:?}\n{:?}", msg.topic, msg.data);
+            log::info!("TradeReceivedMsg: {:?}\n{:#?}", msg.topic, msg.data);
         } else if let KucoinWebsocketMsg::TradeOpenMsg(msg) = msg {
-            log::info!("TradeOpenMsg: {:?}\n{:?}", msg.topic, msg.data);
+            let time_received = SystemTime::now();
+            log::info!("time_received: {time_received:?}");
+
+            log::info!("TradeOpenMsg: {:?}\n{:#?}", msg.topic, msg.data);
             // TODO optimize below to something more insightful
             let event: OrderChangeEvent =
                 OrderChangeEvent::OrderOpen((0, format!("{:?}", msg.data.clone())));
             sender.send(event).expect("Publishing OrderOpen failed");
         } else if let KucoinWebsocketMsg::TradeMatchMsg(msg) = msg {
-            log::info!("TradeMatchMsg: {:?}\n{:?}", msg.topic, msg.data);
+            log::info!("TradeMatchMsg: {:?}\n{:#?}", msg.topic, msg.data);
         } else if let KucoinWebsocketMsg::TradeFilledMsg(msg) = msg {
-            log::info!("TradeFilledMsg: {:?}\n{:?}", msg.topic, msg.data);
+            log::info!("TradeFilledMsg: {:?}\n{:#?}", msg.topic, msg.data);
             let event: OrderChangeEvent =
                 OrderChangeEvent::OrderFilled((0, format!("{:?}", msg.data.clone())));
             sender.send(event).expect("Publishing OrderFilled failed");
         } else if let KucoinWebsocketMsg::TradeCanceledMsg(msg) = msg {
-            log::info!("TradeCanceledMsg: {:?}\n{:?}", msg.topic, msg.data);
+            log::info!("TradeCanceledMsg: {:?}\n{:#?}", msg.topic, msg.data);
             let event: OrderChangeEvent =
                 OrderChangeEvent::OrderCanceled((0, format!("{:?}", msg.data.clone())));
             sender.send(event).expect("Publishing OrderCanceled failed");

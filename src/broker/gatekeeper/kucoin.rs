@@ -7,6 +7,7 @@ use crate::global::counter_helper;
 use crate::model::counter::Counter;
 use crate::model::order::{LimitOrder, OrderType};
 use crate::strings::generate_uid;
+use std::time::SystemTime;
 use tokio::sync::broadcast::{Receiver, Sender};
 use tokio::sync::Mutex;
 
@@ -49,6 +50,9 @@ pub async fn task_gatekeep_chances(
                         amount: chance.actions[i].volume.to_string(),
                         price: chance.actions[i].price.to_string(),
                     };
+                    // Logging time
+                    let time_sent = SystemTime::now();
+                    log::info!("time_sent: {time_sent:?}");
 
                     sender.send(OrderEvent::PostOrder(order)).unwrap();
 

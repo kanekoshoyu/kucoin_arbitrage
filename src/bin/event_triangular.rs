@@ -141,18 +141,19 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
 
     // Subscribes public orderbook WS per session, this is the source of data for the infrastructure tasks
     for (i, sub) in subs.iter().enumerate() {
-        let mut ws = api.websocket();
-        ws.subscribe(url_public.clone(), sub.clone()).await?;
+        let mut ws_public = api.websocket();
+        ws_public.subscribe(url_public.clone(), sub.clone()).await?;
         // TODO change to task_pub_orderbook_event
-        tokio::spawn(task_pub_orderbook_event(ws, tx_orderbook.clone()));
+        tokio::spawn(task_pub_orderbook_event(ws_public, tx_orderbook.clone()));
         log::info!("{i:?}-th session of WS subscription setup");
     }
 
     // Subscribes private order change websocket
-    let mut ws = api.websocket();
-    ws.subscribe(url_private.clone(), vec![WSTopic::TradeOrders])
+    let mut ws_private = api.websocket();
+    ws_private
+        .subscribe(url_private.clone(), vec![WSTopic::TradeOrders])
         .await?;
-    tokio::spawn(task_pub_orderchange_event(ws, tx_orderchange));
+    tokio::spawn(task_pub_orderchange_event(ws_private, tx_orderchange));
 
     log::info!("All application tasks setup");
 

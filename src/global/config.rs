@@ -1,4 +1,3 @@
-extern crate lazy_static;
 use crate::model::config::Config;
 use ini::{Ini, Properties};
 use kucoin_api::client::Credentials;

@@ -65,17 +65,18 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     // Subscribes private order change websocket
     // NOTE TradeOrdersV2's TradeReceived appears unstable.
     // Using TradeOrders's TradeOpen instead
-    let mut ws = api.websocket();
-    ws.subscribe(
-        url_private.clone(),
-        vec![
-            WSTopic::TradeOrders,
-            WSTopic::Balances,
-            WSTopic::PositionChange,
-        ],
-    )
-    .await?;
-    tokio::spawn(task_pub_orderchange_event(ws, tx_orderchange));
+    let mut ws_private = api.websocket();
+    ws_private
+        .subscribe(
+            url_private.clone(),
+            vec![
+                WSTopic::TradeOrders,
+                WSTopic::Balances,
+                WSTopic::PositionChange,
+            ],
+        )
+        .await?;
+    tokio::spawn(task_pub_orderchange_event(ws_private, tx_orderchange));
 
     log::info!("All application tasks setup");
 

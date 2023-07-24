@@ -1,4 +1,4 @@
-/// Arbitrage strategy algorithms
-/// This should come independent from the specific API (i.e. use internal data structure only).
+/// Triangular arbitrage, all taker
 pub mod all_taker;
+/// Triangular arbitrage, all taker with BTC and USD as the two base coins
 pub mod all_taker_btc_usd;

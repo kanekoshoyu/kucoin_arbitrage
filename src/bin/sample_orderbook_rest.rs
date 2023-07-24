@@ -1,4 +1,4 @@
-/// get the Orderbook from REST API
+/// Gets Orderbook from REST API
 use kucoin_api::client::{Kucoin, KucoinEnv};
 use kucoin_api::model::market::OrderBookType;
 

@@ -1,4 +1,3 @@
-extern crate lazy_static;
 use crate::model::config::Config;
 use ini::{Ini, Properties};
 use kucoin_api::client::Credentials;
@@ -13,9 +12,11 @@ lazy_static::lazy_static! {
 
 // might require macro to load the filename
 pub fn load_ini() -> Config {
-    let interval_str = SEC_BEHV.get("monitor_interval_sec").unwrap();
+    let str_interval = SEC_BEHV.get("monitor_interval_sec").unwrap();
+    let str_budget = SEC_BEHV.get("usd_cyclic_arbitrage").unwrap();
     Config {
-        monitor_interval_sec: interval_str.parse::<u64>().unwrap(),
+        monitor_interval_sec: str_interval.parse::<u64>().unwrap(),
+        usd_cyclic_arbitrage: str_budget.parse::<u64>().unwrap(),
         api_key: SEC_CRED.get("api_key").unwrap(),
         secret_key: SEC_CRED.get("secret_key").unwrap(),
         passphrase: SEC_CRED.get("passphrase").unwrap(),

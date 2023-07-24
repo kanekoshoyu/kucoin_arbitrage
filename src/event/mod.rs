@@ -1,5 +1,8 @@
-/// Event
-/// This should come independent from the specific API (i.e. use internal data structure only).
+/// Arbitrage chance enum for internal
 pub mod chance;
+/// Order placement enum for REST
 pub mod order;
+/// Orderbook change enum for subscription
 pub mod orderbook;
+/// Order change enum for subscription
+pub mod orderchange;

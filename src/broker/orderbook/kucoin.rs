@@ -8,16 +8,22 @@ use kucoin_api::{model::websocket::KucoinWebsocketMsg, websocket::KucoinWebsocke
 use std::sync::Arc;
 use tokio::sync::broadcast::{Receiver, Sender};
 use tokio::sync::Mutex;
-//TODO implement the internal trade order task in kucoin
 
-/// Task to publish orderbook events from websocket api output
+/// Task to publish orderbook events.
+/// Subscribes Websocket API.
+/// Publishes OrderbookEvent directly after conversion.
 pub async fn task_pub_orderbook_event(
     mut ws: KucoinWebsocket,
     sender: Sender<OrderbookEvent>,
 ) -> Result<(), kucoin_api::failure::Error> {
     let serial = 0;
     loop {
-        let msg = ws.try_next().await?.unwrap();
+        let msg = ws.try_next().await;
+        if let Err(e) = msg {
+            log::error!("task_pub_orderbook_event error: {e}");
+            panic!()
+        }
+        let msg = msg?.unwrap();
         // add matches for multi-subscribed sockets handling
         if let KucoinWebsocketMsg::OrderBookMsg(msg) = msg {
             // log::info!("WS: {msg:#?}");
@@ -30,10 +36,8 @@ pub async fn task_pub_orderbook_event(
             log::info!("TickerMsg: {msg:#?}")
         } else if let KucoinWebsocketMsg::OrderBookChangeMsg(msg) = msg {
             log::info!("OrderbookChange: {msg:#?}")
-        } else if let KucoinWebsocketMsg::WelcomeMsg(_msg) = msg {
-            log::info!("Connection setup")
-        } else if let KucoinWebsocketMsg::PongMsg(_msg) = msg {
-            log::info!("Connection maintained")
+        } else if let KucoinWebsocketMsg::WelcomeMsg(_) = msg {
+        } else if let KucoinWebsocketMsg::PongMsg(_) = msg {
         } else {
             log::info!("Irrelevant Messages");
             log::info!("{msg:#?}")
@@ -41,7 +45,9 @@ pub async fn task_pub_orderbook_event(
     }
 }
 
-/// Task to puiblish orderbook events from websocket api output
+/// Task to sync local orderbook from API.
+/// Subscribes OrderbookEvent.
+/// Publishes OrderbookEvent after sync.
 pub async fn task_sync_orderbook(
     mut receiver: Receiver<OrderbookEvent>,
     sender: Sender<OrderbookEvent>,

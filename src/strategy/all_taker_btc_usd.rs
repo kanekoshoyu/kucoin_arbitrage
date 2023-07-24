@@ -11,18 +11,18 @@ use std::sync::Arc;
 use tokio::sync::broadcast::{Receiver, Sender};
 use tokio::sync::Mutex;
 
-/// Async Task to subscribe to hte websocket events, calculate chances,  
+/// Async task to subscribe to hte websocket events, calculate chances,  
 pub async fn task_pub_chance_all_taker_btc_usd(
     mut receiver: Receiver<OrderbookEvent>,
     sender: Sender<ChanceEvent>,
     local_full_orderbook: Arc<Mutex<FullOrderbook>>,
     symbol_map: Arc<Mutex<BTreeMap<String, SymbolInfo>>>,
+    usd_budget: f64,
     counter: Arc<Mutex<Counter>>,
 ) -> Result<(), kucoin_api::failure::Error> {
     let btc = String::from("BTC");
     let usd = String::from("USDT");
     let btc_usd = std::format!("{btc}-{usd}");
-    let usd_budget = 100.0;
     loop {
         counter_helper::increment(counter.clone()).await;
         let event = receiver.recv().await?;

@@ -16,7 +16,19 @@ https://github.com/kanekoshoyu/Kucoin-Triangular-Arbitrage
 - It didn't count the actual size of the arbitrage order, which meant that the script kept buying some shitcoin and could not sell properly.
 - It simply took the mean price instead of best bid/ask, which means it took maker positions for each of three actions in one arbitrage, and did not execute arbitrage promptly.
 ## How to run example executables
-Copy/Rename config.ini.sample as config.ini and set the API key with your own KuCoin API credentials.  
+Copy/Rename config.ini.sample as config.ini and set the API key with your own KuCoin API credentials. Configure the event monitor interval and the USD budget per clyclic arbitrage.   
+```
+[KuCoin Credentials]
+api_key="YOUR_API_KEY"
+secret_key="YOUR_SECRET_KEY"
+passphrase="YOUR_PASSPHRASE"
+
+[Behaviour]
+# Performance monitor interval in seconds
+monitor_interval_sec=120
+# max amount of USD to use in a single cyclic arbitrage
+usd_cyclic_arbitrage=100
+```
 At the root directory of the project, run the below command
 ```
 cargo run --bin event_triangular  

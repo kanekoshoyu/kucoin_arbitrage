@@ -1,6 +1,5 @@
 /// Test REST-to-WS Network Latency
 /// place extreme order, receive extreme order, check time difference
-extern crate kucoin_api;
 use chrono::prelude::Local;
 use kucoin_api::failure;
 use kucoin_api::futures::TryStreamExt;
@@ -9,8 +8,8 @@ use kucoin_api::{
     model::websocket::{KucoinWebsocketMsg, WSTopic, WSType},
 };
 use kucoin_arbitrage::model::order::OrderSide;
+use kucoin_arbitrage::strings::generate_uid;
 use kucoin_arbitrage::translator::traits::OrderBookChangeTranslator;
-use uuid::Uuid;
 
 /// main function
 #[tokio::main]
@@ -27,7 +26,6 @@ async fn main() -> Result<(), failure::Error> {
 
     let subs = vec![WSTopic::OrderBook(vec!["BTC-USDT".to_string()])];
     // extreme order
-    let id: Uuid = Uuid::new_v4();
     let test_symbol: &str = "BTC-USDT";
     let test_price: f64 = 1.0; // buying BTC at 1 USD, which cannot happen as of 2023
     let test_volume: f64 = 0.1;
@@ -37,7 +35,7 @@ async fn main() -> Result<(), failure::Error> {
     api.cancel_all_orders(None, None).await.unwrap();
     // TODO set a valid limit order
     api.post_limit_order(
-        id.to_string().as_str(),
+        generate_uid(40).as_str(),
         test_symbol,
         OrderSide::Buy.as_ref(),
         test_price.to_string().as_str(),

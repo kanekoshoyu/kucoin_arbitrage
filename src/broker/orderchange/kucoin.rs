@@ -1,7 +1,7 @@
 use crate::event::orderchange::OrderChangeEvent;
+use crate::global;
 use kucoin_api::futures::TryStreamExt;
 use kucoin_api::{model::websocket::KucoinWebsocketMsg, websocket::KucoinWebsocket};
-use std::time::SystemTime;
 use tokio::sync::broadcast::Sender;
 
 /// Task to publish order change events.
@@ -26,8 +26,10 @@ pub async fn task_pub_orderchange_event(
             // Currently using a more stable TradeOpenMsg, although TradeReceived is always ahead of TradeOpen
             log::info!("TradeReceivedMsg: {:?}\n{:#?}", msg.topic, msg.data);
         } else if let KucoinWebsocketMsg::TradeOpenMsg(msg) = msg {
-            let time_received = SystemTime::now();
-            log::info!("time_received: {time_received:?}");
+
+            let time = global::timer::stop("order_placement_network".to_string()).await.unwrap();
+            log::info!("order_placement_network: {time:?}");
+
 
             log::info!("TradeOpenMsg: {:?}\n{:#?}", msg.topic, msg.data);
             // TODO optimize below to something more insightful

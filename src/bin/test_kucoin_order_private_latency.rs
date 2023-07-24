@@ -5,7 +5,7 @@ use kucoin_api::{
     client::{Kucoin, KucoinEnv},
     model::websocket::{WSTopic, WSType},
 };
-use kucoin_arbitrage::broker::symbol::filter::symbol_with_quotes;
+use kucoin_arbitrage::{broker::symbol::filter::symbol_with_quotes, global};
 use kucoin_arbitrage::broker::symbol::kucoin::{format_subscription_list, get_symbols};
 use kucoin_arbitrage::event::{order::OrderEvent, orderchange::OrderChangeEvent};
 use kucoin_arbitrage::model::counter::Counter;
@@ -80,6 +80,8 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
 
     log::info!("All application tasks setup");
 
+    global::timer::start("order_placement_network".to_string()).await;
+    global::timer::start("order_placement_broadcast".to_string()).await;
     // Sends a post order
     let event = OrderEvent::PostOrder(LimitOrder {
         id: generate_uid(40),
@@ -87,7 +89,7 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
         side: OrderSide::Buy,
         symbol: "BTC-USDT".to_string(),
         amount: 0.001.to_string(),
-        price: 29850.0.to_string(),
+        price: 29947.0.to_string(),
     });
     if let Err(e) = tx_order.send(event) {
         log::error!("{e}");

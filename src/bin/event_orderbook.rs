@@ -19,6 +19,7 @@ async fn main() -> Result<(), failure::Error> {
 
     // config
     let config = kucoin_arbitrage::config::from_file("config.toml")?;
+    let monitor_interval = config.behaviour.monitor_interval_sec;
     let api = Kucoin::new(KucoinEnv::Live, Some(config.kucoin_credentials()))?;
     let url = api.get_socket_endpoint(WSType::Public).await?;
     log::info!("Credentials setup");
@@ -57,7 +58,7 @@ async fn main() -> Result<(), failure::Error> {
 
     let _ = tokio::join!(kucoin_arbitrage::global::task::background_routine(
         vec![counter.clone()],
-        config.behaviour.monitor_interval_sec as u64
+        monitor_interval as u64
     ));
     panic!("Program should not arrive here")
 }

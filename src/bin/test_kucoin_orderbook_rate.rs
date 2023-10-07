@@ -19,10 +19,13 @@ async fn main() -> Result<(), failure::Error> {
     kucoin_arbitrage::logger::log_init();
     let counter = Arc::new(Mutex::new(Counter::new("api_input")));
     log::info!("Testing Kucoin WS Message Rate");
-    let credentials = kucoin_arbitrage::global::config::credentials();
-    log::info!("{credentials:#?}");
+
+    // config
+    let config = kucoin_arbitrage::config::from_file("config.toml")?;
+    let monitor_interval: u32 = config.behaviour.monitor_interval_sec;
+
     // Initialize the Kucoin API struct
-    let api = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
+    let api = Kucoin::new(KucoinEnv::Live, Some(config.kucoin_credentials()))?;
     let url = api.get_socket_endpoint(WSType::Public).await?;
     let mut ws = api.websocket();
     let symbols = [
@@ -35,9 +38,10 @@ async fn main() -> Result<(), failure::Error> {
 
     log::info!("Async polling");
     tokio::spawn(sync_tickers(ws, counter.clone()));
-    let _res = tokio::join!(kucoin_arbitrage::global::task::background_routine(vec![
-        counter.clone()
-    ]));
+    let _res = tokio::join!(kucoin_arbitrage::global::task::background_routine(
+        vec![counter.clone()],
+        monitor_interval as u64
+    ));
     panic!("Program should not arrive here")
 }
 

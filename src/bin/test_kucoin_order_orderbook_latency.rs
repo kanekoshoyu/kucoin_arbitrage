@@ -17,10 +17,12 @@ async fn main() -> Result<(), failure::Error> {
     // provide logging format
     kucoin_arbitrage::logger::log_init();
     log::info!("Testing Kucoin REST-to-WS latency");
-    let credentials = kucoin_arbitrage::global::config::credentials();
-    log::info!("{credentials:#?}");
+
+    // config
+    let config = kucoin_arbitrage::config::from_file("config.toml")?;
+
     // Initialize the Kucoin API struct
-    let api = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
+    let api = Kucoin::new(KucoinEnv::Live, Some(config.kucoin_credentials()))?;
     let url = api.get_socket_endpoint(WSType::Public).await?;
     let mut ws = api.websocket();
 

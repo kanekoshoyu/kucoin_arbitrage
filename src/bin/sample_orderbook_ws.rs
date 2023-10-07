@@ -13,15 +13,17 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 #[tokio::main]
-async fn main() -> Result<(), kucoin_api::failure::Error> {
+async fn main() -> Result<(), failure::Error> {
     // provide logging format
     kucoin_arbitrage::logger::log_init();
     log::info!("Log setup");
     let counter = Arc::new(Mutex::new(Counter::new("api_input")));
 
-    // credentials
-    let credentials = kucoin_arbitrage::global::config::credentials();
-    let api = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
+    // config
+    let config = kucoin_arbitrage::config::from_file("config.toml")?;
+    let monitor_interval = config.behaviour.monitor_interval_sec;
+
+    let api = Kucoin::new(KucoinEnv::Live, Some(config.kucoin_credentials()))?;
     let url = api.clone().get_socket_endpoint(WSType::Public).await?;
     log::info!("Credentials setup");
 
@@ -44,9 +46,10 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
         tokio::spawn(sync_tickers(ws, counter.clone()));
         log::info!("{i:?}-th session of WS subscription setup");
     }
-    let _res = tokio::join!(kucoin_arbitrage::global::task::background_routine(vec![
-        counter.clone(),
-    ]));
+    let _res = tokio::join!(kucoin_arbitrage::global::task::background_routine(
+        vec![counter.clone(),],
+        monitor_interval as u64
+    ));
     panic!("Program should not arrive here")
 }
 

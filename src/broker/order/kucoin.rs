@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::global;
 use crate::model::counter::Counter;
 use crate::model::order::Order;
 use crate::{event::order::OrderEvent, global::counter_helper};
@@ -45,6 +46,10 @@ pub async fn task_place_order(
                 // }
             }
             OrderEvent::PostOrder(order) => {
+                // gge the broadcast duration
+                let time = global::timer::stop("order_placement_broadcast".to_string()).await.unwrap();
+                log::info!("order_placement_broadcast: {time:?}");
+
                 log::info!("order placement\n{order:?}");
                 if let Err(e) = kucoin
                     .post_limit_order(

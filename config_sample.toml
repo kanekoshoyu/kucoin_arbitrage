@@ -1,0 +1,13 @@
+# Create a copy of config_sample.toml as config.toml in the same directory
+
+# Get API credentials from https://www.kucoin.com/ and paste below
+[kucoin]
+api_key = "YOUR_API_KEY_HERE"
+secret_key = "YOUR_SECRET_KEY_HERE"
+passphrase = "YOUR_PASSPHRASE_HERE"
+
+[behaviour]
+# Performance monitor interval in seconds
+monitor_interval_sec = 120
+# max amount of USD to use in a single cyclic arbitrage
+usd_cyclic_arbitrage = 100

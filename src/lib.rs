@@ -14,3 +14,7 @@ pub mod strategy;
 pub mod strings;
 /// Traits/impl to convert between API crate models and internal models
 pub mod translator;
+/// Config file reader
+pub mod config;
+/// Custom error
+pub mod error;

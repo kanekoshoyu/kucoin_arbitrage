@@ -5,7 +5,6 @@ use kucoin_api::{
     client::{Kucoin, KucoinEnv},
     model::websocket::{WSTopic, WSType},
 };
-use kucoin_arbitrage::broker::symbol::filter::symbol_with_quotes;
 use kucoin_arbitrage::broker::symbol::kucoin::{format_subscription_list, get_symbols};
 use kucoin_arbitrage::event::{order::OrderEvent, orderchange::OrderChangeEvent};
 use kucoin_arbitrage::model::counter::Counter;
@@ -16,13 +15,14 @@ use kucoin_arbitrage::{
 use kucoin_arbitrage::{
     broker::orderchange::kucoin::task_pub_orderchange_event, strings::generate_uid,
 };
+use kucoin_arbitrage::{broker::symbol::filter::symbol_with_quotes, global};
 use std::{sync::Arc, time::Duration};
 use tokio::sync::broadcast::channel;
 use tokio::sync::Mutex;
 use tokio::time::sleep;
 
 #[tokio::main]
-async fn main() -> Result<(), kucoin_api::failure::Error> {
+async fn main() -> Result<(), failure::Error> {
     // Provides logging format
     kucoin_arbitrage::logger::log_init();
     log::info!("Log setup");
@@ -30,9 +30,10 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     // Declares all the system counters
     let order_counter = Arc::new(Mutex::new(Counter::new("order")));
 
-    // Credentials
-    let credentials = kucoin_arbitrage::global::config::credentials();
-    let api = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
+    // config
+    let config = kucoin_arbitrage::config::from_file("config.toml")?;
+
+    let api = Kucoin::new(KucoinEnv::Live, Some(config.kucoin_credentials()))?;
     let url_private = api.clone().get_socket_endpoint(WSType::Private).await?;
     log::info!("Credentials setup");
 
@@ -80,6 +81,8 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
 
     log::info!("All application tasks setup");
 
+    global::timer::start("order_placement_network".to_string()).await;
+    global::timer::start("order_placement_broadcast".to_string()).await;
     // Sends a post order
     let event = OrderEvent::PostOrder(LimitOrder {
         id: generate_uid(40),
@@ -87,7 +90,7 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
         side: OrderSide::Buy,
         symbol: "BTC-USDT".to_string(),
         amount: 0.001.to_string(),
-        price: 29850.0.to_string(),
+        price: 29947.0.to_string(),
     });
     if let Err(e) = tx_order.send(event) {
         log::error!("{e}");

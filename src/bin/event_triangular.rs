@@ -14,7 +14,6 @@ use kucoin_arbitrage::event::{
     chance::ChanceEvent, order::OrderEvent, orderbook::OrderbookEvent,
     orderchange::OrderChangeEvent,
 };
-use kucoin_arbitrage::global::config::CONFIG;
 use kucoin_arbitrage::model::{counter::Counter, orderbook::FullOrderbook};
 use kucoin_arbitrage::strategy::all_taker_btc_usd::task_pub_chance_all_taker_btc_usd;
 use kucoin_arbitrage::translator::traits::OrderBookTranslator;
@@ -23,7 +22,7 @@ use tokio::sync::broadcast::channel;
 use tokio::sync::Mutex;
 
 #[tokio::main]
-async fn main() -> Result<(), kucoin_api::failure::Error> {
+async fn main() -> Result<(), failure::Error> {
     // Provides logging format
     kucoin_arbitrage::logger::log_init();
     log::info!("Log setup");
@@ -35,8 +34,11 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     let order_counter = Arc::new(Mutex::new(Counter::new("order")));
 
     // Credentials
-    let credentials = kucoin_arbitrage::global::config::credentials();
-    let api = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
+    let config = kucoin_arbitrage::config::from_file("config.toml")?;
+    let budget = config.behaviour.usd_cyclic_arbitrage;
+    let monitor_interval = config.behaviour.monitor_interval_sec;
+
+    let api = Kucoin::new(KucoinEnv::Live, Some(config.kucoin_credentials()))?;
     let url_public = api.clone().get_socket_endpoint(WSType::Public).await?;
     let url_private = api.clone().get_socket_endpoint(WSType::Private).await?;
     log::info!("Credentials setup");
@@ -84,7 +86,7 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
         tx_chance,
         full_orderbook.clone(),
         hash_symbols,
-        CONFIG.usd_cyclic_arbitrage as f64,
+        budget as f64,
         best_price_counter.clone(),
     ));
     tokio::spawn(task_gatekeep_chances(
@@ -158,11 +160,14 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     log::info!("All application tasks setup");
 
     // Background routine
-    let _ = tokio::join!(kucoin_arbitrage::global::task::background_routine(vec![
-        api_input_counter.clone(),
-        best_price_counter.clone(),
-        chance_counter.clone(),
-        order_counter.clone()
-    ]));
+    let _ = tokio::join!(kucoin_arbitrage::global::task::background_routine(
+        vec![
+            api_input_counter.clone(),
+            best_price_counter.clone(),
+            chance_counter.clone(),
+            order_counter.clone()
+        ],
+        monitor_interval as u64
+    ));
     panic!("Program should not arrive here")
 }

@@ -11,15 +11,15 @@ use tokio::sync::broadcast::channel;
 use tokio::sync::Mutex;
 
 #[tokio::main]
-async fn main() -> Result<(), kucoin_api::failure::Error> {
+async fn main() -> Result<(), failure::Error> {
     // provide logging format
     kucoin_arbitrage::logger::log_init();
     log::info!("Log setup");
     let counter = Arc::new(Mutex::new(Counter::new("api_input")));
 
-    // credentials
-    let credentials = kucoin_arbitrage::global::config::credentials();
-    let api = Kucoin::new(KucoinEnv::Live, Some(credentials))?;
+    // config
+    let config = kucoin_arbitrage::config::from_file("config.toml")?;
+    let api = Kucoin::new(KucoinEnv::Live, Some(config.kucoin_credentials()))?;
     let url = api.get_socket_endpoint(WSType::Public).await?;
     log::info!("Credentials setup");
 
@@ -55,8 +55,9 @@ async fn main() -> Result<(), kucoin_api::failure::Error> {
     ));
     log::info!("task_sync_orderbook setup");
 
-    let _ = tokio::join!(kucoin_arbitrage::global::task::background_routine(vec![
-        counter.clone(),
-    ]));
+    let _ = tokio::join!(kucoin_arbitrage::global::task::background_routine(
+        vec![counter.clone()],
+        config.behaviour.monitor_interval_sec as u64
+    ));
     panic!("Program should not arrive here")
 }

@@ -6,7 +6,7 @@ authors = ["Sho Kaneko <kanekoshoyu@gmail.com>"]
 description = "Event-Driven Kucoin Arbitrage Framework in Async Rust"
 repository = "https://github.com/kanekoshoyu/kucoin_arbitrage"
 license = "MIT"
-
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 kucoin_api = "1.4.10"
@@ -14,10 +14,13 @@ log = "0.4"
 fern = "0.6.2"
 chrono = "0.4"
 env_logger = "0.10.0"
-rust-ini = "0.18"
 lazy_static = "1.4"
 futures = "0.3"
 ordered-float = "3.6.0"
 num-traits = "0.2.15"
+serde = "1.0.188"
+serde_derive = "1.0.188"
+failure = "0.1.8"
+toml = "0.8.2"
 tokio = { version = "1.27.0", features = ["full"] }
 rand = "0.8.5"

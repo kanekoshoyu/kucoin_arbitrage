@@ -4,6 +4,7 @@ use kucoin_api::model::websocket::WSTopic;
 use kucoin_arbitrage::broker::orderbook::kucoin::{task_pub_orderbook_event, task_sync_orderbook};
 use kucoin_arbitrage::model::counter::Counter;
 use kucoin_arbitrage::model::orderbook::FullOrderbook;
+use tokio::task::JoinSet;
 use std::sync::Arc;
 use tokio::sync::broadcast::channel;
 use tokio::sync::Mutex;
@@ -13,6 +14,7 @@ async fn main() -> Result<(), failure::Error> {
     // provide logging format
     kucoin_arbitrage::logger::log_init();
     log::info!("Log setup");
+    
     let counter = Arc::new(Mutex::new(Counter::new("api_input")));
 
     // config
@@ -34,7 +36,10 @@ async fn main() -> Result<(), failure::Error> {
 
     // Orderbook Sync Task
     let full_orderbook = Arc::new(Mutex::new(FullOrderbook::new()));
-    tokio::spawn(task_sync_orderbook(
+
+    let mut taskpool = JoinSet::new();
+    
+    taskpool.spawn(task_sync_orderbook(
         receiver,
         sender_best,
         full_orderbook,
@@ -43,12 +48,18 @@ async fn main() -> Result<(), failure::Error> {
     log::info!("task_sync_orderbook setup");
 
     // OrderEvent Task
-    tokio::spawn(task_pub_orderbook_event(api.clone(), topics, sender));
+    taskpool.spawn(task_pub_orderbook_event(api.clone(), topics, sender));
     log::info!("task_pub_orderbook setup");
 
-    tokio::spawn(kucoin_arbitrage::global::task::task_log_mps(
+    taskpool.spawn(kucoin_arbitrage::global::task::task_log_mps(
         vec![counter.clone()],
-        monitor_interval as u64,
-    ))
-    .await?
+        monitor_interval as u64
+    ));
+
+    if let Some(res) = taskpool.join_next().await{
+        if let Ok(res) = res{
+            return res;
+        }
+    }
+    Err(failure::err_msg("msg"))
 }

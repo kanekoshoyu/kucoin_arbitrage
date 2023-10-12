@@ -17,7 +17,7 @@ pub async fn task_pub_orderbook_event(
     api: Kucoin,
     topics: Vec<WSTopic>,
     sender: Sender<OrderbookEvent>,
-) -> Result<(), kucoin_api::failure::Error> {
+) -> Result<(), failure::Error> {
     let serial = 0;
     let url_public = api.get_socket_endpoint(WSType::Public).await?;
     let mut ws = api.websocket();
@@ -59,7 +59,7 @@ pub async fn task_sync_orderbook(
     sender: Sender<OrderbookEvent>,
     local_full_orderbook: Arc<Mutex<FullOrderbook>>,
     counter: Arc<Mutex<Counter>>,
-) -> Result<(), kucoin_api::failure::Error> {
+) -> Result<(), failure::Error> {
     loop {
         counter_helper::increment(counter.clone()).await;
         let event = receiver.recv().await?;
@@ -72,9 +72,9 @@ pub async fn task_sync_orderbook(
             OrderbookEvent::OrderbookChangeReceived((symbol, orderbook_change)) => {
                 let orderbook = (*full_orderbook).get_mut(&symbol);
                 if orderbook.is_none() {
-                    log::warn!("received {symbol} but orderbook not initialised yet.");
-                    // REST Orderbook should be loaded before syncing with WebSocket OrderbookChange
-                    continue;
+                    return Err(failure::err_msg(format!(
+                        "received {symbol} but orderbook not initialised yet."
+                    )));
                 }
                 // log::info!("insertion: {orderbook_change:#?}");
                 match orderbook.unwrap().merge(orderbook_change) {

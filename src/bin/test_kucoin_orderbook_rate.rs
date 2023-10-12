@@ -38,7 +38,7 @@ async fn main() -> Result<(), failure::Error> {
 
     log::info!("Async polling");
     tokio::spawn(sync_tickers(ws, counter.clone()));
-    let _res = tokio::join!(kucoin_arbitrage::global::task::background_routine(
+    let _res = tokio::join!(kucoin_arbitrage::global::task::task_log_mps(
         vec![counter.clone()],
         monitor_interval as u64
     ));

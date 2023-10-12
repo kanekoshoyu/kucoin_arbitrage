@@ -47,7 +47,9 @@ pub async fn task_place_order(
             }
             OrderEvent::PostOrder(order) => {
                 // gge the broadcast duration
-                let time = global::timer::stop("order_placement_broadcast".to_string()).await.unwrap();
+                let time = global::timer::stop("order_placement_broadcast".to_string())
+                    .await
+                    .unwrap();
                 log::info!("order_placement_broadcast: {time:?}");
 
                 log::info!("order placement\n{order:?}");

@@ -3,8 +3,9 @@ use crate::global::counter_helper;
 use crate::model::counter::Counter;
 use crate::model::orderbook::FullOrderbook;
 use crate::translator::traits::OrderBookChangeTranslator;
+use kucoin_api::client::Kucoin;
 use kucoin_api::futures::TryStreamExt;
-use kucoin_api::{model::websocket::KucoinWebsocketMsg, websocket::KucoinWebsocket};
+use kucoin_api::model::websocket::{KucoinWebsocketMsg, WSTopic, WSType};
 use std::sync::Arc;
 use tokio::sync::broadcast::{Receiver, Sender};
 use tokio::sync::Mutex;
@@ -13,10 +14,15 @@ use tokio::sync::Mutex;
 /// Subscribes Websocket API.
 /// Publishes OrderbookEvent directly after conversion.
 pub async fn task_pub_orderbook_event(
-    mut ws: KucoinWebsocket,
+    api: Kucoin,
+    topics: Vec<WSTopic>,
     sender: Sender<OrderbookEvent>,
 ) -> Result<(), kucoin_api::failure::Error> {
     let serial = 0;
+    let url_public = api.get_socket_endpoint(WSType::Public).await?;
+    let mut ws = api.websocket();
+    ws.subscribe(url_public.clone(), topics).await?;
+
     loop {
         let msg = ws.try_next().await;
         if let Err(e) = msg {

@@ -1,8 +1,6 @@
 /// Syncs orderbook
-use kucoin_api::{
-    client::{Kucoin, KucoinEnv},
-    model::websocket::{WSTopic, WSType},
-};
+use kucoin_api::client::{Kucoin, KucoinEnv};
+use kucoin_api::model::websocket::WSTopic;
 use kucoin_arbitrage::broker::orderbook::kucoin::{task_pub_orderbook_event, task_sync_orderbook};
 use kucoin_arbitrage::model::counter::Counter;
 use kucoin_arbitrage::model::orderbook::FullOrderbook;
@@ -21,21 +19,13 @@ async fn main() -> Result<(), failure::Error> {
     let config = kucoin_arbitrage::config::from_file("config.toml")?;
     let monitor_interval = config.behaviour.monitor_interval_sec;
     let api = Kucoin::new(KucoinEnv::Live, Some(config.kucoin_credentials()))?;
-    let url = api.get_socket_endpoint(WSType::Public).await?;
     log::info!("Credentials setup");
 
-    // Initialize the websocket
-    let mut ws = api.websocket();
-    let subs = vec![
-        WSTopic::OrderBook(vec![
-            "ETH-BTC".to_string(),
-            "BTC-USDT".to_string(),
-            "ETH-USDT".to_string(),
-        ]),
-        // WSTopic::OrderBookChange(vec!["ETH-BTC".to_string(), "BTC-USDT".to_string()]),
-    ];
-    ws.subscribe(url, subs).await?;
-    log::info!("Websocket subscription setup");
+    let topics = vec![WSTopic::OrderBook(vec![
+        "ETH-BTC".to_string(),
+        "BTC-USDT".to_string(),
+        "ETH-USDT".to_string(),
+    ])];
 
     // Create a broadcast channel.
     let (sender, receiver) = channel(256);
@@ -43,7 +33,7 @@ async fn main() -> Result<(), failure::Error> {
     log::info!("Channel setup");
 
     // OrderEvent Task
-    tokio::spawn(task_pub_orderbook_event(ws, sender));
+    tokio::spawn(task_pub_orderbook_event(api.clone(), topics, sender));
     log::info!("task_pub_orderevent setup");
 
     // Orderbook Sync Task
@@ -56,7 +46,7 @@ async fn main() -> Result<(), failure::Error> {
     ));
     log::info!("task_sync_orderbook setup");
 
-    let _ = tokio::join!(kucoin_arbitrage::global::task::background_routine(
+    let _ = tokio::join!(kucoin_arbitrage::global::task::task_log_mps(
         vec![counter.clone()],
         monitor_interval as u64
     ));

@@ -20,7 +20,6 @@ use tokio::signal::unix::{signal, SignalKind};
 use tokio::sync::broadcast::channel;
 use tokio::sync::Mutex;
 use tokio::task::JoinSet;
-
 #[tokio::main]
 async fn main() -> Result<(), failure::Error> {
     // logging format
@@ -31,7 +30,7 @@ async fn main() -> Result<(), failure::Error> {
     let config = kucoin_arbitrage::config::from_file("config.toml")?;
 
     tokio::select! {
-        _ = task_signal_handle() => println!("received external signal, temrinating program"),
+        _ = task_signal_handle() => println!("received external signal, terminating program"),
         res = core(config) => println!("core ended first {res:?}"),
     };
 
@@ -82,7 +81,7 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<(), failure::E
 
     // creates local orderbook
     let full_orderbook = Arc::new(Mutex::new(FullOrderbook::new()));
-    log::info!("Local orderbook setup");
+    log::info!("Local empty full orderbook setup");
 
     // infrastructure tasks
     let mut taskpool_infrastructure = JoinSet::new();
@@ -125,51 +124,26 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<(), failure::E
 
     // TODO wrap below into a task and join them all using taskpool
     // collect all initial orderbook states with REST
-    let symbols: Vec<String> = symbol_infos.into_iter().map(|info| info.symbol).collect();
-    for symbol in symbols {
-        let api = api.clone();
-        let full_orderbook_arc = full_orderbook.clone();
-        tokio::spawn(async move {
-            loop {
-                // log::info!("Obtaining initial orderbook[{}] from REST", symbol);
-                let res = api.get_orderbook(&symbol, OrderBookType::L100).await;
-                if res.is_err() {
-                    log::warn!("orderbook[{}] did not respond, retry", &symbol);
-                    continue;
-                }
-                let res = res.unwrap().data;
-                if res.is_none() {
-                    log::warn!("orderbook[{}] received none, retry", &symbol);
-                    continue;
-                }
-                let data = res.unwrap();
-                let mut x = full_orderbook_arc.lock().await;
-                x.insert(symbol.to_string(), data.to_internal());
-                break;
-            }
-            symbol
-        });
-    }
-
-    log::info!("Collected all the symbols");
+    aggregate_orderbook_state(api.clone(), symbol_infos, full_orderbook).await?;
+    log::info!("Aggregated all the symbols");
 
     let mut taskpool_subscription = JoinSet::new();
     taskpool_subscription.spawn(task_pub_orderchange_event(api.clone(), tx_orderchange));
 
-    subs.iter().enumerate().for_each(|(i, sub)| {
+    for (i, sub) in subs.iter().enumerate() {
         taskpool_subscription.spawn(task_pub_orderbook_event(
             api.clone(),
             sub.to_vec(),
             tx_orderbook.clone(),
         ));
         log::info!("{i:?}-th session of WS subscription setup");
-    });
-    tokio::select! {
-        _ = taskpool_infrastructure.join_next() => log::warn!("Error found in infrastructure task pool"),
-        _ = taskpool_subscription.join_next() => log::warn!("Error found in infrastructure task pool"),
+    }
+    let message = tokio::select! {
+        res = taskpool_infrastructure.join_next() => 
+            format!("Infrastructure task pool error [{res:?}]"),
+        res = taskpool_subscription.join_next() => format!("Subscription task pool error [{res:?}]"),
     };
-
-    Ok(())
+    Err(failure::err_msg(format!("unexpected error [{message}]")))
 }
 
 /// task to wait for any external terminating signal
@@ -186,5 +160,52 @@ async fn task_signal_handle() -> Result<(), failure::Error> {
 // Define a handler function for the SIGTERM signal
 async fn exit_program(signal_alias: &str) -> Result<(), failure::Error> {
     log::info!("Received [{signal_alias}] signal");
+    Ok(())
+}
+
+async fn aggregate_orderbook_state(
+    api: Kucoin,
+    symbol_infos: Vec<kucoin_arbitrage::model::symbol::SymbolInfo>,
+    full_orderbook: Arc<Mutex<FullOrderbook>>,
+) -> Result<(), failure::Error> {
+    // replace spawn with or a taskpool
+    let mut taskpool_aggregate = JoinSet::new();
+    // collect all initial orderbook states with REST
+    let symbols: Vec<String> = symbol_infos.into_iter().map(|info| info.symbol).collect();
+    log::info!("{symbols:?}");
+    for symbol in symbols {
+        let api = api.clone();
+        let full_orderbook_arc = full_orderbook.clone();
+        taskpool_aggregate.spawn(async move {
+            let mut try_counter = 0;
+            loop {
+                try_counter+=1;
+                log::info!("Obtaining initial orderbook[{symbol}] from REST ({try_counter} tries)");
+                let res = api.get_orderbook(&symbol, OrderBookType::L20).await;
+                if res.is_err() {
+                    log::warn!("orderbook[{symbol}] did not respond ({try_counter:?} tries)");
+                    continue;
+                }
+                let res = res.unwrap().data;
+                if res.is_none() {
+                    log::warn!("orderbook[{symbol}] received none ({try_counter:?} tries)");
+                    continue;
+                }
+                let data = res.unwrap();
+                let mut x = full_orderbook_arc.lock().await;
+                x.insert(symbol.to_string(), data.to_internal());
+                break;
+            }
+            symbol
+        });
+    }
+    while let Some(res) = taskpool_aggregate.join_next().await {
+        if let Err(e) = res {
+            log::warn!("taskpool_aggregate error [{e}]");
+            return Err(failure::Error::from(e));
+        }
+        let res: String = res.unwrap();
+        log::info!("Initialized orderbook for [{res}]");
+    }
     Ok(())
 }

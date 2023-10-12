@@ -27,14 +27,10 @@ async fn main() -> Result<(), failure::Error> {
         "ETH-USDT".to_string(),
     ])];
 
-    // Create a broadcast channel.
+    // broadcast channel
     let (sender, receiver) = channel(256);
     let (sender_best, _) = channel(64);
     log::info!("Channel setup");
-
-    // OrderEvent Task
-    tokio::spawn(task_pub_orderbook_event(api.clone(), topics, sender));
-    log::info!("task_pub_orderevent setup");
 
     // Orderbook Sync Task
     let full_orderbook = Arc::new(Mutex::new(FullOrderbook::new()));
@@ -46,9 +42,13 @@ async fn main() -> Result<(), failure::Error> {
     ));
     log::info!("task_sync_orderbook setup");
 
-    let _ = tokio::join!(kucoin_arbitrage::global::task::task_log_mps(
+    // OrderEvent Task
+    tokio::spawn(task_pub_orderbook_event(api.clone(), topics, sender));
+    log::info!("task_pub_orderbook setup");
+
+    tokio::spawn(kucoin_arbitrage::global::task::task_log_mps(
         vec![counter.clone()],
-        monitor_interval as u64
-    ));
-    panic!("Program should not arrive here")
+        monitor_interval as u64,
+    ))
+    .await?
 }

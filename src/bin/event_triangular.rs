@@ -1,6 +1,6 @@
 /// Executes triangular arbitrage
 use kucoin_api::client::{Kucoin, KucoinEnv};
-use kucoin_api::model::market::OrderBookType;
+use kucoin_api::model::market::{OrderBook, OrderBookType};
 use kucoin_arbitrage::broker::gatekeeper::kucoin::task_gatekeep_chances;
 use kucoin_arbitrage::broker::order::kucoin::task_place_order;
 use kucoin_arbitrage::broker::orderbook::kucoin::{task_pub_orderbook_event, task_sync_orderbook};
@@ -16,6 +16,7 @@ use kucoin_arbitrage::model::{counter::Counter, orderbook::FullOrderbook};
 use kucoin_arbitrage::strategy::all_taker_btc_usd::task_pub_chance_all_taker_btc_usd;
 use kucoin_arbitrage::translator::traits::OrderBookTranslator;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::signal::unix::{signal, SignalKind};
 use tokio::sync::broadcast::channel;
 use tokio::sync::Mutex;
@@ -139,7 +140,7 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<(), failure::E
         log::info!("{i:?}-th session of WS subscription setup");
     }
     let message = tokio::select! {
-        res = taskpool_infrastructure.join_next() => 
+        res = taskpool_infrastructure.join_next() =>
             format!("Infrastructure task pool error [{res:?}]"),
         res = taskpool_subscription.join_next() => format!("Subscription task pool error [{res:?}]"),
     };
@@ -172,40 +173,54 @@ async fn aggregate_orderbook_state(
     let mut taskpool_aggregate = JoinSet::new();
     // collect all initial orderbook states with REST
     let symbols: Vec<String> = symbol_infos.into_iter().map(|info| info.symbol).collect();
-    log::info!("{symbols:?}");
+    log::info!("Total symbols: {:?}", symbols.len());
     for symbol in symbols {
         let api = api.clone();
         let full_orderbook_arc = full_orderbook.clone();
         taskpool_aggregate.spawn(async move {
-            let mut try_counter = 0;
-            loop {
-                try_counter+=1;
-                log::info!("Obtaining initial orderbook[{symbol}] from REST ({try_counter} tries)");
-                let res = api.get_orderbook(&symbol, OrderBookType::L20).await;
-                if res.is_err() {
-                    log::warn!("orderbook[{symbol}] did not respond ({try_counter:?} tries)");
-                    continue;
-                }
-                let res = res.unwrap().data;
-                if res.is_none() {
-                    log::warn!("orderbook[{symbol}] received none ({try_counter:?} tries)");
-                    continue;
-                }
-                let data = res.unwrap();
-                let mut x = full_orderbook_arc.lock().await;
-                x.insert(symbol.to_string(), data.to_internal());
-                break;
-            }
+            let data = task_get_orderbook(api, &symbol).await.unwrap();
+            let mut x = full_orderbook_arc.lock().await;
+            x.insert(symbol.to_string(), data.to_internal());
             symbol
         });
+        // prevent server overloading
+        tokio::time::sleep(Duration::from_millis(25)).await;
     }
     while let Some(res) = taskpool_aggregate.join_next().await {
         if let Err(e) = res {
-            log::warn!("taskpool_aggregate error [{e}]");
             return Err(failure::Error::from(e));
         }
-        let res: String = res.unwrap();
-        log::info!("Initialized orderbook for [{res}]");
+        log::info!("Initialized orderbook for [{:?}]", res.unwrap());
     }
     Ok(())
+}
+
+async fn task_get_orderbook(api: Kucoin, symbol: &str) -> Result<OrderBook, failure::Error> {
+    let mut try_counter = 0;
+    loop {
+        try_counter += 1;
+        // OrderBookType::Full requires valid API Key
+        let res = api.get_orderbook(symbol, OrderBookType::L20).await;
+        if res.is_err() {
+            log::warn!("orderbook[{symbol}] did not respond ({try_counter:?} tries)");
+            continue;
+        }
+        let res = res.unwrap();
+        let code = res.code;
+        match code.as_str() {
+            "429000" => {
+                log::warn!("[{symbol:?}] request overloaded ({try_counter:?} tries)")
+            }
+            "200000" => {
+                if res.data.is_none() {
+                    log::warn!("orderbook[{symbol}] received none ({try_counter:?} tries)");
+                    continue;
+                }
+                log::info!("obtained [{symbol}]");
+                return Ok(res.data.unwrap());
+            }
+            "400003" => return Err(failure::err_msg(format!("API key needed not but provided"))),
+            _ => return Err(failure::err_msg(format!("unrecognised code [{:?}]", code))),
+        }
+    }
 }

@@ -3,9 +3,8 @@ use std::sync::Arc;
 use crate::event::chance::ChanceEvent;
 use crate::event::order::OrderEvent;
 use crate::event::orderchange::OrderChangeEvent;
-use crate::monitor::counter::Counter;
 use crate::model::order::{LimitOrder, OrderType};
-use crate::monitor::counter_helper;
+use crate::monitor::counter;
 use crate::strings::generate_uid;
 use std::time::SystemTime;
 use tokio::sync::broadcast::{Receiver, Sender};
@@ -23,10 +22,10 @@ pub async fn task_gatekeep_chances(
     mut receiver_chance: Receiver<ChanceEvent>,
     mut receiver_order_change: Receiver<OrderChangeEvent>,
     sender: Sender<OrderEvent>,
-    counter: Arc<Mutex<Counter>>,
+    counter: Arc<Mutex<counter::Counter>>,
 ) -> Result<(), kucoin_api::failure::Error> {
     loop {
-        counter_helper::increment(counter.clone()).await;
+        counter::increment(counter.clone()).await;
         let status = receiver_chance.recv().await;
         if let Err(e) = status {
             log::error!("gatekeep chance parsing error {e:?}");

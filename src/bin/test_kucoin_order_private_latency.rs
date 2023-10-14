@@ -7,8 +7,8 @@ use kucoin_arbitrage::broker::orderchange::kucoin::task_pub_orderchange_event;
 use kucoin_arbitrage::broker::symbol::kucoin::{format_subscription_list, get_symbols};
 use kucoin_arbitrage::event::order::OrderEvent;
 use kucoin_arbitrage::event::orderchange::OrderChangeEvent;
-use kucoin_arbitrage::monitor::counter::Counter;
 use kucoin_arbitrage::model::order::{LimitOrder, OrderSide, OrderType};
+use kucoin_arbitrage::monitor::counter::Counter;
 use kucoin_arbitrage::strings::generate_uid;
 use kucoin_arbitrage::{broker::symbol::filter::symbol_with_quotes, monitor};
 use std::sync::Arc;
@@ -61,7 +61,6 @@ async fn main() -> Result<(), failure::Error> {
     tokio::spawn(task_pub_orderchange_event(api.clone(), tx_orderchange));
 
     log::info!("All application tasks setup");
-
     monitor::timer::start("order_placement_network".to_string()).await;
     monitor::timer::start("order_placement_broadcast".to_string()).await;
     // Sends a post order

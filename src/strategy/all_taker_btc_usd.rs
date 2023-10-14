@@ -1,9 +1,8 @@
 use crate::event::{chance::ChanceEvent, orderbook::OrderbookEvent};
 use crate::model::chance::{ActionInfo, TriangularArbitrageChance};
-use crate::monitor::counter::Counter;
 use crate::model::orderbook::{FullOrderbook, Orderbook};
 use crate::model::symbol::SymbolInfo;
-use crate::monitor::counter_helper;
+use crate::monitor::counter;
 use crate::strings::split_symbol;
 use ordered_float::OrderedFloat;
 use std::collections::BTreeMap;
@@ -18,13 +17,13 @@ pub async fn task_pub_chance_all_taker_btc_usd(
     local_full_orderbook: Arc<Mutex<FullOrderbook>>,
     symbol_map: Arc<Mutex<BTreeMap<String, SymbolInfo>>>,
     usd_budget: f64,
-    counter: Arc<Mutex<Counter>>,
+    counter: Arc<Mutex<counter::Counter>>,
 ) -> Result<(), kucoin_api::failure::Error> {
     let btc = String::from("BTC");
     let usd = String::from("USDT");
     let btc_usd = std::format!("{btc}-{usd}");
     loop {
-        counter_helper::increment(counter.clone()).await;
+        counter::increment(counter.clone()).await;
         let event = receiver.recv().await?;
         // log::info!("received orderbook_update");
         let alt: Option<String> = match event {

@@ -7,8 +7,8 @@ use kucoin_api::{
 };
 use kucoin_arbitrage::broker::symbol::filter::symbol_with_quotes;
 use kucoin_arbitrage::broker::symbol::kucoin::get_symbols;
-use kucoin_arbitrage::monitor::counter::Counter;
 use kucoin_arbitrage::model::symbol::SymbolInfo;
+use kucoin_arbitrage::monitor::counter;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -17,7 +17,7 @@ async fn main() -> Result<(), failure::Error> {
     // provide logging format
     kucoin_arbitrage::logger::log_init();
     log::info!("Log setup");
-    let counter = Arc::new(Mutex::new(Counter::new("api_input")));
+    let counter = Arc::new(Mutex::new(counter::Counter::new("api_input")));
 
     // config
     let config = kucoin_arbitrage::config::from_file("config.toml")?;
@@ -55,7 +55,7 @@ async fn main() -> Result<(), failure::Error> {
 
 async fn sync_tickers(
     mut ws: KucoinWebsocket,
-    counter: Arc<Mutex<Counter>>,
+    counter: Arc<Mutex<counter::Counter>>,
 ) -> Result<(), kucoin_api::failure::Error> {
     while let Some(msg) = ws.try_next().await? {
         // add matches for multi-subscribed sockets handling
@@ -68,7 +68,7 @@ async fn sync_tickers(
             }
             KucoinWebsocketMsg::OrderBookMsg(msg) => {
                 let _ = msg.data;
-                kucoin_arbitrage::monitor::counter_helper::increment(counter.clone()).await;
+                counter::increment(counter.clone()).await;
             }
             _ => {
                 panic!("unexpected msgs received: {msg:?}")

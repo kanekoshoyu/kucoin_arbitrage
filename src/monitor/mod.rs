@@ -1,6 +1,6 @@
-/// Generic counter
-pub mod counter_helper;
-/// Routine tasks
+/// counter
+pub mod counter;
+/// task for system monitor
 pub mod task;
-/// Timers (for debugging)
+/// timer
 pub mod timer;

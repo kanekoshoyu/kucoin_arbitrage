@@ -1,7 +1,7 @@
 use crate::event::orderbook::OrderbookEvent;
-use crate::monitor::counter::Counter;
 use crate::model::orderbook::FullOrderbook;
-use crate::monitor::counter_helper;
+use crate::monitor::counter;
+use crate::monitor::counter::Counter;
 use std::sync::Arc;
 use tokio::sync::broadcast::{Receiver, Sender};
 use tokio::sync::Mutex;
@@ -14,7 +14,7 @@ pub async fn task_sync_orderbook(
     counter: Arc<Mutex<Counter>>,
 ) -> Result<(), failure::Error> {
     loop {
-        counter_helper::increment(counter.clone()).await;
+        counter::increment(counter.clone()).await;
         let event = receiver.recv().await?;
         let mut full_orderbook = local_full_orderbook.lock().await;
         match event {

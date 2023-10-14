@@ -1,10 +1,9 @@
-use crate::monitor::counter::Counter;
-use crate::monitor::counter_helper;
+use crate::monitor::counter::{self, Counter};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tokio::time::{sleep, Duration};
 
-/// log counters 
+/// log counters
 async fn log_mps(
     counters: Vec<Arc<Mutex<Counter>>>,
     interval: u64,
@@ -17,11 +16,11 @@ async fn log_mps(
         };
         log::info!("{name:10}: {count:5} points ({:5}mps)", count / interval);
         // clear the data
-        counter_helper::reset(counter.clone()).await;
+        counter::reset(counter.clone()).await;
     }
     Ok(())
 }
-/// log counters as a task 
+/// log counters as a task
 pub async fn task_log_mps(
     counters: Vec<Arc<Mutex<Counter>>>,
     interval: u64,

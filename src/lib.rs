@@ -1,5 +1,9 @@
 /// Bridge between API calls and internal data structures, with tasks, functions and structs
 pub mod broker;
+/// Config file reader
+pub mod config;
+/// Custom error
+pub mod error;
 /// API independent event enums
 pub mod event;
 /// Everything declared with lazy_statics!. Refrain from overusing lazy_statics, pass variables instead
@@ -14,7 +18,3 @@ pub mod strategy;
 pub mod strings;
 /// Traits/impl to convert between API crate models and internal models
 pub mod translator;
-/// Config file reader
-pub mod config;
-/// Custom error
-pub mod error;

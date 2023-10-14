@@ -1,12 +1,11 @@
 /// Executes triangular arbitrage
-use kucoin_api::{
-    client::{Kucoin, KucoinEnv},
-    model::market::OrderBookType,
-    model::websocket::{WSTopic, WSType},
-};
+use kucoin_api::client::{Kucoin, KucoinEnv};
 use kucoin_arbitrage::broker::gatekeeper::kucoin::task_gatekeep_chances;
 use kucoin_arbitrage::broker::order::kucoin::task_place_order;
-use kucoin_arbitrage::broker::orderbook::kucoin::{task_pub_orderbook_event, task_sync_orderbook};
+use kucoin_arbitrage::broker::orderbook::internal::task_sync_orderbook;
+use kucoin_arbitrage::broker::orderbook::kucoin::{
+    task_get_initial_orderbooks, task_pub_orderbook_event,
+};
 use kucoin_arbitrage::broker::orderchange::kucoin::task_pub_orderchange_event;
 use kucoin_arbitrage::broker::symbol::filter::{symbol_with_quotes, vector_to_hash};
 use kucoin_arbitrage::broker::symbol::kucoin::{format_subscription_list, get_symbols};
@@ -14,49 +13,61 @@ use kucoin_arbitrage::event::{
     chance::ChanceEvent, order::OrderEvent, orderbook::OrderbookEvent,
     orderchange::OrderChangeEvent,
 };
+use kucoin_arbitrage::global::task::task_log_mps;
 use kucoin_arbitrage::model::{counter::Counter, orderbook::FullOrderbook};
 use kucoin_arbitrage::strategy::all_taker_btc_usd::task_pub_chance_all_taker_btc_usd;
-use kucoin_arbitrage::translator::traits::OrderBookTranslator;
 use std::sync::Arc;
+use tokio::signal::unix::{signal, SignalKind};
 use tokio::sync::broadcast::channel;
 use tokio::sync::Mutex;
-
+use tokio::task::JoinSet;
 #[tokio::main]
 async fn main() -> Result<(), failure::Error> {
-    // Provides logging format
+    // logging format
     kucoin_arbitrage::logger::log_init();
     log::info!("Log setup");
 
-    // Declares all the system counters
+    // credentials
+    let config = kucoin_arbitrage::config::from_file("config.toml")?;
+
+    tokio::select! {
+        _ = task_signal_handle() => println!("received external signal, terminating program"),
+        res = core(config) => println!("core ended first {res:?}"),
+    };
+
+    println!("Good bye!");
+    Ok(())
+}
+
+async fn core(config: kucoin_arbitrage::config::Config) -> Result<(), failure::Error> {
+    // config parameters
+    let budget = config.behaviour.usd_cyclic_arbitrage;
+    let monitor_interval = config.behaviour.monitor_interval_sec;
+
+    // system mps counters
     let api_input_counter = Arc::new(Mutex::new(Counter::new("api_input")));
     let best_price_counter = Arc::new(Mutex::new(Counter::new("best_price")));
     let chance_counter = Arc::new(Mutex::new(Counter::new("chance")));
     let order_counter = Arc::new(Mutex::new(Counter::new("order")));
 
-    // Credentials
-    let config = kucoin_arbitrage::config::from_file("config.toml")?;
-    let budget = config.behaviour.usd_cyclic_arbitrage;
-    let monitor_interval = config.behaviour.monitor_interval_sec;
-
+    // API endpoints
     let api = Kucoin::new(KucoinEnv::Live, Some(config.kucoin_credentials()))?;
-    let url_public = api.clone().get_socket_endpoint(WSType::Public).await?;
-    let url_private = api.clone().get_socket_endpoint(WSType::Private).await?;
     log::info!("Credentials setup");
 
-    // Gets all symbols concurrently
+    // get all symbols concurrently
     let symbol_list = get_symbols(api.clone()).await;
     log::info!("Total exchange symbols: {:?}", symbol_list.len());
 
-    // Filters with either btc or usdt as quote
+    // filter with either btc or usdt as quote
     let symbol_infos = symbol_with_quotes(&symbol_list, "BTC", "USDT");
     let hash_symbols = Arc::new(Mutex::new(vector_to_hash(&symbol_infos)));
     log::info!("Total symbols in scope: {:?}", symbol_infos.len());
 
-    // Changes a list of SymbolInfo into a 2D list of WSTopic per session in max 100 index
+    // list subscription using the filtered symbols
     let subs = format_subscription_list(&symbol_infos);
     log::info!("Total orderbook WS sessions: {:?}", subs.len());
 
-    // Creates broadcast channels
+    // create broadcast channels
     // for syncing public orderbook
     let (tx_orderbook, rx_orderbook) = channel::<OrderbookEvent>(1024 * 2);
     // for getting notable orderbook after syncing
@@ -69,19 +80,19 @@ async fn main() -> Result<(), failure::Error> {
     let (tx_orderchange, rx_orderchange) = channel::<OrderChangeEvent>(128);
     log::info!("Broadcast channels setup");
 
-    // Creates local orderbook
+    // local orderbook
     let full_orderbook = Arc::new(Mutex::new(FullOrderbook::new()));
-    log::info!("Local orderbook setup");
+    log::info!("Local empty full orderbook setup");
 
-    // Infrastructure tasks
-    // USD cyclic arbitrage budget obtained from CONFIG
-    tokio::spawn(task_sync_orderbook(
+    // infrastructure tasks
+    let mut taskpool_infrastructure = JoinSet::new();
+    taskpool_infrastructure.spawn(task_sync_orderbook(
         rx_orderbook,
         tx_orderbook_best,
         full_orderbook.clone(),
         api_input_counter.clone(),
     ));
-    tokio::spawn(task_pub_chance_all_taker_btc_usd(
+    taskpool_infrastructure.spawn(task_pub_chance_all_taker_btc_usd(
         rx_orderbook_best,
         tx_chance,
         full_orderbook.clone(),
@@ -89,85 +100,65 @@ async fn main() -> Result<(), failure::Error> {
         budget as f64,
         best_price_counter.clone(),
     ));
-    tokio::spawn(task_gatekeep_chances(
+    taskpool_infrastructure.spawn(task_gatekeep_chances(
         rx_chance,
         rx_orderchange,
         tx_order,
         chance_counter.clone(),
     ));
-    tokio::spawn(task_place_order(
+    taskpool_infrastructure.spawn(task_place_order(
         rx_order,
         api.clone(),
         order_counter.clone(),
     ));
-
-    // Extracts the names only
-    let symbols: Vec<String> = symbol_infos.into_iter().map(|info| info.symbol).collect();
-
-    // TODO place below in broker
-    // Uses REST to obtain the initial orderbook before subscribing to websocket
-    let tasks: Vec<_> = symbols
-        .iter()
-        .map(|symbol| {
-            // clone variables per task before spawn
-            let api = api.clone();
-            let full_orderbook_2 = full_orderbook.clone();
-            let symbol = symbol.clone();
-
-            tokio::spawn(async move {
-                loop {
-                    // log::info!("Obtaining initial orderbook[{}] from REST", symbol);
-                    let res = api.get_orderbook(&symbol, OrderBookType::L100).await;
-                    if res.is_err() {
-                        log::warn!("orderbook[{}] did not respond, retry", &symbol);
-                        continue;
-                    }
-                    let res = res.unwrap().data;
-                    if res.is_none() {
-                        log::warn!("orderbook[{}] received none, retry", &symbol);
-                        continue;
-                    }
-                    let data = res.unwrap();
-                    // log::info!("Initial sequence {}:{}", &symbol, data.sequence);
-                    let mut x = full_orderbook_2.lock().await;
-                    x.insert(symbol.to_string(), data.to_internal());
-                    break;
-                }
-            })
-        })
-        .collect();
-    futures::future::join_all(tasks).await;
-    log::info!("Collected all the symbols");
-
-    // TODO revert the flow, we should first setup the infrastructure, then setup the data flow
-
-    // Subscribes public orderbook WS per session, this is the source of data for the infrastructure tasks
-    for (i, sub) in subs.iter().enumerate() {
-        let mut ws_public = api.websocket();
-        ws_public.subscribe(url_public.clone(), sub.clone()).await?;
-        // TODO change to task_pub_orderbook_event
-        tokio::spawn(task_pub_orderbook_event(ws_public, tx_orderbook.clone()));
-        log::info!("{i:?}-th session of WS subscription setup");
-    }
-
-    // Subscribes private order change websocket
-    let mut ws_private = api.websocket();
-    ws_private
-        .subscribe(url_private.clone(), vec![WSTopic::TradeOrders])
-        .await?;
-    tokio::spawn(task_pub_orderchange_event(ws_private, tx_orderchange));
-
-    log::info!("All application tasks setup");
-
-    // Background routine
-    let _ = tokio::join!(kucoin_arbitrage::global::task::background_routine(
+    taskpool_infrastructure.spawn(task_log_mps(
         vec![
             api_input_counter.clone(),
             best_price_counter.clone(),
             chance_counter.clone(),
-            order_counter.clone()
+            order_counter.clone(),
         ],
-        monitor_interval as u64
+        monitor_interval as u64,
     ));
-    panic!("Program should not arrive here")
+
+    // collect all initial orderbook states with REST
+    task_get_initial_orderbooks(api.clone(), symbol_infos, full_orderbook).await?;
+    log::info!("Aggregated all the symbols");
+    let mut taskpool_subscription = JoinSet::new();
+    // publishes OrderChangeEvent from private subscription
+    taskpool_subscription.spawn(task_pub_orderchange_event(api.clone(), tx_orderchange));
+    // publishes OrderBookEvent from public subscription
+    for (i, sub) in subs.iter().enumerate() {
+        taskpool_subscription.spawn(task_pub_orderbook_event(
+            api.clone(),
+            sub.to_vec(),
+            tx_orderbook.clone(),
+        ));
+        log::info!("{i:?}-th session of WS subscription setup");
+    }
+
+    // terminate if taskpools failed
+    let message = tokio::select! {
+        res = taskpool_infrastructure.join_next() =>
+            format!("Infrastructure task pool error [{res:?}]"),
+        res = taskpool_subscription.join_next() => format!("Subscription task pool error [{res:?}]"),
+    };
+    Err(failure::err_msg(format!("unexpected error [{message}]")))
+}
+
+/// wait for any external terminating signal
+async fn task_signal_handle() -> Result<(), failure::Error> {
+    let mut sigterm = signal(SignalKind::terminate()).unwrap();
+    let mut sigint = signal(SignalKind::interrupt()).unwrap();
+    tokio::select! {
+        _ = sigterm.recv() => exit_program("SIGTERM").await?,
+        _ = sigint.recv() => exit_program("SIGINT").await?,
+    };
+    Ok(())
+}
+
+/// handle external signal
+async fn exit_program(signal_alias: &str) -> Result<(), failure::Error> {
+    log::info!("Received [{signal_alias}] signal");
+    Ok(())
 }

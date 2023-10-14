@@ -46,7 +46,7 @@ async fn main() -> Result<(), failure::Error> {
         tokio::spawn(sync_tickers(ws, counter.clone()));
         log::info!("{i:?}-th session of WS subscription setup");
     }
-    let _res = tokio::join!(kucoin_arbitrage::global::task::background_routine(
+    let _res = tokio::join!(kucoin_arbitrage::global::task::task_log_mps(
         vec![counter.clone(),],
         monitor_interval as u64
     ));

@@ -21,7 +21,7 @@ async fn report_status(
     Ok(())
 }
 
-pub async fn background_routine(
+pub async fn task_log_mps(
     counters: Vec<Arc<Mutex<Counter>>>,
     interval: u64,
 ) -> Result<(), kucoin_api::failure::Error> {

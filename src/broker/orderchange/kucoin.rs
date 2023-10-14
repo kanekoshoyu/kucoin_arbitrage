@@ -1,16 +1,21 @@
 use crate::event::orderchange::OrderChangeEvent;
 use crate::global;
+use kucoin_api::client::Kucoin;
 use kucoin_api::futures::TryStreamExt;
-use kucoin_api::{model::websocket::KucoinWebsocketMsg, websocket::KucoinWebsocket};
+use kucoin_api::model::websocket::{KucoinWebsocketMsg, WSTopic, WSType};
 use tokio::sync::broadcast::Sender;
 
 /// Task to publish order change events.
-/// Subscribes Websocket API.
-/// Publishes OrderChangeEvent directly after conversion.
+/// Subscribe Kucoi Websocket API, then publish OrderChangeEvent directly after conversion.
 pub async fn task_pub_orderchange_event(
-    mut ws: KucoinWebsocket,
+    api: Kucoin,
     sender: Sender<OrderChangeEvent>,
 ) -> Result<(), kucoin_api::failure::Error> {
+    let url_private = api.get_socket_endpoint(WSType::Private).await?;
+    let mut ws = api.websocket();
+    let topics = vec![WSTopic::TradeOrders];
+    ws.subscribe(url_private.clone(), topics).await?;
+
     loop {
         // Awaits subscription message
         let msg = ws.try_next().await;
@@ -26,10 +31,10 @@ pub async fn task_pub_orderchange_event(
             // Currently using a more stable TradeOpenMsg, although TradeReceived is always ahead of TradeOpen
             log::info!("TradeReceivedMsg: {:?}\n{:#?}", msg.topic, msg.data);
         } else if let KucoinWebsocketMsg::TradeOpenMsg(msg) = msg {
-
-            let time = global::timer::stop("order_placement_network".to_string()).await.unwrap();
+            let time = global::timer::stop("order_placement_network".to_string())
+                .await
+                .unwrap();
             log::info!("order_placement_network: {time:?}");
-
 
             log::info!("TradeOpenMsg: {:?}\n{:#?}", msg.topic, msg.data);
             // TODO optimize below to something more insightful

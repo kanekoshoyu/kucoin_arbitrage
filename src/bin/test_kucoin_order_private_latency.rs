@@ -1,22 +1,18 @@
 /// Test latency between order and private channel order detection
 /// Places extreme order in REST, receive extreme order in private channel
 /// Please configure the buy price to either the current market price or lower for testing purpose
-use kucoin_api::{
-    client::{Kucoin, KucoinEnv},
-    model::websocket::{WSTopic, WSType},
-};
+use kucoin_api::client::{Kucoin, KucoinEnv};
+use kucoin_arbitrage::broker::order::kucoin::task_place_order;
+use kucoin_arbitrage::broker::orderchange::kucoin::task_pub_orderchange_event;
 use kucoin_arbitrage::broker::symbol::kucoin::{format_subscription_list, get_symbols};
-use kucoin_arbitrage::event::{order::OrderEvent, orderchange::OrderChangeEvent};
+use kucoin_arbitrage::event::order::OrderEvent;
+use kucoin_arbitrage::event::orderchange::OrderChangeEvent;
 use kucoin_arbitrage::model::counter::Counter;
-use kucoin_arbitrage::{
-    broker::order::kucoin::task_place_order,
-    model::order::{LimitOrder, OrderSide, OrderType},
-};
-use kucoin_arbitrage::{
-    broker::orderchange::kucoin::task_pub_orderchange_event, strings::generate_uid,
-};
+use kucoin_arbitrage::model::order::{LimitOrder, OrderSide, OrderType};
+use kucoin_arbitrage::strings::generate_uid;
 use kucoin_arbitrage::{broker::symbol::filter::symbol_with_quotes, global};
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::broadcast::channel;
 use tokio::sync::Mutex;
 use tokio::time::sleep;
@@ -34,7 +30,6 @@ async fn main() -> Result<(), failure::Error> {
     let config = kucoin_arbitrage::config::from_file("config.toml")?;
 
     let api = Kucoin::new(KucoinEnv::Live, Some(config.kucoin_credentials()))?;
-    let url_private = api.clone().get_socket_endpoint(WSType::Private).await?;
     log::info!("Credentials setup");
 
     // Gets all symbols concurrently
@@ -63,21 +58,7 @@ async fn main() -> Result<(), failure::Error> {
         order_counter.clone(),
     ));
 
-    // Subscribes private order change websocket
-    // NOTE TradeOrdersV2's TradeReceived appears unstable.
-    // Using TradeOrders's TradeOpen instead
-    let mut ws_private = api.websocket();
-    ws_private
-        .subscribe(
-            url_private.clone(),
-            vec![
-                WSTopic::TradeOrders,
-                WSTopic::Balances,
-                WSTopic::PositionChange,
-            ],
-        )
-        .await?;
-    tokio::spawn(task_pub_orderchange_event(ws_private, tx_orderchange));
+    tokio::spawn(task_pub_orderchange_event(api.clone(), tx_orderchange));
 
     log::info!("All application tasks setup");
 

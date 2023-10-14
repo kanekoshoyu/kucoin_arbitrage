@@ -1,5 +1,5 @@
 use crate::event::orderbook::OrderbookEvent;
-use crate::model::counter::Counter;
+use crate::monitor::counter::Counter;
 use crate::model::orderbook::FullOrderbook;
 use crate::monitor::counter_helper;
 use std::sync::Arc;

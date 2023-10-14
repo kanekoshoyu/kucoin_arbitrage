@@ -13,7 +13,8 @@ use kucoin_arbitrage::event::{
     chance::ChanceEvent, order::OrderEvent, orderbook::OrderbookEvent,
     orderchange::OrderChangeEvent,
 };
-use kucoin_arbitrage::model::{counter::Counter, orderbook::FullOrderbook};
+use kucoin_arbitrage::model::orderbook::FullOrderbook;
+use kucoin_arbitrage::monitor::counter::Counter;
 use kucoin_arbitrage::monitor::task::task_log_mps;
 use kucoin_arbitrage::strategy::all_taker_btc_usd::task_pub_chance_all_taker_btc_usd;
 use std::sync::Arc;

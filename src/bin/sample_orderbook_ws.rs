@@ -7,7 +7,7 @@ use kucoin_api::{
 };
 use kucoin_arbitrage::broker::symbol::filter::symbol_with_quotes;
 use kucoin_arbitrage::broker::symbol::kucoin::get_symbols;
-use kucoin_arbitrage::model::counter::Counter;
+use kucoin_arbitrage::monitor::counter::Counter;
 use kucoin_arbitrage::model::symbol::SymbolInfo;
 use std::sync::Arc;
 use tokio::sync::Mutex;

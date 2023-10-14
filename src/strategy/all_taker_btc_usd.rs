@@ -1,6 +1,6 @@
 use crate::event::{chance::ChanceEvent, orderbook::OrderbookEvent};
 use crate::model::chance::{ActionInfo, TriangularArbitrageChance};
-use crate::model::counter::Counter;
+use crate::monitor::counter::Counter;
 use crate::model::orderbook::{FullOrderbook, Orderbook};
 use crate::model::symbol::SymbolInfo;
 use crate::monitor::counter_helper;

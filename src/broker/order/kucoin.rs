@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::model::counter::Counter;
+use crate::monitor::counter::Counter;
 use crate::model::order::Order;
 use crate::monitor;
 use crate::{event::order::OrderEvent, monitor::counter_helper};

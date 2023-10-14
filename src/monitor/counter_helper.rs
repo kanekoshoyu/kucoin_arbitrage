@@ -1,4 +1,4 @@
-use crate::model::counter::Counter;
+use crate::monitor::counter::Counter;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 

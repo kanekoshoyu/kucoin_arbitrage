@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::event::chance::ChanceEvent;
 use crate::event::order::OrderEvent;
 use crate::event::orderchange::OrderChangeEvent;
-use crate::model::counter::Counter;
+use crate::monitor::counter::Counter;
 use crate::model::order::{LimitOrder, OrderType};
 use crate::monitor::counter_helper;
 use crate::strings::generate_uid;

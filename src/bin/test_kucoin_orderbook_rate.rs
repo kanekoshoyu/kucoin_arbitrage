@@ -7,7 +7,7 @@ use kucoin_api::{
     model::websocket::{KucoinWebsocketMsg, WSTopic, WSType},
     websocket::KucoinWebsocket,
 };
-use kucoin_arbitrage::model::counter::Counter;
+use kucoin_arbitrage::monitor::counter::Counter;
 use kucoin_arbitrage::monitor::counter_helper;
 use std::sync::Arc;
 use tokio::sync::Mutex;

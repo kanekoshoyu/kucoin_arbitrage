@@ -6,8 +6,7 @@ use kucoin_api::model::websocket::{KucoinWebsocketMsg, WSTopic, WSType};
 use tokio::sync::broadcast::Sender;
 
 /// Task to publish order change events.
-/// Subscribes Websocket API.
-/// Publishes OrderChangeEvent directly after conversion.
+/// Subscribe Kucoi Websocket API, then publish OrderChangeEvent directly after conversion.
 pub async fn task_pub_orderchange_event(
     api: Kucoin,
     sender: Sender<OrderChangeEvent>,

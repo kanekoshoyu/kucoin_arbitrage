@@ -6,9 +6,18 @@ use kucoin_api::model::websocket::WSTopic;
 
 /// Uses the KuCoin API to generate a list of symbols
 pub async fn get_symbols(api: Kucoin) -> Vec<SymbolInfo> {
-    // TODO check what are the option for market selection from the API documentation
-    let api_result = api.get_symbol_list(None).await;
-    let data: Vec<SymbolList> = api_result.unwrap().data.unwrap();
+    // Keep retrying until obtained a symbol list
+    let data: Vec<SymbolList> = {
+        let mut res;
+        loop {
+            res = api.get_symbol_list(None).await;
+            if res.is_ok() {
+                break;
+            }
+            log::warn!("failed getting symbol list, trying again");
+        }
+        res.unwrap().data.unwrap()
+    };
     let mut result: Vec<SymbolInfo> = Vec::new();
     for symbol in data {
         // check base currency. Kucoin updates symbol instead of name when the alias updates

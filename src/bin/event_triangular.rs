@@ -1,9 +1,11 @@
 /// Executes triangular arbitrage
 use kucoin_api::client::{Kucoin, KucoinEnv};
-use kucoin_api::model::market::{OrderBook, OrderBookType};
 use kucoin_arbitrage::broker::gatekeeper::kucoin::task_gatekeep_chances;
 use kucoin_arbitrage::broker::order::kucoin::task_place_order;
-use kucoin_arbitrage::broker::orderbook::kucoin::{task_pub_orderbook_event, task_sync_orderbook};
+use kucoin_arbitrage::broker::orderbook::kucoin::{
+    task_get_initial_orderbooks, task_pub_orderbook_event,
+};
+use kucoin_arbitrage::broker::orderbook::internal::task_sync_orderbook;
 use kucoin_arbitrage::broker::orderchange::kucoin::task_pub_orderchange_event;
 use kucoin_arbitrage::broker::symbol::filter::{symbol_with_quotes, vector_to_hash};
 use kucoin_arbitrage::broker::symbol::kucoin::{format_subscription_list, get_symbols};
@@ -14,9 +16,7 @@ use kucoin_arbitrage::event::{
 use kucoin_arbitrage::global::task::task_log_mps;
 use kucoin_arbitrage::model::{counter::Counter, orderbook::FullOrderbook};
 use kucoin_arbitrage::strategy::all_taker_btc_usd::task_pub_chance_all_taker_btc_usd;
-use kucoin_arbitrage::translator::traits::OrderBookTranslator;
 use std::sync::Arc;
-use std::time::Duration;
 use tokio::signal::unix::{signal, SignalKind};
 use tokio::sync::broadcast::channel;
 use tokio::sync::Mutex;
@@ -50,15 +50,15 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<(), failure::E
     let chance_counter = Arc::new(Mutex::new(Counter::new("chance")));
     let order_counter = Arc::new(Mutex::new(Counter::new("order")));
 
-    // api endpoints
+    // API endpoints
     let api = Kucoin::new(KucoinEnv::Live, Some(config.kucoin_credentials()))?;
     log::info!("Credentials setup");
 
-    // gets all symbols concurrently
+    // get all symbols concurrently
     let symbol_list = get_symbols(api.clone()).await;
     log::info!("Total exchange symbols: {:?}", symbol_list.len());
 
-    // filters with either btc or usdt as quote
+    // filter with either btc or usdt as quote
     let symbol_infos = symbol_with_quotes(&symbol_list, "BTC", "USDT");
     let hash_symbols = Arc::new(Mutex::new(vector_to_hash(&symbol_infos)));
     log::info!("Total symbols in scope: {:?}", symbol_infos.len());
@@ -67,7 +67,7 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<(), failure::E
     let subs = format_subscription_list(&symbol_infos);
     log::info!("Total orderbook WS sessions: {:?}", subs.len());
 
-    // creates broadcast channels
+    // create broadcast channels
     // for syncing public orderbook
     let (tx_orderbook, rx_orderbook) = channel::<OrderbookEvent>(1024 * 2);
     // for getting notable orderbook after syncing
@@ -80,14 +80,12 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<(), failure::E
     let (tx_orderchange, rx_orderchange) = channel::<OrderChangeEvent>(128);
     log::info!("Broadcast channels setup");
 
-    // creates local orderbook
+    // local orderbook
     let full_orderbook = Arc::new(Mutex::new(FullOrderbook::new()));
     log::info!("Local empty full orderbook setup");
 
     // infrastructure tasks
     let mut taskpool_infrastructure = JoinSet::new();
-
-    // USD cyclic arbitrage budget obtained from CONFIG
     taskpool_infrastructure.spawn(task_sync_orderbook(
         rx_orderbook,
         tx_orderbook_best,
@@ -123,14 +121,13 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<(), failure::E
         monitor_interval as u64,
     ));
 
-    // TODO wrap below into a task and join them all using taskpool
     // collect all initial orderbook states with REST
-    aggregate_orderbook_state(api.clone(), symbol_infos, full_orderbook).await?;
+    task_get_initial_orderbooks(api.clone(), symbol_infos, full_orderbook).await?;
     log::info!("Aggregated all the symbols");
-
     let mut taskpool_subscription = JoinSet::new();
+    // publishes OrderChangeEvent from private subscription 
     taskpool_subscription.spawn(task_pub_orderchange_event(api.clone(), tx_orderchange));
-
+    // publishes OrderBookEvent from public subscription 
     for (i, sub) in subs.iter().enumerate() {
         taskpool_subscription.spawn(task_pub_orderbook_event(
             api.clone(),
@@ -139,6 +136,8 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<(), failure::E
         ));
         log::info!("{i:?}-th session of WS subscription setup");
     }
+
+    // terminate if taskpools failed
     let message = tokio::select! {
         res = taskpool_infrastructure.join_next() =>
             format!("Infrastructure task pool error [{res:?}]"),
@@ -147,7 +146,7 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<(), failure::E
     Err(failure::err_msg(format!("unexpected error [{message}]")))
 }
 
-/// task to wait for any external terminating signal
+/// wait for any external terminating signal
 async fn task_signal_handle() -> Result<(), failure::Error> {
     let mut sigterm = signal(SignalKind::terminate()).unwrap();
     let mut sigint = signal(SignalKind::interrupt()).unwrap();
@@ -158,69 +157,8 @@ async fn task_signal_handle() -> Result<(), failure::Error> {
     Ok(())
 }
 
-// Define a handler function for the SIGTERM signal
+/// handle external signal
 async fn exit_program(signal_alias: &str) -> Result<(), failure::Error> {
     log::info!("Received [{signal_alias}] signal");
     Ok(())
-}
-
-async fn aggregate_orderbook_state(
-    api: Kucoin,
-    symbol_infos: Vec<kucoin_arbitrage::model::symbol::SymbolInfo>,
-    full_orderbook: Arc<Mutex<FullOrderbook>>,
-) -> Result<(), failure::Error> {
-    // replace spawn with or a taskpool
-    let mut taskpool_aggregate = JoinSet::new();
-    // collect all initial orderbook states with REST
-    let symbols: Vec<String> = symbol_infos.into_iter().map(|info| info.symbol).collect();
-    log::info!("Total symbols: {:?}", symbols.len());
-    for symbol in symbols {
-        let api = api.clone();
-        let full_orderbook_arc = full_orderbook.clone();
-        taskpool_aggregate.spawn(async move {
-            let data = task_get_orderbook(api, &symbol).await.unwrap();
-            let mut x = full_orderbook_arc.lock().await;
-            x.insert(symbol.to_string(), data.to_internal());
-            symbol
-        });
-        // prevent server overloading
-        tokio::time::sleep(Duration::from_millis(25)).await;
-    }
-    while let Some(res) = taskpool_aggregate.join_next().await {
-        if let Err(e) = res {
-            return Err(failure::Error::from(e));
-        }
-        log::info!("Initialized orderbook for [{:?}]", res.unwrap());
-    }
-    Ok(())
-}
-
-async fn task_get_orderbook(api: Kucoin, symbol: &str) -> Result<OrderBook, failure::Error> {
-    let mut try_counter = 0;
-    loop {
-        try_counter += 1;
-        // OrderBookType::Full requires valid API Key
-        let res = api.get_orderbook(symbol, OrderBookType::L20).await;
-        if res.is_err() {
-            log::warn!("orderbook[{symbol}] did not respond ({try_counter:?} tries)");
-            continue;
-        }
-        let res = res.unwrap();
-        let code = res.code;
-        match code.as_str() {
-            "429000" => {
-                log::warn!("[{symbol:?}] request overloaded ({try_counter:?} tries)")
-            }
-            "200000" => {
-                if res.data.is_none() {
-                    log::warn!("orderbook[{symbol}] received none ({try_counter:?} tries)");
-                    continue;
-                }
-                log::info!("obtained [{symbol}]");
-                return Ok(res.data.unwrap());
-            }
-            "400003" => return Err(failure::err_msg(format!("API key needed not but provided"))),
-            _ => return Err(failure::err_msg(format!("unrecognised code [{:?}]", code))),
-        }
-    }
 }

@@ -2,10 +2,10 @@
 use kucoin_api::client::{Kucoin, KucoinEnv};
 use kucoin_arbitrage::broker::gatekeeper::kucoin::task_gatekeep_chances;
 use kucoin_arbitrage::broker::order::kucoin::task_place_order;
+use kucoin_arbitrage::broker::orderbook::internal::task_sync_orderbook;
 use kucoin_arbitrage::broker::orderbook::kucoin::{
     task_get_initial_orderbooks, task_pub_orderbook_event,
 };
-use kucoin_arbitrage::broker::orderbook::internal::task_sync_orderbook;
 use kucoin_arbitrage::broker::orderchange::kucoin::task_pub_orderchange_event;
 use kucoin_arbitrage::broker::symbol::filter::{symbol_with_quotes, vector_to_hash};
 use kucoin_arbitrage::broker::symbol::kucoin::{format_subscription_list, get_symbols};
@@ -125,9 +125,9 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<(), failure::E
     task_get_initial_orderbooks(api.clone(), symbol_infos, full_orderbook).await?;
     log::info!("Aggregated all the symbols");
     let mut taskpool_subscription = JoinSet::new();
-    // publishes OrderChangeEvent from private subscription 
+    // publishes OrderChangeEvent from private subscription
     taskpool_subscription.spawn(task_pub_orderchange_event(api.clone(), tx_orderchange));
-    // publishes OrderBookEvent from public subscription 
+    // publishes OrderBookEvent from public subscription
     for (i, sub) in subs.iter().enumerate() {
         taskpool_subscription.spawn(task_pub_orderbook_event(
             api.clone(),

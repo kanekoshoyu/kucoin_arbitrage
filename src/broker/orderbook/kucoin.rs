@@ -12,7 +12,7 @@ use tokio::sync::Mutex;
 use tokio::task::JoinSet;
 use tokio::time::Duration;
 
-/// Subscribe Websocket API, then publish OrderbookEvent directly after conversion to internal model.
+/// Subscribe Websocket API, then publish internal OrderbookEvent
 pub async fn task_pub_orderbook_event(
     api: Kucoin,
     topics: Vec<WSTopic>,

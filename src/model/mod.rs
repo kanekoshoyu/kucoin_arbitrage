@@ -1,6 +1,8 @@
+/// Arbitrage chance
 pub mod chance;
-pub mod config;
-pub mod counter;
+/// Order
 pub mod order;
+/// Orderbook
 pub mod orderbook;
+/// Symbol information
 pub mod symbol;

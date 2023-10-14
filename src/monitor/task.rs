@@ -1,26 +1,26 @@
-use crate::global::counter_helper;
-use crate::model::counter::Counter;
+use crate::monitor::counter::{self, Counter};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tokio::time::{sleep, Duration};
 
-async fn report_status(
+/// log counters
+async fn log_mps(
     counters: Vec<Arc<Mutex<Counter>>>,
     interval: u64,
 ) -> Result<(), kucoin_api::failure::Error> {
-    log::info!("Reporting broadcast data rate");
+    log::info!("Broadcast channel data rate");
     for counter in counters.iter() {
         let (name, count) = {
             let p = counter.lock().await;
             (p.name, p.data_count)
         };
-        log::info!("{name:?}: {count:?} points ({:?}pps)", count / interval);
+        log::info!("{name:10}: {count:5} points ({:5}mps)", count / interval);
         // clear the data
-        counter_helper::reset(counter.clone()).await;
+        counter::reset(counter.clone()).await;
     }
     Ok(())
 }
-
+/// log counters as a task
 pub async fn task_log_mps(
     counters: Vec<Arc<Mutex<Counter>>>,
     interval: u64,
@@ -28,7 +28,7 @@ pub async fn task_log_mps(
     let monitor_delay = Duration::from_secs(interval);
     loop {
         sleep(monitor_delay).await;
-        report_status(counters.clone(), interval)
+        log_mps(counters.clone(), interval)
             .await
             .expect("report status error");
     }

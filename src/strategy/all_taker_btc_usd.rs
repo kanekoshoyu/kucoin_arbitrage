@@ -105,13 +105,13 @@ fn triangular_chance_sequence(
 ) -> Option<TriangularArbitrageChance> {
     // log::info!("TSC: {}", info_alt_btc.base);
     // get the least ask
-    let (btc_usd_ask, btc_usd_ask_volume) = orderbook_btc_usd.ask.first_key_value().unwrap();
-    let (alt_btc_ask, alt_btc_ask_volume) = orderbook_alt_btc.ask.first_key_value().unwrap();
-    let (alt_usd_ask, alt_usd_ask_volume) = orderbook_alt_usd.ask.first_key_value().unwrap();
+    let (btc_usd_ask, btc_usd_ask_volume) = orderbook_btc_usd.ask.first_key_value()?;
+    let (alt_btc_ask, alt_btc_ask_volume) = orderbook_alt_btc.ask.first_key_value()?;
+    let (alt_usd_ask, alt_usd_ask_volume) = orderbook_alt_usd.ask.first_key_value()?;
     // get the largest bid
-    let (btc_usd_bid, btc_usd_bid_volume) = orderbook_btc_usd.bid.last_key_value().unwrap();
-    let (alt_btc_bid, alt_btc_bid_volume) = orderbook_alt_btc.bid.last_key_value().unwrap();
-    let (alt_usd_bid, alt_usd_bid_volume) = orderbook_alt_usd.bid.last_key_value().unwrap();
+    let (btc_usd_bid, btc_usd_bid_volume) = orderbook_btc_usd.bid.last_key_value()?;
+    let (alt_btc_bid, alt_btc_bid_volume) = orderbook_alt_btc.bid.last_key_value()?;
+    let (alt_usd_bid, alt_usd_bid_volume) = orderbook_alt_usd.bid.last_key_value()?;
 
     // This should be obtained from the API
     let trading_fee = 0.001;

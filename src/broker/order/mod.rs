@@ -1,2 +1,2 @@
-// Order placement task in KuCoin
+// Order placement using KuCoin public REST API
 pub mod kucoin;

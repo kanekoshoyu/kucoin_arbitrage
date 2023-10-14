@@ -7,8 +7,8 @@ use kucoin_api::{
     model::websocket::{KucoinWebsocketMsg, WSTopic, WSType},
     websocket::KucoinWebsocket,
 };
-use kucoin_arbitrage::global::counter_helper;
 use kucoin_arbitrage::model::counter::Counter;
+use kucoin_arbitrage::monitor::counter_helper;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -38,7 +38,7 @@ async fn main() -> Result<(), failure::Error> {
 
     log::info!("Async polling");
     tokio::spawn(sync_tickers(ws, counter.clone()));
-    let _res = tokio::join!(kucoin_arbitrage::global::task::task_log_mps(
+    let _res = tokio::join!(kucoin_arbitrage::monitor::task::task_log_mps(
         vec![counter.clone()],
         monitor_interval as u64
     ));

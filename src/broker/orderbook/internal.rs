@@ -1,14 +1,12 @@
 use crate::event::orderbook::OrderbookEvent;
-use crate::global::counter_helper;
 use crate::model::counter::Counter;
 use crate::model::orderbook::FullOrderbook;
+use crate::monitor::counter_helper;
 use std::sync::Arc;
 use tokio::sync::broadcast::{Receiver, Sender};
 use tokio::sync::Mutex;
 
-/// Task to sync local orderbook from API.
-/// Subscribes OrderbookEvent.
-/// Publishes OrderbookEvent after syncing the local orderbook
+/// Subscribe OrderbookEvent, then publish OrderbookEvent after syncing local orderbook
 pub async fn task_sync_orderbook(
     mut receiver: Receiver<OrderbookEvent>,
     sender: Sender<OrderbookEvent>,

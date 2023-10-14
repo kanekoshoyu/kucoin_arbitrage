@@ -2,7 +2,7 @@ use crate::error::Error;
 use kucoin_api::client::Credentials;
 use serde_derive::Deserialize;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Config {
     pub kucoin: KuCoin,
     pub behaviour: Behaviour,
@@ -18,14 +18,14 @@ impl Config {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct KuCoin {
     pub api_key: String,
     pub secret_key: String,
     pub passphrase: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Behaviour {
     pub monitor_interval_sec: u32,
     pub usd_cyclic_arbitrage: u32,

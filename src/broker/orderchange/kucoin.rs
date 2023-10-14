@@ -1,5 +1,5 @@
 use crate::event::orderchange::OrderChangeEvent;
-use crate::global;
+use crate::monitor;
 use kucoin_api::client::Kucoin;
 use kucoin_api::futures::TryStreamExt;
 use kucoin_api::model::websocket::{KucoinWebsocketMsg, WSTopic, WSType};
@@ -31,7 +31,7 @@ pub async fn task_pub_orderchange_event(
             // Currently using a more stable TradeOpenMsg, although TradeReceived is always ahead of TradeOpen
             log::info!("TradeReceivedMsg: {:?}\n{:#?}", msg.topic, msg.data);
         } else if let KucoinWebsocketMsg::TradeOpenMsg(msg) = msg {
-            let time = global::timer::stop("order_placement_network".to_string())
+            let time = monitor::timer::stop("order_placement_network".to_string())
                 .await
                 .unwrap();
             log::info!("order_placement_network: {time:?}");

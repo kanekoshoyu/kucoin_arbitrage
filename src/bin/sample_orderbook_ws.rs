@@ -46,7 +46,7 @@ async fn main() -> Result<(), failure::Error> {
         tokio::spawn(sync_tickers(ws, counter.clone()));
         log::info!("{i:?}-th session of WS subscription setup");
     }
-    let _res = tokio::join!(kucoin_arbitrage::global::task::task_log_mps(
+    let _res = tokio::join!(kucoin_arbitrage::monitor::task::task_log_mps(
         vec![counter.clone(),],
         monitor_interval as u64
     ));
@@ -68,7 +68,7 @@ async fn sync_tickers(
             }
             KucoinWebsocketMsg::OrderBookMsg(msg) => {
                 let _ = msg.data;
-                kucoin_arbitrage::global::counter_helper::increment(counter.clone()).await;
+                kucoin_arbitrage::monitor::counter_helper::increment(counter.clone()).await;
             }
             _ => {
                 panic!("unexpected msgs received: {msg:?}")

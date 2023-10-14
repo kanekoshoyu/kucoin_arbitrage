@@ -2,6 +2,8 @@ use crate::model::counter::Counter;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
+// TODO make use of async traits
+
 pub async fn increment(counter: Arc<Mutex<Counter>>) {
     let mut p = counter.lock().await;
     p.data_count += 1;

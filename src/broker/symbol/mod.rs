@@ -1,4 +1,4 @@
 /// Filter functions using internal models
 pub mod filter;
-/// Uses KuCoin API
+/// KuCoin API
 pub mod kucoin;

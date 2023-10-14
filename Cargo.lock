@@ -810,7 +810,7 @@ dependencies = [
 
 [[package]]
 name = "kucoin_arbitrage"
-version = "0.0.11"
+version = "0.0.12"
 dependencies = [
  "chrono",
  "env_logger",

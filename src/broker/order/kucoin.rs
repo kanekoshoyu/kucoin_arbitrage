@@ -13,7 +13,7 @@ pub async fn task_place_order(
     mut receiver: broadcast::Receiver<OrderEvent>,
     kucoin: Kucoin,
     counter: Arc<Mutex<Counter>>,
-) -> Result<(), kucoin_api::failure::Error> {
+) -> Result<(), failure::Error> {
     loop {
         counter::increment(counter.clone()).await;
 
@@ -48,9 +48,7 @@ pub async fn task_place_order(
             }
             OrderEvent::PostOrder(order) => {
                 // gge the broadcast duration
-                let time = monitor::timer::stop("order_placement_broadcast".to_string())
-                    .await
-                    .unwrap();
+                let time = monitor::timer::stop("order_placement_broadcast".to_string()).await?;
                 log::info!("order_placement_broadcast: {time:?}");
 
                 log::info!("order placement\n{order:?}");

@@ -56,7 +56,7 @@ async fn main() -> Result<(), failure::Error> {
 async fn sync_tickers(
     mut ws: KucoinWebsocket,
     counter: Arc<Mutex<counter::Counter>>,
-) -> Result<(), kucoin_api::failure::Error> {
+) -> Result<(), failure::Error> {
     while let Some(msg) = ws.try_next().await? {
         // add matches for multi-subscribed sockets handling
         match msg {

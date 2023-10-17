@@ -4,10 +4,7 @@ use tokio::sync::Mutex;
 use tokio::time::{sleep, Duration};
 
 /// log counters
-async fn log_mps(
-    counters: Vec<Arc<Mutex<Counter>>>,
-    interval: u64,
-) -> Result<(), kucoin_api::failure::Error> {
+async fn log_mps(counters: Vec<Arc<Mutex<Counter>>>, interval: u64) -> Result<(), failure::Error> {
     log::info!("Broadcast channel data rate");
     for counter in counters.iter() {
         let (name, count) = {
@@ -24,7 +21,7 @@ async fn log_mps(
 pub async fn task_log_mps(
     counters: Vec<Arc<Mutex<Counter>>>,
     interval: u64,
-) -> Result<(), kucoin_api::failure::Error> {
+) -> Result<(), failure::Error> {
     let monitor_delay = Duration::from_secs(interval);
     loop {
         sleep(monitor_delay).await;

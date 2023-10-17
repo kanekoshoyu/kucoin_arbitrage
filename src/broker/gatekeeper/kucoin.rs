@@ -23,7 +23,7 @@ pub async fn task_gatekeep_chances(
     mut receiver_order_change: Receiver<OrderChangeEvent>,
     sender: Sender<OrderEvent>,
     counter: Arc<Mutex<counter::Counter>>,
-) -> Result<(), kucoin_api::failure::Error> {
+) -> Result<(), failure::Error> {
     loop {
         counter::increment(counter.clone()).await;
         let status = receiver_chance.recv().await;

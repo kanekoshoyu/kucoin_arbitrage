@@ -1,5 +1,5 @@
 /// Order change received from exchange
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum OrderChangeEvent {
     OrderOpen((u128, String)),
     OrderFilled((u128, String)),

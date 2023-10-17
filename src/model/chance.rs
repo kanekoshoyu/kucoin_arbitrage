@@ -3,7 +3,7 @@ use ordered_float::OrderedFloat;
 use std::cmp::Ordering;
 
 /// structure of of arbitrage chances
-#[derive(Clone, Default, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct ActionInfo {
     pub action: OrderSide,
     pub ticker: String,

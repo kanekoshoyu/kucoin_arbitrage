@@ -44,7 +44,7 @@ pub async fn task_place_order(
                 let time = monitor::timer::stop("order_placement_broadcast".to_string()).await;
                 if let Err(e) = time {
                     log::error!("{e:?}");
-                }else{
+                } else {
                     log::info!("order_placement_broadcast: {:?}", time.unwrap());
                 }
 

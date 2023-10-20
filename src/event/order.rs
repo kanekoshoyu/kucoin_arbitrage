@@ -7,4 +7,3 @@ pub enum OrderEvent {
     CancelAllOrders,
     PostOrder(LimitOrder),
 }
-

@@ -1,14 +1,10 @@
-use std::sync::Arc;
-
 use crate::event::chance::ChanceEvent;
 use crate::event::order::OrderEvent;
 use crate::event::orderchange::OrderChangeEvent;
 use crate::model::order::{LimitOrder, OrderType};
-use crate::monitor::counter;
 use crate::strings::generate_uid;
 use std::time::SystemTime;
 use tokio::sync::broadcast::{Receiver, Sender};
-use tokio::sync::Mutex;
 
 // TODO implement when all_taker_btc_usdt is done
 
@@ -22,10 +18,8 @@ pub async fn task_gatekeep_chances(
     mut receiver_chance: Receiver<ChanceEvent>,
     mut receiver_order_change: Receiver<OrderChangeEvent>,
     sender: Sender<OrderEvent>,
-    counter: Arc<Mutex<counter::Counter>>,
 ) -> Result<(), failure::Error> {
     loop {
-        counter::increment(counter.clone()).await;
         let status = receiver_chance.recv().await;
         if let Err(e) = status {
             log::error!("gatekeep chance parsing error {e:?}");

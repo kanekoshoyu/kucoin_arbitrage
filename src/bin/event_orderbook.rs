@@ -4,13 +4,12 @@ use kucoin_arbitrage::broker::orderbook::internal::task_sync_orderbook;
 use kucoin_arbitrage::broker::orderbook::kucoin::{
     task_get_initial_orderbooks, task_pub_orderbook_event,
 };
-use kucoin_arbitrage::broker::orderchange::kucoin::task_pub_orderchange_event;
 use kucoin_arbitrage::broker::symbol::filter::symbol_with_quotes;
 use kucoin_arbitrage::broker::symbol::kucoin::{format_subscription_list, get_symbols};
-use kucoin_arbitrage::event::{orderbook::OrderbookEvent, orderchange::OrderChangeEvent};
+use kucoin_arbitrage::event;
 use kucoin_arbitrage::model::orderbook::FullOrderbook;
-use kucoin_arbitrage::monitor::counter::Counter;
-use kucoin_arbitrage::monitor::task::task_log_mps;
+use kucoin_arbitrage::monitor::counter;
+use kucoin_arbitrage::monitor::task::{task_log_mps, task_monitor_channel_mps};
 use std::sync::Arc;
 use tokio::signal::unix::{signal, SignalKind};
 use tokio::sync::broadcast::channel;
@@ -39,12 +38,6 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<(), failure::E
     // config parameters
     let monitor_interval = config.behaviour.monitor_interval_sec;
 
-    // system mps counters
-    let api_input_counter = Arc::new(Mutex::new(Counter::new("api_input")));
-    let best_price_counter = Arc::new(Mutex::new(Counter::new("best_price")));
-    let chance_counter = Arc::new(Mutex::new(Counter::new("chance")));
-    let order_counter = Arc::new(Mutex::new(Counter::new("order")));
-
     // API endpoints
     let api = Kucoin::new(KucoinEnv::Live, Some(config.kucoin_credentials()))?;
     log::info!("Credentials setup");
@@ -61,13 +54,11 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<(), failure::E
     let subs = format_subscription_list(&symbol_infos);
     log::info!("Total orderbook WS sessions: {:?}", subs.len());
 
-    // create broadcast channels
-    // for syncing public orderbook
-    let (tx_orderbook, rx_orderbook) = channel::<OrderbookEvent>(1024 * 2);
-    // for getting notable orderbook after syncing
-    let (tx_orderbook_best, _) = channel::<OrderbookEvent>(512);
-    // for getting private order changes
-    let (tx_orderchange, _) = channel::<OrderChangeEvent>(128);
+    // broadcast channels and counters
+    let cx_orderbook = Arc::new(Mutex::new(counter::Counter::new("orderbook")));
+    let tx_orderbook = channel::<event::orderbook::OrderbookEvent>(1024 * 2).0;
+    let cx_orderbook_best = Arc::new(Mutex::new(counter::Counter::new("best_price")));
+    let tx_orderbook_best = channel::<event::orderbook::OrderbookEvent>(512).0;
     log::info!("Broadcast channels setup");
 
     // local orderbook
@@ -77,18 +68,23 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<(), failure::E
     // infrastructure tasks
     let mut taskpool_infrastructure = JoinSet::new();
     taskpool_infrastructure.spawn(task_sync_orderbook(
-        rx_orderbook,
-        tx_orderbook_best,
+        tx_orderbook.subscribe(),
+        tx_orderbook_best.clone(),
         full_orderbook.clone(),
-        api_input_counter.clone(),
     ));
-    taskpool_infrastructure.spawn(task_log_mps(
-        vec![
-            api_input_counter.clone(),
-            best_price_counter.clone(),
-            chance_counter.clone(),
-            order_counter.clone(),
-        ],
+    // monitor tasks
+    let mut taskpool_monitor = JoinSet::new();
+
+    taskpool_monitor.spawn(task_monitor_channel_mps(
+        tx_orderbook.subscribe(),
+        cx_orderbook.clone(),
+    ));
+    taskpool_monitor.spawn(task_monitor_channel_mps(
+        tx_orderbook_best.subscribe(),
+        cx_orderbook_best.clone(),
+    ));
+    taskpool_monitor.spawn(task_log_mps(
+        vec![cx_orderbook, cx_orderbook_best],
         monitor_interval as u64,
     ));
 
@@ -96,8 +92,6 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<(), failure::E
     task_get_initial_orderbooks(api.clone(), symbol_infos, full_orderbook).await?;
     log::info!("Aggregated all the symbols");
     let mut taskpool_subscription = JoinSet::new();
-    // publishes OrderChangeEvent from private subscription
-    taskpool_subscription.spawn(task_pub_orderchange_event(api.clone(), tx_orderchange));
     // publishes OrderBookEvent from public subscription
     for (i, sub) in subs.iter().enumerate() {
         taskpool_subscription.spawn(task_pub_orderbook_event(
@@ -112,6 +106,8 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<(), failure::E
     let message = tokio::select! {
         res = taskpool_infrastructure.join_next() =>
             format!("Infrastructure task pool error [{res:?}]"),
+        res = taskpool_monitor.join_next() =>
+            format!("Monitor task pool error [{res:?}]"),
         res = taskpool_subscription.join_next() => format!("Subscription task pool error [{res:?}]"),
     };
     Err(failure::err_msg(format!("unexpected error [{message}]")))

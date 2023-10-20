@@ -1,22 +1,15 @@
-use std::sync::Arc;
-
 use crate::event::order::OrderEvent;
 use crate::model::order::Order;
 use crate::monitor;
-use crate::monitor::counter;
-use crate::monitor::counter::Counter;
 use kucoin_api::client::Kucoin;
-use tokio::sync::{broadcast, Mutex};
+use tokio::sync::broadcast;
 
 /// Converts received OrderEvent into API call
 pub async fn task_place_order(
     mut receiver: broadcast::Receiver<OrderEvent>,
     kucoin: Kucoin,
-    counter: Arc<Mutex<Counter>>,
 ) -> Result<(), failure::Error> {
     loop {
-        counter::increment(counter.clone()).await;
-
         let event = receiver.recv().await?;
         // println!("Received event: {event:?}");
         match event {

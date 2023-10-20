@@ -50,11 +50,11 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<(), failure::E
     log::info!("Total orderbook WS sessions: {:?}", subs.len());
 
     // broadcast channels and counters
-    let counter_orderbook = Arc::new(Mutex::new(counter::Counter::new("orderbook")));
+    let cx_orderbook = Arc::new(Mutex::new(counter::Counter::new("orderbook")));
     let tx_orderbook = channel::<event::orderbook::OrderbookEvent>(1024 * 2).0;
-    let counter_best_price = Arc::new(Mutex::new(counter::Counter::new("best_price")));
+    let cx_orderbook_best = Arc::new(Mutex::new(counter::Counter::new("best_price")));
     let tx_orderbook_best = channel::<event::orderbook::OrderbookEvent>(512).0;
-    let counter_chance = Arc::new(Mutex::new(counter::Counter::new("chance")));
+    let cx_chance = Arc::new(Mutex::new(counter::Counter::new("chance")));
     let tx_chance = channel::<event::chance::ChanceEvent>(64).0;
     log::info!("Broadcast channels setup");
 
@@ -62,21 +62,21 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<(), failure::E
     let mut taskpool_monitor = JoinSet::new();
     taskpool_monitor.spawn(task_monitor_channel_mps(
         tx_orderbook.subscribe(),
-        counter_orderbook.clone(),
+        cx_orderbook.clone(),
     ));
     taskpool_monitor.spawn(task_monitor_channel_mps(
         tx_orderbook_best.subscribe(),
-        counter_orderbook.clone(),
+        cx_orderbook_best.clone(),
     ));
     taskpool_monitor.spawn(task_monitor_channel_mps(
         tx_chance.subscribe(),
-        counter_chance.clone(),
+        cx_chance.clone(),
     ));
     taskpool_monitor.spawn(task_log_mps(
         vec![
-            counter_orderbook.clone(),
-            counter_best_price.clone(),
-            counter_chance.clone(),
+            cx_orderbook.clone(),
+            cx_orderbook_best.clone(),
+            cx_chance.clone(),
         ],
         monitor_interval as u64,
     ));

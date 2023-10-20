@@ -16,7 +16,7 @@ https://github.com/kanekoshoyu/Kucoin-Triangular-Arbitrage
 - It didn't count the actual size of the arbitrage order, which meant that the script kept buying some shitcoin and could not sell properly.
 - It simply took the mean price instead of best bid/ask, which means it took maker positions for each of three actions in one arbitrage, and did not execute arbitrage promptly.
 ## How to run example executables
-Copy/Rename config_sample.toml as config.toml and set the API key with your own KuCoin API credentials. Configure the event monitor interval and the USD budget per clyclic arbitrage.   
+1. Rename config_sample.toml as config.toml and set the API key with your own KuCoin API credentials. Configure the event monitor interval and the USD budget per each iteration of cyclic arbitrage.   
 ```
 [KuCoin Credentials]
 api_key="YOUR_API_KEY"
@@ -29,25 +29,42 @@ monitor_interval_sec=120
 # max amount of USD to use in a single cyclic arbitrage
 usd_cyclic_arbitrage=100
 ```
-At the root directory of the project, run the below command
+2. At the root directory of the project(kucoin_arbiitrage), run the below command
 ```
 cargo run --bin event_triangular  
 ```
-`event_triangular` is one of the example executables. There are other executables in the `bin` directory.
+`event_triangular` is one of the example executables that implements [XXX-BTC, XXX-USDT, BTC-USDT] triangular arbitrage. There are other executables in the `bin` directory.
 
 ## Overview
+
+### Code Structure
 The project is split into these components:
-###### Example Executables
+  
+##### Example Executables
 - `bin` contains example executable codes. Some of them are for network testing purpose.
-###### Internal Structure (Independent of Exchange APIs)
+  
+##### Internal Structure (Independent of Exchange APIs)
 - `model` has internal generic data structures used for abstracted representations of markets. This should be independent of exchange APIs so that the the arbitrage strategy algorithm can be conducted across different exchanges.
 - `event` has the events used to pass states and data passed across different components. It uses the internal model for the same reason.
-- `strategy` has the implementations of arbitrage strategy algorithm. The algorithms are built upon internal model and event. 
-- `monitor` has the counter used to monitor MPS (message per seconds) of each broadcast channels, and a timers mapped globally by string for easy debug access. 
+- `strategy` has the implementations of arbitrage strategy algorithm. The algorithms are built upon internal model and event.
+- `monitor` has the counter used to monitor MPS (message per seconds) for each broadcast channels, and a timers mapped globally by string for easy debug access.
   
-###### Link to Exchange APIs (e.g. KuCoin)
+##### Link to Exchange APIs (e.g. KuCoin)
 - `translator` has the conversion of exchange API objects into internal models and vice versa. It uses traits and the traits are implemented per API models.
 - `broker` has the tasks that runs API calls, and converts into internal data structure.
+  
+### Event Pub/Sub with Tokio Broadcast
+Event broadcasts empowers the modularity of tasks. Each async task communicates with eachother using events, pub/sub via tokio's broadcast. Here is the exmaple for `event_triangular.rs`
+| Channel        | Publisher                         | Subscriber                                                  |
+| -------------- | --------------------------------- | ----------------------------------------------------------- |
+| orderbook      | task_pub_orderbook_event          | task_monitor_channel_mps, task_sync                         |
+| orderbook_best | task_sync                         | task_monitor_channel_mps, task_pub_chance_all_taker_btc_usd |
+| chance         | task_pub_chance_all_taker_btc_usd | task_monitor_channel_mps, task_gatekeep_chances             |
+| order          | task_gatekeep_chances             | task_monitor_channel_mps, task_place_order                  |
+| orderchange    | task_pub_orderchange_event        | task_monitor_channel_mps, task_gatekeep_chances             |
+
+### Task Pools with Tokio JoinSet
+Tasks are grouped and spawned using JoinSets. We can either await for all the tasks to end with `join!` or await until a single task ends with `select!`. This provides full control over how we want to control these tasks.  
 
 ## Major Structural Improvements
 - Use compiled Rust code for neat, efficient and proper code
@@ -68,6 +85,9 @@ The project is split into these components:
 | Resort against limit order that could not get filled                                               | Pending   |
 | Full triangular arbitrage with the middle coin other than BTC (e.g. ETH-USD, ALT-ETH, ALT-USD)     | Pending   |
 
-  
-## To-dos
-please refer to the [Discussions](https://github.com/kanekoshoyu/kucoin_arbitrage/discussions) channel in GitHub.
+## Deployment
+Please refer to my another repo implementing service-level wrappers: [chaiwala](https://github.com/kanekoshoyu/chaiwala)
+
+## Community
+- Rust Questions: [GitHub Repo Discussion](https://github.com/kanekoshoyu/kucoin_arbitrage/discussions)
+- Arbitrage Questions: [Discord Server](https://discord.gg/q3j5MYdwnm)

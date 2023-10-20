@@ -83,7 +83,7 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<(), failure::E
     log::info!("Local empty full orderbook setup");
 
     // infrastructure tasks
-    let mut taskpool_infrastructure = JoinSet::new();
+    let mut taskpool_infrastructure: JoinSet<Result<(), failure::Error>> = JoinSet::new();
     taskpool_infrastructure.spawn(task_sync_orderbook(
         tx_orderbook.subscribe(),
         tx_orderbook_best.clone(),
@@ -113,7 +113,7 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<(), failure::E
         tx_orderbook_best.subscribe(),
         cx_orderbook_best.clone(),
     ));
-    taskpool_infrastructure.spawn(task_log_mps(
+    taskpool_monitor.spawn(task_log_mps(
         vec![
             cx_orderbook.clone(),
             cx_orderbook_best.clone(),

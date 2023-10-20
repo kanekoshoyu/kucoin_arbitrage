@@ -41,8 +41,12 @@ pub async fn task_place_order(
             }
             OrderEvent::PostOrder(order) => {
                 // gge the broadcast duration
-                let time = monitor::timer::stop("order_placement_broadcast".to_string()).await?;
-                log::info!("order_placement_broadcast: {time:?}");
+                let time = monitor::timer::stop("order_placement_broadcast".to_string()).await;
+                if let Err(e) = time {
+                    log::error!("{e:?}");
+                }else{
+                    log::info!("order_placement_broadcast: {:?}", time.unwrap());
+                }
 
                 log::info!("order placement\n{order:?}");
                 if let Err(e) = kucoin

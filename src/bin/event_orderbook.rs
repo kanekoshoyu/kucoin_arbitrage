@@ -72,9 +72,9 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<(), failure::E
         tx_orderbook_best.clone(),
         full_orderbook.clone(),
     ));
+
     // monitor tasks
     let mut taskpool_monitor = JoinSet::new();
-
     taskpool_monitor.spawn(task_monitor_channel_mps(
         tx_orderbook.subscribe(),
         cx_orderbook.clone(),
@@ -91,8 +91,10 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<(), failure::E
     // collect all initial orderbook states with REST
     task_get_initial_orderbooks(api.clone(), symbol_infos, full_orderbook).await?;
     log::info!("Aggregated all the symbols");
+
+    // websocket subscription tasks
     let mut taskpool_subscription = JoinSet::new();
-    // publishes OrderBookEvent from public subscription
+    // publishes OrderBookEvent from public API
     for (i, sub) in subs.iter().enumerate() {
         taskpool_subscription.spawn(task_pub_orderbook_event(
             api.clone(),
@@ -102,8 +104,8 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<(), failure::E
         log::info!("{i:?}-th session of WS subscription setup");
     }
 
-    // terminate if taskpools failed
-    let message = tokio::select! {
+    // terminate if any taskpool failed
+    let message: String = tokio::select! {
         res = taskpool_infrastructure.join_next() =>
             format!("Infrastructure task pool error [{res:?}]"),
         res = taskpool_monitor.join_next() =>

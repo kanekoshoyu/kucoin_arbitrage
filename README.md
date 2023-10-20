@@ -16,7 +16,7 @@ https://github.com/kanekoshoyu/Kucoin-Triangular-Arbitrage
 - It didn't count the actual size of the arbitrage order, which meant that the script kept buying some shitcoin and could not sell properly.
 - It simply took the mean price instead of best bid/ask, which means it took maker positions for each of three actions in one arbitrage, and did not execute arbitrage promptly.
 ## How to run example executables
-Copy/Rename config.ini.sample as config.ini and set the API key with your own KuCoin API credentials. Configure the event monitor interval and the USD budget per clyclic arbitrage.   
+Copy/Rename config_sample.toml as config.toml and set the API key with your own KuCoin API credentials. Configure the event monitor interval and the USD budget per clyclic arbitrage.   
 ```
 [KuCoin Credentials]
 api_key="YOUR_API_KEY"
@@ -43,7 +43,7 @@ The project is split into these components:
 - `model` has internal generic data structures used for abstracted representations of markets. This should be independent of exchange APIs so that the the arbitrage strategy algorithm can be conducted across different exchanges.
 - `event` has the events used to pass states and data passed across different components. It uses the internal model for the same reason.
 - `strategy` has the implementations of arbitrage strategy algorithm. The algorithms are built upon internal model and event. 
-- `global` has the lazy_static globals that is used across the code. This may get replaced by passing Arc/Mutex to functions soon. I just wanted the code to be simple and readable with this way first.
+- `monitor` has the counter used to monitor MPS (message per seconds) of each broadcast channels, and a timers mapped globally by string for easy debug access. 
   
 ###### Link to Exchange APIs (e.g. KuCoin)
 - `translator` has the conversion of exchange API objects into internal models and vice versa. It uses traits and the traits are implemented per API models.

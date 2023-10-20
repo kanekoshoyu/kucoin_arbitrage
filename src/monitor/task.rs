@@ -15,7 +15,7 @@ async fn log_mps(
             let p = counter.lock().await;
             (p.name, p.data_count)
         };
-        log::info!("{name:10}: {count:5} points ({:5}mps)", count / interval);
+        log::info!("{name:12}: {count:5} messages ({:5}mps)", count / interval);
         // clear the data
         counter::reset(counter.clone()).await;
     }

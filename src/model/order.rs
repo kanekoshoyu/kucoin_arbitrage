@@ -1,9 +1,9 @@
 /// Order placement selector, default set as "Sell" for security
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Copy)]
 pub enum OrderSide {
-    Buy,
     #[default]
     Sell,
+    Buy,
 }
 
 impl AsRef<str> for OrderSide {
@@ -26,7 +26,7 @@ impl ToString for OrderSide {
     }
 }
 
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
 // Market selector, market set to limit order for security
 pub enum OrderType {
     #[default]
@@ -80,7 +80,7 @@ impl Order for MarketOrder {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct LimitOrder {
     pub id: String,
     pub order_type: OrderType,

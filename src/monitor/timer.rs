@@ -18,7 +18,7 @@ pub async fn stop(name: String) -> Result<Duration, failure::Error> {
     let now = Instant::now();
     let timer = TIMERS.lock().await;
     let stat = timer.get(&name).ok_or(failure::err_msg(format!(
-        "global timer [{name:?}] is not found"
+        "global timer [{name}] is not found"
     )))?;
     Ok(now.duration_since(*stat))
 }

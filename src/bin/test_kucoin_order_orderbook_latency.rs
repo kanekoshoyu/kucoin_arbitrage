@@ -1,7 +1,6 @@
 /// Test REST-to-WS Network Latency
 /// place extreme order, receive extreme order, check time difference
 use chrono::prelude::Local;
-use kucoin_api::failure;
 use kucoin_api::futures::TryStreamExt;
 use kucoin_api::{
     client::{Kucoin, KucoinEnv},

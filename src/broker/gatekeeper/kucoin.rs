@@ -1,14 +1,10 @@
-use std::sync::Arc;
-
 use crate::event::chance::ChanceEvent;
 use crate::event::order::OrderEvent;
 use crate::event::orderchange::OrderChangeEvent;
 use crate::model::order::{LimitOrder, OrderType};
-use crate::monitor::counter;
 use crate::strings::generate_uid;
 use std::time::SystemTime;
 use tokio::sync::broadcast::{Receiver, Sender};
-use tokio::sync::Mutex;
 
 // TODO implement when all_taker_btc_usdt is done
 
@@ -22,10 +18,8 @@ pub async fn task_gatekeep_chances(
     mut receiver_chance: Receiver<ChanceEvent>,
     mut receiver_order_change: Receiver<OrderChangeEvent>,
     sender: Sender<OrderEvent>,
-    counter: Arc<Mutex<counter::Counter>>,
-) -> Result<(), kucoin_api::failure::Error> {
+) -> Result<(), failure::Error> {
     loop {
-        counter::increment(counter.clone()).await;
         let status = receiver_chance.recv().await;
         if let Err(e) = status {
             log::error!("gatekeep chance parsing error {e:?}");
@@ -53,21 +47,13 @@ pub async fn task_gatekeep_chances(
                     let time_sent = SystemTime::now();
                     log::info!("time_sent: {time_sent:?}");
 
-                    sender.send(OrderEvent::PostOrder(order)).unwrap();
+                    sender.send(OrderEvent::PostOrder(order))?;
 
                     let mut amount_untraded = chance.actions[i].price.0;
                     while amount_untraded > 0.0 {
-                        let order_change_status = receiver_order_change.recv().await;
-                        if order_change_status.is_err() {
-                            log::error!(
-                                "gatekeep change parsing error {:?}",
-                                order_change_status.err().unwrap()
-                            );
-                            continue;
-                        }
-                        let order_change_event = order_change_status.unwrap();
+                        let order_change_status = receiver_order_change.recv().await?;
                         if let OrderChangeEvent::OrderFilled((amount, currency)) =
-                            order_change_event
+                            order_change_status
                         {
                             log::info!("{amount}{currency} filled, proceeding to next step");
                             amount_untraded = 0.0;

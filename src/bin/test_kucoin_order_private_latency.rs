@@ -8,23 +8,16 @@ use kucoin_arbitrage::broker::symbol::kucoin::{format_subscription_list, get_sym
 use kucoin_arbitrage::event::order::OrderEvent;
 use kucoin_arbitrage::event::orderchange::OrderChangeEvent;
 use kucoin_arbitrage::model::order::{LimitOrder, OrderSide, OrderType};
-use kucoin_arbitrage::monitor::counter::Counter;
 use kucoin_arbitrage::strings::generate_uid;
 use kucoin_arbitrage::{broker::symbol::filter::symbol_with_quotes, monitor};
-use std::sync::Arc;
-use std::time::Duration;
 use tokio::sync::broadcast::channel;
-use tokio::sync::Mutex;
-use tokio::time::sleep;
+use tokio::time::{sleep, Duration};
 
 #[tokio::main]
 async fn main() -> Result<(), failure::Error> {
     // Provides logging format
     kucoin_arbitrage::logger::log_init();
     log::info!("Log setup");
-
-    // Declares all the system counters
-    let order_counter = Arc::new(Mutex::new(Counter::new("order")));
 
     // config
     let config = kucoin_arbitrage::config::from_file("config.toml")?;
@@ -52,11 +45,7 @@ async fn main() -> Result<(), failure::Error> {
     log::info!("Broadcast channels setup");
 
     // TODO use the tx_order to send orders
-    tokio::spawn(task_place_order(
-        rx_order,
-        api.clone(),
-        order_counter.clone(),
-    ));
+    tokio::spawn(task_place_order(rx_order, api.clone()));
 
     tokio::spawn(task_pub_orderchange_event(api.clone(), tx_orderchange));
 

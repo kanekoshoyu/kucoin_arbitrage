@@ -1,5 +1,5 @@
-use std::time::Duration;
 use tokio::signal::unix::{signal, SignalKind};
+use tokio::time;
 
 #[tokio::main]
 async fn main() -> Result<(), failure::Error> {
@@ -34,10 +34,10 @@ async fn exit_program(signal_alias: &str) -> Result<(), failure::Error> {
 // Define a handler function for the SIGTERM signal
 async fn program() -> Result<(), failure::Error> {
     let mut counter = 0;
-    let duration = Duration::from_secs(2);
+    let duration = time::Duration::from_secs(2);
     loop {
         println!("couter: {counter}");
         counter += 1;
-        tokio::time::sleep(duration).await;
+        time::sleep(duration).await;
     }
 }

@@ -10,7 +10,7 @@ use tokio::sync::broadcast::Sender;
 pub async fn task_pub_orderchange_event(
     api: Kucoin,
     sender: Sender<OrderChangeEvent>,
-) -> Result<(), kucoin_api::failure::Error> {
+) -> Result<(), failure::Error> {
     let url_private = api.get_socket_endpoint(WSType::Private).await?;
     let mut ws = api.websocket();
     let topics = vec![WSTopic::TradeOrders];

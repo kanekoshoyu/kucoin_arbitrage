@@ -1,6 +1,5 @@
 /// Test WebSocket Message Rate
 /// Subscribe to messages, run for 10 seconds, get the rate respectively
-use kucoin_api::failure;
 use kucoin_api::futures::TryStreamExt;
 use kucoin_api::{
     client::{Kucoin, KucoinEnv},

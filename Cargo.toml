@@ -1,6 +1,6 @@
 [package]
 name = "kucoin_arbitrage"
-version = "0.0.13"
+version = "0.0.14"
 edition = "2021"
 authors = ["Sho Kaneko <kanekoshoyu@gmail.com>"]
 description = "Event-Driven Kucoin Arbitrage Framework in Async Rust"
@@ -14,7 +14,7 @@ futures = "0.3.28"
 tokio = { version = "1.33.0", features = ["full"] }
 tokio-signal = "0.2.9"
 # log
-log = "0.4"
+log = "0.4.20"
 fern = "0.6.2"
 env_logger = "0.10.0"
 # config

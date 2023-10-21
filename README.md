@@ -3,10 +3,12 @@
 [![](https://img.shields.io/docsrs/kucoin_arbitrage)](https://docs.rs/kucoin_arbitrage)
 [![](https://img.shields.io/github/license/kanekoshoyu/kucoin_arbitrage)](https://github.com/kanekoshoyu/kucoin_arbitrage/blob/master/LICENSE)  
 This is an async Rust project to implement zero-risk crypto trinagular arbitrage, explore technical feasiblity of generating passsive income (i.e. sleep to earn!).  
-## How the arbitrage works
-Say we hold USDT, it checks all the coins(e.g. ETH) that can trade against BTC and USDT, and compare the profit by either:  
+## How cyclic arbitrage works
+Say we hold USDT, it checks all the listed crypto (e.g. ETH) that can trade against BTC and USDT, and compare the profit by either:  
 - Buy-Sell-Sell: buy ETH (sell USDT), sell ETH (buy BTC), sell BTC (buy USDT)  
 - Buy-Buy-Sell: buy BTC (sell USDT), buy ETH (sell BTC), sell ETH (buy USDT)  
+
+The above is triangular arbitrage, which is the simplest form of cyclic arbitrage. We can make more complex say finding the most profitable routes, or placing order at maker price for reduced fees. 
   
 ## Previous mistakes in Python
 2 years ago I have made a python script that runs the triangular arbitrage in KuCoin, but it had several technical issues and ended up not following up.  
@@ -29,7 +31,7 @@ monitor_interval_sec=120
 # max amount of USD to use in a single cyclic arbitrage
 usd_cyclic_arbitrage=100
 ```
-2. At the root directory of the project(kucoin_arbiitrage), run the below command
+2. At the root directory of the project(kucoin_arbiitrage), run the command below:
 ```
 cargo run --bin event_triangular  
 ```
@@ -64,7 +66,15 @@ Event broadcasts empowers the modularity of tasks. Each async task communicates 
 | orderchange    | task_pub_orderchange_event        | task_monitor_channel_mps, task_gatekeep_chances             |
 
 ### Task Pools with Tokio JoinSet
-Tasks are grouped and spawned using JoinSets. We can either await for all the tasks to end with `join!` or await until a single task ends with `select!`. This provides full control over how we want to control these tasks.  
+Tasks are grouped and spawned using JoinSets. We can either await for all the tasks to end with `join!` or await until a single task ends with `select!` or `join_next`. This provides full control over how we want to control these tasks. Here is the exmaple for task pools declared in core function of `event_triangular.rs`
+| TaskPool                | Task                                                                                            |
+| ----------------------- | ----------------------------------------------------------------------------------------------- |
+| taskpool_infrastructure | task_sync_orderbook, task_pub_chance_all_taker_btc_usd, task_gatekeep_chances, task_place_order |
+| taskpool_subscription   | task_pub_orderbook_event, task_pub_orderchange_event                                            |
+| taskpool_monitor        | task_monitor_channel_mps, task_log_mps                                                          |
+
+When a task in taskpool returns, its result is received by `join_next`, which are received by core's `select!`. 
+When an external signal is received, or core returns error, it gets detected by `select!` at the main and terminates the program.
 
 ## Major Structural Improvements
 - Use compiled Rust code for neat, efficient and proper code

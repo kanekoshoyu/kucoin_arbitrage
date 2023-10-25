@@ -7,6 +7,7 @@ use std::time::SystemTime;
 use tokio::sync::broadcast::{Receiver, Sender};
 
 // TODO implement when all_taker_btc_usdt is done
+// TODO implement profit maximization
 
 /// Broker that accepts chances, then outputs actual orders based on other limiting factors
 /// Gate Keeper
@@ -29,10 +30,6 @@ pub async fn task_gatekeep_chances(
         match event {
             ChanceEvent::AllTaker(chance) => {
                 log::info!("All Taker Chance found!\n{chance:?}");
-                // TODO conduct profit maximization here
-                // set up a sized queue here with a timer and a order monitor
-                // if timeout, close order with market price
-                // chance.profit
                 // i is [0, 1, 2]
                 for i in 0..3 {
                     let order: LimitOrder = LimitOrder {
@@ -47,7 +44,7 @@ pub async fn task_gatekeep_chances(
                     let time_sent = SystemTime::now();
                     log::info!("time_sent: {time_sent:?}");
 
-                    sender.send(OrderEvent::PostOrder(order))?;
+                    sender.send(OrderEvent::PlaceOrder(order))?;
 
                     let mut amount_untraded = chance.actions[i].price.0;
                     while amount_untraded > 0.0 {

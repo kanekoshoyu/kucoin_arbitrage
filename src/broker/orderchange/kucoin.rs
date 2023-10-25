@@ -15,15 +15,11 @@ pub async fn task_pub_orderchange_event(
     let mut ws = api.websocket();
     let topics = vec![WSTopic::TradeOrders];
     ws.subscribe(url_private.clone(), topics).await?;
-
     loop {
         // Awaits subscription message
-        let msg = ws.try_next().await;
-        if let Err(e) = msg {
-            log::error!("task_pub_orderchange_event error: {e}");
-            panic!()
-        }
-        let msg = msg?.unwrap();
+        let msg = ws.try_next().await?;
+        let msg = msg.unwrap();
+        log::info!("message: {msg:?}");
 
         if let KucoinWebsocketMsg::TradeReceivedMsg(msg) = msg {
             // TradeReceived is only available to V2.

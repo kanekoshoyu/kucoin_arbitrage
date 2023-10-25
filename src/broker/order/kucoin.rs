@@ -15,53 +15,36 @@ pub async fn task_place_order(
         match event {
             OrderEvent::GetAllOrders => {
                 // unimplemented!("mossing source of order_id");
-                let status = kucoin.get_recent_orders().await;
-                if let Err(e) = status {
-                    log::error!("There was an error with kucoin API cancelling all order ({e})");
-                } else {
-                    let status_api_data = status.unwrap();
-                    let data = status_api_data.data.unwrap();
-                    for datum in data {
-                        log::info!("get_recent_orders obtained {datum:#?}")
-                    }
-                }
+                let status = kucoin.get_recent_orders().await?;
+                log::info!("{status:?}");
             }
             OrderEvent::CancelOrder(order) => {
-                if let Err(e) = kucoin.cancel_order(order.id().to_string().as_str()).await {
-                    log::error!("There was an error with kucoin API cancelling single order ({e})");
-                }
-
-                unimplemented!()
+                let status = kucoin.cancel_order(order.id().as_ref()).await?;
+                log::info!("{status:?}");
             }
             OrderEvent::CancelAllOrders => {
-                unimplemented!("mossing source of symbol and trade_type");
-                // if let Err(e) = kucoin.cancel_all_orders(symbol, trade_type).await {
-                //     log::error!("There was an error with kucoin API cancelling all order ({e})");
-                // }
+                unimplemented!();
             }
-            OrderEvent::PostOrder(order) => {
-                // gge the broadcast duration
-                let time = monitor::timer::stop("order_placement_broadcast".to_string()).await;
-                if let Err(e) = time {
-                    log::error!("{e:?}");
-                } else {
-                    log::info!("order_placement_broadcast: {:?}", time.unwrap());
-                }
-
-                log::info!("order placement\n{order:?}");
-                if let Err(e) = kucoin
+            OrderEvent::PlaceOrder(order) => {
+                // get the broadcast duration
+                let time = monitor::timer::stop("order_placement_broadcast".to_string()).await?;
+                log::info!("order_placement_broadcast: {:?}", time);
+                let status = kucoin
                     .post_limit_order(
-                        order.id().to_string().as_str(),
-                        order.symbol().as_str(),
-                        order.side().to_string().as_str(),
-                        order.price().as_str(),
-                        order.amount().as_str(),
+                        order.id().as_ref(),
+                        order.symbol().as_ref(),
+                        order.side().as_ref(),
+                        order.price().as_ref(),
+                        order.amount().as_ref(),
                         None,
                     )
-                    .await
-                {
-                    log::error!("There was an error with kucoin API placing order ({e})");
-                }
+                    .await?;
+                log::info!("{status:?}");
+            }
+            OrderEvent::PlaceBorrowOrder(_order) => {
+                // TODO learn more about the function below
+                // kucoin.post_borrow_order(currency, trade_type, size, max_rate, term)
+                unimplemented!();
             }
         };
     }

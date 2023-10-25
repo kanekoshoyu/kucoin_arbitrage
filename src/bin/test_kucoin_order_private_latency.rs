@@ -21,7 +21,7 @@ use tokio::task::JoinSet;
 #[tokio::main]
 async fn main() -> Result<(), failure::Error> {
     // Provides logging format
-    kucoin_arbitrage::logger::log_init();
+    kucoin_arbitrage::logger::log_init()?;
     log::info!("Log setup");
 
     // config
@@ -79,7 +79,8 @@ async fn main() -> Result<(), failure::Error> {
         res = taskpool_infrastructure.join_next() => format!("taskpool_infrastructure stopped unexpectedly [{res:?}]"),
         res = task_signal_handle() => format!("received external signal, terminating program [{res:?}]"),
     };
-    log::warn!("{err_msg:?}");
+    log::error!("{err_msg:?}");
+    log::info!("Exiting program, bye!");
     Ok(())
 }
 

@@ -1,39 +1,66 @@
 use chrono::prelude::Local;
+use colored::Colorize;
+use fern;
 
-pub fn log_init() {
-    // setup time loggers
-    let fmt = "%Y_%m_%d_%H_%M_%S";
-    let now = Local::now();
-    let formatted_date = now.format(fmt).to_string();
+// TODO find a way to obtain the running binary name for
+// - terminal log whitelisting
+// - console log filename
 
-    // Output file
-    let dir = "log";
-    let filename = String::from(dir) + "/" + &formatted_date + ".log";
-    let _ = std::fs::create_dir(dir);
-
-    // Terminal logger
-    let console_logger = fern::Dispatch::new()
+fn dispatch_console() -> fern::Dispatch {
+    fern::Dispatch::new()
+        .level(log::LevelFilter::Info)
         .format(move |out, message, record| {
             out.finish(format_args!(
                 "{}[{}][{}] {}",
                 Local::now().format("[%Y-%m-%d %H:%M:%S]"),
-                record.level(),
+                match record.level() {
+                    log::Level::Error => "ERROR".red(),
+                    log::Level::Warn => "WARN".yellow(),
+                    log::Level::Info => "INFO".green(),
+                    log::Level::Debug => "DEBUG".cyan(),
+                    log::Level::Trace => "TRACE".blue(),
+                },
                 record.target(),
                 message
             ))
         })
-        .level(log::LevelFilter::Info)
-        .chain(std::io::stdout());
+        .chain(std::io::stdout())
+}
 
-    // File logger
-    let file_logger = fern::Dispatch::new()
-        .format(|out, message, _| out.finish(format_args!("{}", message)))
+fn dispatch_file(filename: &str) -> fern::Dispatch {
+    fern::Dispatch::new()
         .level(log::LevelFilter::Info)
-        .chain(fern::log_file(filename).unwrap());
+        .format(move |out, message, record| {
+            out.finish(format_args!(
+                "{}[{}][{}] {}",
+                Local::now().format("[%Y-%m-%d %H:%M:%S]"),
+                match record.level() {
+                    log::Level::Error => "ERROR",
+                    log::Level::Warn => "WARN",
+                    log::Level::Info => "INFO",
+                    log::Level::Debug => "DEBUG",
+                    log::Level::Trace => "TRACE",
+                },
+                record.target(),
+                message
+            ))
+        })
+        .chain(fern::log_file(filename).expect("Failed to create log file"))
+}
 
-    // TODO add color to the terminal upon the release of fern 0.7
-    console_logger
-        .chain(file_logger)
-        .apply()
-        .expect("failed to initialize logger");
+pub fn log_init() -> Result<(), failure::Error> {
+    // setup time loggers
+    let fmt = "%Y_%m_%d_%H_%M_%S";
+    let formatted_date = Local::now().format(fmt).to_string();
+    // Output file
+    let dir = "log";
+    let filename = format!("{dir}/{formatted_date}.log");
+    if std::fs::metadata(dir).is_err() {
+        std::fs::create_dir(dir)?;
+    }
+    fern::Dispatch::new()
+        .chain(dispatch_file(&filename))
+        .chain(dispatch_console())
+        .apply()?;
+    Ok(())
 }

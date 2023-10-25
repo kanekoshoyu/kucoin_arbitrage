@@ -75,10 +75,11 @@ async fn main() -> Result<(), failure::Error> {
     log::info!("All application tasks setup");
     monitor::timer::start("order_placement_network".to_string()).await;
     monitor::timer::start("order_placement_broadcast".to_string()).await;
-    tokio::select! {
-        _ = taskpool_infrastructure.join_next() => println!("taskpool_infrastructure stopped unexpectedly"),
-        _ = task_signal_handle() => println!("received external signal, terminating program"),
+    let err_msg = tokio::select! {
+        res = taskpool_infrastructure.join_next() => format!("taskpool_infrastructure stopped unexpectedly [{res:?}]"),
+        res = task_signal_handle() => format!("received external signal, terminating program [{res:?}]"),
     };
+    log::warn!("{err_msg:?}");
     Ok(())
 }
 

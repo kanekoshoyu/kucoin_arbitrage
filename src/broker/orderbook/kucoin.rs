@@ -63,8 +63,7 @@ pub async fn task_get_orderbook(api: Kucoin, symbol: &str) -> Result<OrderBook, 
             continue;
         }
         let res = res.unwrap();
-        let code = res.code;
-        match code.as_str() {
+        match res.code.as_str() {
             "429000" => {
                 log::warn!("[{symbol:?}] request overloaded ({try_counter:?} tries)")
             }
@@ -77,7 +76,7 @@ pub async fn task_get_orderbook(api: Kucoin, symbol: &str) -> Result<OrderBook, 
                 return Ok(res.data.unwrap());
             }
             "400003" => return Err(failure::err_msg("API key needed not but provided")),
-            _ => return Err(failure::err_msg(format!("unrecognised code [{:?}]", code))),
+            code => return Err(failure::err_msg(format!("unrecognised code [{code:?}]"))),
         }
     }
 }

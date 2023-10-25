@@ -14,7 +14,6 @@ pub async fn task_place_order(
         // println!("Received event: {event:?}");
         match event {
             OrderEvent::GetAllOrders => {
-                // unimplemented!("mossing source of order_id");
                 let status = kucoin.get_recent_orders().await?;
                 log::info!("{status:?}");
             }
@@ -39,7 +38,12 @@ pub async fn task_place_order(
                         None,
                     )
                     .await?;
-                log::info!("{status:?}");
+                match status.code.as_str() {
+                    "200004" => {
+                        return Err(failure::err_msg("Insufficient fund"));
+                    }
+                    code => return Err(failure::err_msg(format!("unrecognised code [{code:?}]"))),
+                };
             }
             OrderEvent::PlaceBorrowOrder(_order) => {
                 // TODO learn more about the function below

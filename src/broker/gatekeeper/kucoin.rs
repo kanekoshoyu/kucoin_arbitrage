@@ -2,7 +2,6 @@ use crate::event::chance::ChanceEvent;
 use crate::event::order::OrderEvent;
 use crate::event::trade::TradeEvent;
 use crate::model::order::{LimitOrder, OrderType};
-use std::time::SystemTime;
 use tokio::sync::broadcast::{Receiver, Sender};
 use uuid::Uuid;
 // TODO implement when all_taker_btc_usdt is done
@@ -40,12 +39,7 @@ pub async fn task_gatekeep_chances(
                         amount: chance.actions[i].volume.to_string(),
                         price: chance.actions[i].price.to_string(),
                     };
-                    // Logging time
-                    let time_sent = SystemTime::now();
-                    log::info!("time_sent: {time_sent:?}");
-
                     tx_order.send(OrderEvent::PlaceLimitOrder(order))?;
-
                     let fill_target = chance.actions[i].price.0;
                     let mut fill_cumulative = 0.0;
                     while fill_cumulative < fill_target {
@@ -59,13 +53,15 @@ pub async fn task_gatekeep_chances(
                                 }
                             }
                             other => {
-                                log::info!("igmore [{other:?}]")
+                                // print for debugging purpose
+                                if let TradeEvent::TradeMatch(info) = other {
+                                    log::info!("TradeMatch[{}]", info.order_id);
+                                }
                             }
                         }
                     }
-
-                    // wait until it receives a signal from Kucoin that the order has been complete
                 }
+                log::info!("cycle completed!")
             }
             ChanceEvent::MakerTakerTaker(_actions) => {}
         }

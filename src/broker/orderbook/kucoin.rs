@@ -1,7 +1,7 @@
 use crate::event::orderbook::OrderbookEvent;
 use crate::model::orderbook::FullOrderbook;
 use crate::model::symbol::SymbolInfo;
-use crate::translator::traits::{ToOrderBookChange, ToOrderBook};
+use crate::translator::traits::{ToOrderBook, ToOrderBookChange};
 use kucoin_api::client::Kucoin;
 use kucoin_api::futures::TryStreamExt;
 use kucoin_api::model::market::{OrderBook, OrderBookType};
@@ -22,32 +22,29 @@ pub async fn task_pub_orderbook_event(
     let url_public = api.get_socket_endpoint(WSType::Public).await?;
     let mut ws = api.websocket();
     ws.subscribe(url_public.clone(), topics).await?;
-
     loop {
-        let msg = ws.try_next().await;
-        if let Err(e) = msg {
-            log::error!("task_pub_orderbook_event error: {e}");
-            panic!()
-        }
-        let msg = msg?.unwrap();
-        // add matches for multi-subscribed sockets handling
-        if let KucoinWebsocketMsg::OrderBookMsg(msg) = msg {
-            // log::info!("WS: {msg:#?}");
-            let (str, data) = msg.data.to_internal(serial);
-            let event = OrderbookEvent::OrderbookChangeReceived((str, data));
-            if sender.send(event).is_err() {
-                log::error!("Orderbook event publish error, check receiver");
+        let msg = ws.try_next().await?;
+        let msg = msg.unwrap();
+        match msg {
+            KucoinWebsocketMsg::OrderBookMsg(msg) => {
+                let (str, data) = msg.data.to_internal(serial);
+                let event = OrderbookEvent::OrderbookChangeReceived((str, data));
+                sender.send(event)?;
             }
-        } else if let KucoinWebsocketMsg::TickerMsg(msg) = msg {
-            log::info!("TickerMsg: {msg:#?}")
-        } else if let KucoinWebsocketMsg::OrderBookChangeMsg(msg) = msg {
-            log::info!("OrderbookChange: {msg:#?}")
-        } else if let KucoinWebsocketMsg::WelcomeMsg(_) = msg {
-        } else if let KucoinWebsocketMsg::PongMsg(_) = msg {
-        } else {
-            log::info!("Irrelevant Messages");
-            log::info!("{msg:#?}")
-        }
+            KucoinWebsocketMsg::TickerMsg(msg) => {
+                log::info!("TickerMsg: {msg:#?}");
+            }
+            KucoinWebsocketMsg::OrderBookChangeMsg(msg) => {
+                log::info!("OrderbookChange: {msg:#?}")
+            }
+            KucoinWebsocketMsg::WelcomeMsg(_) => {
+                log::info!("Welcome to KuCoin public WS")
+            }
+            KucoinWebsocketMsg::PongMsg(_) => {}
+            other => {
+                log::error!("unregistered message {other:?}")
+            }
+        };
     }
 }
 

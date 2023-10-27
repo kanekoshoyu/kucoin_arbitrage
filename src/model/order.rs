@@ -40,7 +40,7 @@ impl FromStr for OrderSide {
         match s {
             "buy" => Ok(OrderSide::Buy),
             "sell" => Ok(OrderSide::Sell),
-            unknown => Err(failure::err_msg(format!("unknown side: {unknown}")))
+            unknown => Err(failure::err_msg(format!("unknown side: {unknown}"))),
         }
     }
 }

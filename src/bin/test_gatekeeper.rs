@@ -56,6 +56,10 @@ async fn main() -> Result<(), failure::Error> {
     // monitor tasks
     let mut taskpool_monitor = JoinSet::new();
     taskpool_monitor.spawn(task_monitor_channel_mps(
+        tx_chance.subscribe(),
+        cx_chance.clone(),
+    ));
+    taskpool_monitor.spawn(task_monitor_channel_mps(
         tx_order.subscribe(),
         cx_order.clone(),
     ));
@@ -63,7 +67,10 @@ async fn main() -> Result<(), failure::Error> {
         tx_trade.subscribe(),
         cx_trade.clone(),
     ));
-    taskpool_monitor.spawn(task_log_mps(vec![cx_order.clone(), cx_trade.clone()], 10));
+    taskpool_monitor.spawn(task_log_mps(
+        vec![cx_chance.clone(), cx_order.clone(), cx_trade.clone()],
+        10,
+    ));
 
     let mut taskpool_infrastructure: JoinSet<Result<(), failure::Error>> = JoinSet::new();
     taskpool_infrastructure.spawn(task_place_order(tx_order.subscribe(), api.clone()));
@@ -78,7 +85,7 @@ async fn main() -> Result<(), failure::Error> {
     monitor::timer::start("order_placement_network".to_string()).await;
     monitor::timer::start("order_placement_broadcast".to_string()).await;
     let err_msg = tokio::select! {
-        res = task_pub_chance_periodically(tx_chance.clone(), 15.0) => format!("failed publishing"),
+        _ = task_pub_chance_periodically(tx_chance.clone(), 15.0) => format!("failed publishing"),
         res = taskpool_infrastructure.join_next() => format!("taskpool_infrastructure stopped unexpectedly [{res:?}]"),
         _ = task_signal_handle() => format!("Received external signal, terminating program"),
     };

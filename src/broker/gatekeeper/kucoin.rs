@@ -27,7 +27,8 @@ pub async fn task_gatekeep_chances(
         let event: ChanceEvent = status.unwrap();
         match event {
             ChanceEvent::AllTaker(chance) => {
-                log::info!("All Taker Chance found!\n{chance:?}");
+                log::info!("All Taker Chance found!");
+                log::info!("{chance:?}");
                 // i is [0, 1, 2]
                 for i in 0..3 {
                     let uuid = Uuid::new_v4();

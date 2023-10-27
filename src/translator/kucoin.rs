@@ -31,6 +31,7 @@ impl traits::ToOrderBook for api_model::market::OrderBook {
 }
 
 impl traits::ToOrderBookChange for api_model::websocket::Level2 {
+    /// converts to (symbol, orderbook)
     fn to_internal(&self, last_serial: u64) -> (String, model::orderbook::Orderbook) {
         // return Orderbook::new();
         let mut ask = model::orderbook::PVMap::new();

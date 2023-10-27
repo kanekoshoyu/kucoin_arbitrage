@@ -112,6 +112,18 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<(), failure::E
         tx_orderbook_best.subscribe(),
         cx_orderbook_best.clone(),
     ));
+    taskpool_monitor.spawn(task_monitor_channel_mps(
+        tx_chance.subscribe(),
+        cx_chance.clone(),
+    ));
+    taskpool_monitor.spawn(task_monitor_channel_mps(
+        tx_order.subscribe(),
+        cx_order.clone(),
+    ));
+    taskpool_monitor.spawn(task_monitor_channel_mps(
+        tx_trade.subscribe(),
+        cx_trade.clone(),
+    ));
     taskpool_monitor.spawn(task_log_mps(
         vec![
             cx_orderbook.clone(),

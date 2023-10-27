@@ -26,11 +26,11 @@ async fn main() -> Result<(), failure::Error> {
     let config = kucoin_arbitrage::config::from_file("config.toml")?;
 
     tokio::select! {
-        _ = task_signal_handle() => println!("received external signal, terminating program"),
-        res = core(config) => println!("core ended first {res:?}"),
+        _ = task_signal_handle() => log::error!("received external signal, terminating program"),
+        res = core(config) => log::error!("core ended first {res:?}"),
     };
 
-    println!("Good bye!");
+    log::info!("Good bye!");
     Ok(())
 }
 

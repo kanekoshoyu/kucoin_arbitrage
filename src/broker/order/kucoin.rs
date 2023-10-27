@@ -43,9 +43,10 @@ pub async fn task_place_order(
                         log::info!("Limit order placement successful [{}]", uuid.as_u128());
                     }
                     "200004" => {
-                        log::error!(
-                            "Insufficient fund, please check order placement status {order:?}"
-                        );
+                        log::error!("Insufficient fund, check order placement status {order:?}");
+                    }
+                    "400100" => {
+                        log::error!("Invalid order size increment {order:?}");
                     }
                     code => return Err(failure::err_msg(format!("unrecognised code [{code:?}]"))),
                 };

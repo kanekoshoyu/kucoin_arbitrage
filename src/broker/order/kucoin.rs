@@ -1,10 +1,9 @@
 use crate::event::order::OrderEvent;
 use crate::model::order::Order;
-use crate::monitor;
 use kucoin_api::client::Kucoin;
 use tokio::sync::broadcast;
 
-/// Converts received OrderEvent into API call
+/// Converts received OrderEvent into REST API call
 pub async fn task_place_order(
     mut receiver: broadcast::Receiver<OrderEvent>,
     kucoin: Kucoin,
@@ -22,12 +21,12 @@ pub async fn task_place_order(
                 log::info!("{status:?}");
             }
             OrderEvent::CancelAllOrders => {
+                // TODO study the API below
+                // kucoin.cancel_all_orders(symbol, trade_type)
                 unimplemented!();
             }
             OrderEvent::PlaceOrder(order) => {
                 // get the broadcast duration
-                let time = monitor::timer::stop("order_placement_broadcast".to_string()).await?;
-                log::info!("order_placement_broadcast: {:?}", time);
                 let status = kucoin
                     .post_limit_order(
                         order.id().as_ref(),
@@ -39,12 +38,16 @@ pub async fn task_place_order(
                     )
                     .await?;
                 match status.code.as_str() {
+                    "200000" => {
+                        let order_id = status.data.unwrap().order_id;
+                        log::info!("Order placement successful [{order_id}]");
+                   }
                     "200004" => {
-                        return Err(failure::err_msg("Insufficient fund"));
+                        log::error!("Insufficient fund, please check order placement status {order:?}");
                     }
                     code => return Err(failure::err_msg(format!("unrecognised code [{code:?}]"))),
                 };
-            }
+            } 
             OrderEvent::PlaceBorrowOrder(_order) => {
                 // TODO learn more about the function below
                 // kucoin.post_borrow_order(currency, trade_type, size, max_rate, term)

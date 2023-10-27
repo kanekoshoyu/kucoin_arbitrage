@@ -1,6 +1,6 @@
 use crate::event::chance::ChanceEvent;
 use crate::event::order::OrderEvent;
-use crate::event::orderchange::OrderChangeEvent;
+use crate::event::trade::TradeEvent;
 use crate::model::order::{LimitOrder, OrderType};
 use crate::strings::generate_uid;
 use std::time::SystemTime;
@@ -16,12 +16,12 @@ use tokio::sync::broadcast::{Receiver, Sender};
 /// - 45 orders per 3 seconds
 /// - 200 active order at once
 pub async fn task_gatekeep_chances(
-    mut receiver_chance: Receiver<ChanceEvent>,
-    mut receiver_order_change: Receiver<OrderChangeEvent>,
-    sender: Sender<OrderEvent>,
+    mut rx_chance: Receiver<ChanceEvent>,
+    mut rx_trade: Receiver<TradeEvent>,
+    tx_order: Sender<OrderEvent>,
 ) -> Result<(), failure::Error> {
     loop {
-        let status = receiver_chance.recv().await;
+        let status = rx_chance.recv().await;
         if let Err(e) = status {
             log::error!("gatekeep chance parsing error {e:?}");
             return Ok(());
@@ -44,12 +44,12 @@ pub async fn task_gatekeep_chances(
                     let time_sent = SystemTime::now();
                     log::info!("time_sent: {time_sent:?}");
 
-                    sender.send(OrderEvent::PlaceOrder(order))?;
+                    tx_order.send(OrderEvent::PlaceOrder(order))?;
 
                     let mut amount_untraded = chance.actions[i].price.0;
                     while amount_untraded > 0.0 {
-                        let order_change_status = receiver_order_change.recv().await?;
-                        if let OrderChangeEvent::OrderFilled((amount, currency)) =
+                        let order_change_status = rx_trade.recv().await?;
+                        if let TradeEvent::TradeFilled((amount, currency)) =
                             order_change_status
                         {
                             log::info!("{amount}{currency} filled, proceeding to next step");

@@ -4,5 +4,5 @@ pub mod chance;
 pub mod order;
 /// Orderbook change enum for subscription
 pub mod orderbook;
-/// Order change enum for subscription
-pub mod orderchange;
+/// Trade enum for subscription
+pub mod trade;

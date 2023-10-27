@@ -5,6 +5,6 @@ pub mod order;
 /// Public orderbook sync
 pub mod orderbook;
 /// Private order change sync
-pub mod orderchange;
+pub mod trade;
 /// Symbol listing
 pub mod symbol;

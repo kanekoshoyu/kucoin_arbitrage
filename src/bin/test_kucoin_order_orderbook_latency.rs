@@ -14,7 +14,7 @@ use kucoin_arbitrage::translator::traits::OrderBookChangeTranslator;
 #[tokio::main]
 async fn main() -> Result<(), failure::Error> {
     // provide logging format
-    kucoin_arbitrage::logger::log_init();
+    kucoin_arbitrage::logger::log_init()?;
     log::info!("Testing Kucoin REST-to-WS latency");
 
     // config

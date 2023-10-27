@@ -1,14 +1,14 @@
-use crate::event::orderchange::OrderChangeEvent;
+use crate::event::trade::TradeEvent;
 use kucoin_api::client::Kucoin;
 use kucoin_api::futures::TryStreamExt;
 use kucoin_api::model::websocket::{KucoinWebsocketMsg, WSTopic, WSType};
 use tokio::sync::broadcast::Sender;
 
 /// Task to publish order change events.
-/// Subscribe Kucoi Websocket API, then publish OrderChangeEvent directly after conversion.
-pub async fn task_pub_orderchange_event(
+/// Subscribe Kucoi Websocket API, then publish tradeEvent directly after conversion.
+pub async fn task_pub_trade_event(
     api: Kucoin,
-    sender: Sender<OrderChangeEvent>,
+    sender: Sender<TradeEvent>,
 ) -> Result<(), failure::Error> {
     let url_private = api.get_socket_endpoint(WSType::Private).await?;
     let mut ws = api.websocket();
@@ -29,8 +29,8 @@ pub async fn task_pub_orderchange_event(
                 log::info!("TradeMatchMsg[{:#?}]", msg);
             }
             KucoinWebsocketMsg::TradeFilledMsg(msg) => {
-                log::info!("TradeCanceledMsg[{:?}][{:#?}]", msg.topic, msg.data);
-                let event = OrderChangeEvent::OrderCanceled((0, format!("{:?}", &msg.data)));
+                log::info!("TradeFilled[{:#?}]", msg);
+                let event = TradeEvent::TradeCanceled((0, format!("{:?}", &msg.data)));
                 sender.send(event).expect("Publishing OrderCanceled failed");
             }
             KucoinWebsocketMsg::BalancesMsg(msg) => {

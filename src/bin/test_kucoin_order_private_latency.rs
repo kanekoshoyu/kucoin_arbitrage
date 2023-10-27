@@ -5,10 +5,10 @@ use std::sync::Arc;
 /// Please configure the buy price to either the current market price or lower for testing purpose
 use kucoin_api::client::{Kucoin, KucoinEnv};
 use kucoin_arbitrage::broker::order::kucoin::task_place_order;
-use kucoin_arbitrage::broker::orderchange::kucoin::task_pub_orderchange_event;
+use kucoin_arbitrage::broker::trade::kucoin::task_pub_trade_event;
 use kucoin_arbitrage::broker::symbol::kucoin::{format_subscription_list, get_symbols};
 use kucoin_arbitrage::event::order::OrderEvent;
-use kucoin_arbitrage::event::orderchange::OrderChangeEvent;
+use kucoin_arbitrage::event::trade::TradeEvent;
 use kucoin_arbitrage::model::order::{LimitOrder, OrderSide, OrderType};
 use kucoin_arbitrage::monitor::counter::Counter;
 use kucoin_arbitrage::monitor::task::{task_log_mps, task_monitor_channel_mps};
@@ -45,8 +45,8 @@ async fn main() -> Result<(), failure::Error> {
     // Creates broadcast channels
     let cx_order = Arc::new(Mutex::new(Counter::new("order")));
     let tx_order = broadcast::channel::<OrderEvent>(16).0;
-    let cx_orderchange = Arc::new(Mutex::new(Counter::new("orderchange")));
-    let tx_orderchange = broadcast::channel::<OrderChangeEvent>(128).0;
+    let cx_trade = Arc::new(Mutex::new(Counter::new("trade")));
+    let tx_trade = broadcast::channel::<TradeEvent>(128).0;
     log::info!("Broadcast channels setup");
 
     // monitor tasks
@@ -56,20 +56,20 @@ async fn main() -> Result<(), failure::Error> {
         cx_order.clone(),
     ));
     taskpool_monitor.spawn(task_monitor_channel_mps(
-        tx_orderchange.subscribe(),
-        cx_orderchange.clone(),
+        tx_trade.subscribe(),
+        cx_trade.clone(),
     ));
     taskpool_monitor.spawn(task_log_mps(
-        vec![cx_order.clone(), cx_orderchange.clone()],
+        vec![cx_order.clone(), cx_trade.clone()],
         10,
     ));
 
     let mut taskpool_infrastructure: JoinSet<Result<(), failure::Error>> = JoinSet::new();
     taskpool_infrastructure.spawn(task_place_order(tx_order.subscribe(), api.clone()));
     taskpool_infrastructure.spawn(task_place_order_periodically(tx_order.clone(), 10.0));
-    taskpool_infrastructure.spawn(task_pub_orderchange_event(
+    taskpool_infrastructure.spawn(task_pub_trade_event(
         api.clone(),
-        tx_orderchange.clone(),
+        tx_trade.clone(),
     ));
 
     log::info!("All application tasks setup");
@@ -77,9 +77,9 @@ async fn main() -> Result<(), failure::Error> {
     monitor::timer::start("order_placement_broadcast".to_string()).await;
     let err_msg = tokio::select! {
         res = taskpool_infrastructure.join_next() => format!("taskpool_infrastructure stopped unexpectedly [{res:?}]"),
-        res = task_signal_handle() => format!("received external signal, terminating program [{res:?}]"),
+        _ = task_signal_handle() => format!("Received external signal, terminating program"),
     };
-    log::error!("{err_msg:?}");
+    log::error!("{err_msg}");
     log::info!("Exiting program, bye!");
     Ok(())
 }

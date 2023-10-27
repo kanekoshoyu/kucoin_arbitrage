@@ -5,7 +5,7 @@ use kucoin_arbitrage::broker::symbol::{filter::symbol_with_quotes, kucoin::get_s
 #[tokio::main]
 async fn main() -> Result<(), failure::Error> {
     // provide logging format
-    kucoin_arbitrage::logger::log_init();
+    kucoin_arbitrage::logger::log_init()?;
     log::info!("Hello world");
     let config = kucoin_arbitrage::config::from_file("config.toml")?;
     let api = Kucoin::new(KucoinEnv::Live, Some(config.kucoin_credentials()))?;

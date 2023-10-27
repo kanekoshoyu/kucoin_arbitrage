@@ -15,7 +15,7 @@ use tokio::sync::Mutex;
 #[tokio::main]
 async fn main() -> Result<(), failure::Error> {
     // provide logging format
-    kucoin_arbitrage::logger::log_init();
+    kucoin_arbitrage::logger::log_init()?;
     log::info!("Log setup");
     let counter = Arc::new(Mutex::new(counter::Counter::new("api_input")));
 

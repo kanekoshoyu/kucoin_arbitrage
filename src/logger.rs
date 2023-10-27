@@ -11,8 +11,8 @@ fn dispatch_console() -> fern::Dispatch {
         .level(log::LevelFilter::Info)
         .format(move |out, message, record| {
             out.finish(format_args!(
-                "{}[{}][{}] {}",
-                Local::now().format("[%Y-%m-%d %H:%M:%S]"),
+                "[{}][{}][{}] {}",
+                Local::now().format("%Y-%m-%d %H:%M:%S"),
                 match record.level() {
                     log::Level::Error => "ERROR".red(),
                     log::Level::Warn => "WARN".yellow(),
@@ -32,8 +32,8 @@ fn dispatch_file(filename: &str) -> fern::Dispatch {
         .level(log::LevelFilter::Info)
         .format(move |out, message, record| {
             out.finish(format_args!(
-                "{}[{}][{}] {}",
-                Local::now().format("[%Y-%m-%d %H:%M:%S]"),
+                "[{}][{}][{}] {}",
+                Local::now().format("%Y-%m-%d %H:%M:%S"),
                 match record.level() {
                     log::Level::Error => "ERROR",
                     log::Level::Warn => "WARN",

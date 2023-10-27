@@ -49,14 +49,15 @@ pub async fn task_gatekeep_chances(
                             TradeEvent::TradeFilled(info) => {
                                 if info.order_id.eq(&uuid.as_u128()) {
                                     // TODO use actual data to deduct the amount_untraded
-                                    log::info!("roughly assume all the trade were filled!");
+                                    log::warn!("while we are currently assuming it is all filled at once, please implement accumulation");
+                                    log::info!("{info:?}");
                                     fill_cumulative = fill_target;
                                 }
                             }
                             other => {
                                 // print for debugging purpose
                                 if let TradeEvent::TradeMatch(info) = other {
-                                    log::info!("TradeMatch[{}]", info.order_id);
+                                    log::info!("Ignoring TradeMatch[{}]", info.order_id);
                                 }
                             }
                         }

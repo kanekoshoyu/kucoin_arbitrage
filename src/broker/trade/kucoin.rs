@@ -13,6 +13,7 @@ pub async fn task_pub_trade_event(
 ) -> Result<(), failure::Error> {
     let url_private = api.get_socket_endpoint(WSType::Private).await?;
     let mut ws = api.websocket();
+    // TODO test TradeOrdersV2
     let topics = vec![WSTopic::TradeOrders];
     ws.subscribe(url_private.clone(), topics).await?;
     loop {
@@ -33,13 +34,11 @@ pub async fn task_pub_trade_event(
             }
             KucoinWebsocketMsg::TradeFilledMsg(msg) => {
                 let tradeinfo = msg.data.to_internal()?;
-                log::info!("TradeFilledMsg [{}]", tradeinfo.order_id);
+                log::info!("TradeFilledMsg[{}]", tradeinfo.order_id);
                 sender.send(TradeEvent::TradeFilled(tradeinfo))?;
             }
-            KucoinWebsocketMsg::BalancesMsg(msg) => {
-                let delta = msg.data.available_change;
-                let currency = msg.data.currency;
-                log::info!("BalancesMsg: {currency:?}: {delta:?}");
+            KucoinWebsocketMsg::BalancesMsg(_) => {
+                unimplemented!("not sure how it works yet")
             }
             KucoinWebsocketMsg::WelcomeMsg(_) => {
                 log::info!("Welcome to KuCoin private WS");

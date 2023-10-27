@@ -39,14 +39,6 @@ pub async fn get_symbols(api: Kucoin) -> Vec<SymbolInfo> {
             );
             continue;
         }
-        if symbol.symbol != symbol.name {
-            // log::warn!(
-            //     "name and symbol doen't match (symbol: {:10}, name: {:10}, base: {:5})",
-            //     symbol.symbol,
-            //     symbol.name,
-            //     symbol.base_currency,
-            // );
-        }
         let internal_symbol_info = symbol.to_internal();
         result.push(internal_symbol_info);
     }

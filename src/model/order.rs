@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 /// Order placement selector, default set as "Sell" for security
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Copy)]
 pub enum OrderSide {
@@ -26,6 +28,23 @@ impl ToString for OrderSide {
     }
 }
 
+/// ```
+/// use kucoin_arbitrage::model::order::OrderSide;
+/// let buy = OrderSide::Buy;
+/// assert_eq!(buy.to_string(), "buy");
+/// ```
+impl FromStr for OrderSide {
+    type Err = failure::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "buy" => Ok(OrderSide::Buy),
+            "sell" => Ok(OrderSide::Sell),
+            unknown => Err(failure::err_msg(format!("unknown side: {unknown}")))
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
 // Market selector, market set to limit order for security
 pub enum OrderType {
@@ -43,7 +62,17 @@ impl ToString for OrderType {
         .to_string()
     }
 }
+impl FromStr for OrderType {
+    type Err = failure::Error;
 
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "limit" => Ok(OrderType::Limit),
+            "market" => Ok(OrderType::Market),
+            unknown => Err(failure::err_msg(format!("unknown ordertype {unknown}"))),
+        }
+    }
+}
 pub trait Order {
     fn id(&self) -> String;
     fn side(&self) -> OrderSide;

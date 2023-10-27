@@ -5,6 +5,6 @@ pub enum OrderEvent {
     GetAllOrders,
     CancelOrder(LimitOrder),
     CancelAllOrders,
-    PlaceOrder(LimitOrder),
+    PlaceLimitOrder(LimitOrder),
     PlaceBorrowOrder(LimitOrder),
 }

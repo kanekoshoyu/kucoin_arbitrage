@@ -2,10 +2,9 @@ use crate::event::chance::ChanceEvent;
 use crate::event::order::OrderEvent;
 use crate::event::trade::TradeEvent;
 use crate::model::order::{LimitOrder, OrderType};
-use crate::strings::generate_uid;
 use std::time::SystemTime;
 use tokio::sync::broadcast::{Receiver, Sender};
-
+use uuid::Uuid;
 // TODO implement when all_taker_btc_usdt is done
 // TODO implement profit maximization
 
@@ -32,8 +31,9 @@ pub async fn task_gatekeep_chances(
                 log::info!("All Taker Chance found!\n{chance:?}");
                 // i is [0, 1, 2]
                 for i in 0..3 {
+                    let uuid = Uuid::new_v4();
                     let order: LimitOrder = LimitOrder {
-                        id: generate_uid(40),
+                        id: uuid.to_string(),
                         order_type: OrderType::Limit,
                         side: chance.actions[i].action,
                         symbol: chance.actions[i].ticker.clone(),
@@ -44,16 +44,23 @@ pub async fn task_gatekeep_chances(
                     let time_sent = SystemTime::now();
                     log::info!("time_sent: {time_sent:?}");
 
-                    tx_order.send(OrderEvent::PlaceOrder(order))?;
+                    tx_order.send(OrderEvent::PlaceLimitOrder(order))?;
 
-                    let mut amount_untraded = chance.actions[i].price.0;
-                    while amount_untraded > 0.0 {
-                        let order_change_status = rx_trade.recv().await?;
-                        if let TradeEvent::TradeFilled((amount, currency)) =
-                            order_change_status
-                        {
-                            log::info!("{amount}{currency} filled, proceeding to next step");
-                            amount_untraded = 0.0;
+                    let fill_target = chance.actions[i].price.0;
+                    let mut fill_cumulative = 0.0;
+                    while fill_cumulative < fill_target {
+                        let trade_event = rx_trade.recv().await?;
+                        match trade_event {
+                            TradeEvent::TradeFilled(info) => {
+                                if info.order_id.eq(&uuid.as_u128()) {
+                                    // TODO use actual data to deduct the amount_untraded
+                                    log::info!("roughly assume all the trade were filled!");
+                                    fill_cumulative = fill_target;
+                                }
+                            }
+                            other => {
+                                log::info!("igmore [{other:?}]")
+                            }
                         }
                     }
 

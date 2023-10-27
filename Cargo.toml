@@ -31,5 +31,5 @@ chrono = "0.4.31"
 # number
 ordered-float = "3.6.0"
 num-traits = "0.2.15"
-# uid
-rand = "0.8.5"
+# uuid
+uuid = { version = "1.5.0", features = ["v4", "fast-rng", "macro-diagnostics"] }

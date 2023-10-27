@@ -6,3 +6,5 @@ pub mod order;
 pub mod orderbook;
 /// Symbol information
 pub mod symbol;
+/// Trade information
+pub mod trade;

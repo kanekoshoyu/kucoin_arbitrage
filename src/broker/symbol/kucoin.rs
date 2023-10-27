@@ -1,5 +1,5 @@
 use crate::model::symbol::SymbolInfo;
-use crate::translator::traits::SymbolInfoTranslator;
+use crate::translator::traits::ToSymbolInfo;
 use kucoin_api::client::Kucoin;
 use kucoin_api::model::market::SymbolList;
 use kucoin_api::model::websocket::WSTopic;

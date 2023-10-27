@@ -1,7 +1,7 @@
 use crate::event::orderbook::OrderbookEvent;
 use crate::model::orderbook::FullOrderbook;
 use crate::model::symbol::SymbolInfo;
-use crate::translator::traits::{OrderBookChangeTranslator, OrderBookTranslator};
+use crate::translator::traits::{ToOrderBookChange, ToOrderBook};
 use kucoin_api::client::Kucoin;
 use kucoin_api::futures::TryStreamExt;
 use kucoin_api::model::market::{OrderBook, OrderBookType};

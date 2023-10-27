@@ -4,19 +4,22 @@ use std::sync::Arc;
 /// Places extreme order in REST, receive extreme order in private channel
 /// Please configure the buy price to either the current market price or lower for testing purpose
 use kucoin_api::client::{Kucoin, KucoinEnv};
+use kucoin_arbitrage::broker::gatekeeper::kucoin::task_gatekeep_chances;
 use kucoin_arbitrage::broker::order::kucoin::task_place_order;
 use kucoin_arbitrage::broker::symbol::kucoin::{format_subscription_list, get_symbols};
 use kucoin_arbitrage::broker::trade::kucoin::task_pub_trade_event;
+use kucoin_arbitrage::event::chance::ChanceEvent;
 use kucoin_arbitrage::event::order::OrderEvent;
 use kucoin_arbitrage::event::trade::TradeEvent;
-use kucoin_arbitrage::model::order::{LimitOrder, OrderSide, OrderType};
+use kucoin_arbitrage::model::chance::{ActionInfo, TriangularArbitrageChance};
 use kucoin_arbitrage::monitor::counter::Counter;
 use kucoin_arbitrage::monitor::task::{task_log_mps, task_monitor_channel_mps};
 use kucoin_arbitrage::{broker::symbol::filter::symbol_with_quotes, monitor};
+use ordered_float::OrderedFloat;
 use tokio::signal::unix::{signal, SignalKind};
 use tokio::sync::{broadcast, Mutex};
 use tokio::task::JoinSet;
-use uuid::Uuid;
+
 #[tokio::main]
 async fn main() -> Result<(), failure::Error> {
     // Provides logging format
@@ -42,10 +45,12 @@ async fn main() -> Result<(), failure::Error> {
     log::info!("Total orderbook WS sessions: {:?}", subs.len());
 
     // Creates broadcast channels
+    let cx_chance = Arc::new(Mutex::new(Counter::new("chance")));
+    let tx_chance = broadcast::channel::<ChanceEvent>(32).0;
     let cx_order = Arc::new(Mutex::new(Counter::new("order")));
     let tx_order = broadcast::channel::<OrderEvent>(16).0;
     let cx_trade = Arc::new(Mutex::new(Counter::new("trade")));
-    let tx_trade = broadcast::channel::<TradeEvent>(128).0;
+    let tx_trade = broadcast::channel::<TradeEvent>(32).0;
     log::info!("Broadcast channels setup");
 
     // monitor tasks
@@ -62,17 +67,19 @@ async fn main() -> Result<(), failure::Error> {
 
     let mut taskpool_infrastructure: JoinSet<Result<(), failure::Error>> = JoinSet::new();
     taskpool_infrastructure.spawn(task_place_order(tx_order.subscribe(), api.clone()));
+    taskpool_infrastructure.spawn(task_gatekeep_chances(
+        tx_chance.subscribe(),
+        tx_trade.subscribe(),
+        tx_order.clone(),
+    ));
     taskpool_infrastructure.spawn(task_pub_trade_event(api.clone(), tx_trade.clone()));
 
     log::info!("All application tasks setup");
     monitor::timer::start("order_placement_network".to_string()).await;
     monitor::timer::start("order_placement_broadcast".to_string()).await;
     let err_msg = tokio::select! {
-        res = task_place_order_periodically(tx_order.clone(), 15.0) => format!("failed placing order [{res:?}]"),
-        res = taskpool_infrastructure.join_next() => {
-            let res = res.unwrap();
-            format!("taskpool_infrastructure stopped unexpectedly [{res:?}]")
-        },
+        res = task_pub_chance_periodically(tx_chance.clone(), 15.0) => format!("failed publishing"),
+        res = taskpool_infrastructure.join_next() => format!("taskpool_infrastructure stopped unexpectedly [{res:?}]"),
         _ = task_signal_handle() => format!("Received external signal, terminating program"),
     };
     log::error!("{err_msg}");
@@ -97,21 +104,22 @@ async fn exit_program(signal_alias: &str) -> Result<(), failure::Error> {
     Ok(())
 }
 
-async fn task_place_order_periodically(
-    tx_order: broadcast::Sender<OrderEvent>,
+async fn task_pub_chance_periodically(
+    tx_chance: broadcast::Sender<ChanceEvent>,
     interval_s: f64,
 ) -> Result<(), failure::Error> {
     // unique ID to be generated every time
     loop {
-        let event = OrderEvent::PlaceLimitOrder(LimitOrder {
-            id: Uuid::new_v4().to_string(),
-            order_type: OrderType::Limit,
-            side: OrderSide::Buy,
-            symbol: "BTC-USDT".to_string(),
-            amount: 0.0001.to_string(),
-            price: 35000.0.to_string(),
-        });
-        tx_order.send(event.clone())?;
+        let chance = TriangularArbitrageChance {
+            profit: OrderedFloat::from(0.1),
+            actions: [
+                ActionInfo::buy("BTC-USDT".to_string(), OrderedFloat(0.1), OrderedFloat(0.1)),
+                ActionInfo::buy("ETH-BTC".to_string(), OrderedFloat(0.1), OrderedFloat(0.1)),
+                ActionInfo::sell("ETH-USDT".to_string(), OrderedFloat(0.1), OrderedFloat(0.1)),
+            ],
+        };
+        let event = ChanceEvent::AllTaker(chance);
+        tx_chance.send(event.clone())?;
         tokio::time::sleep(tokio::time::Duration::from_secs_f64(interval_s)).await;
     }
 }

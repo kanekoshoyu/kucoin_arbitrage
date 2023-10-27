@@ -7,8 +7,8 @@ use kucoin_api::{
     model::websocket::{KucoinWebsocketMsg, WSTopic, WSType},
 };
 use kucoin_arbitrage::model::order::OrderSide;
-use kucoin_arbitrage::strings::generate_uid;
-use kucoin_arbitrage::translator::traits::OrderBookChangeTranslator;
+use kucoin_arbitrage::translator::traits::ToOrderBookChange;
+use uuid::Uuid;
 
 /// main function
 #[tokio::main]
@@ -36,11 +36,11 @@ async fn main() -> Result<(), failure::Error> {
     api.cancel_all_orders(None, None).await.unwrap();
     // TODO set a valid limit order
     api.post_limit_order(
-        generate_uid(40).as_str(),
+        Uuid::new_v4().to_string().as_ref(),
         test_symbol,
         OrderSide::Buy.as_ref(),
-        test_price.to_string().as_str(),
-        test_volume.to_string().as_str(),
+        test_price.to_string().as_ref(),
+        test_volume.to_string().as_ref(),
         None,
     )
     .await?;

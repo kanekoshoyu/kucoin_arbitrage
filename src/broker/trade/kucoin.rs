@@ -1,4 +1,5 @@
 use crate::event::trade::TradeEvent;
+use crate::translator::traits::ToTradeInfo;
 use kucoin_api::client::Kucoin;
 use kucoin_api::futures::TryStreamExt;
 use kucoin_api::model::websocket::{KucoinWebsocketMsg, WSTopic, WSType};
@@ -19,26 +20,32 @@ pub async fn task_pub_trade_event(
         let ws_msg = ws.try_next().await?;
         let ws_msg = ws_msg.unwrap();
         match ws_msg {
-            KucoinWebsocketMsg::TradeReceivedMsg(msg) => {
-                log::info!("TradeReceivedMsg[{:#?}]", msg);
+            KucoinWebsocketMsg::TradeReceivedMsg(_) => {
+                unimplemented!("not sure how it works yet")
             }
             KucoinWebsocketMsg::TradeOpenMsg(msg) => {
-                log::info!("TradeOpenMsg[{:#?}]", msg);
+                let tradeinfo = msg.data.to_internal()?;
+                log::info!("TradeMatch [{}]", tradeinfo.order_id);
+                sender.send(TradeEvent::TradeMatch(tradeinfo))?;
             }
             KucoinWebsocketMsg::TradeMatchMsg(msg) => {
-                log::info!("TradeMatchMsg[{:#?}]", msg);
+                let tradeinfo = msg.data.to_internal()?;
+                log::info!("TradeMatch [{}]", tradeinfo.order_id);
+                sender.send(TradeEvent::TradeMatch(tradeinfo))?;
             }
             KucoinWebsocketMsg::TradeFilledMsg(msg) => {
-                log::info!("TradeFilled[{:#?}]", msg);
-                let event = TradeEvent::TradeCanceled((0, format!("{:?}", &msg.data)));
-                sender.send(event).expect("Publishing OrderCanceled failed");
+                let tradeinfo = msg.data.to_internal()?;
+                log::info!("TradeFilledMsg [{}]", tradeinfo.order_id);
+                sender.send(TradeEvent::TradeFilled(tradeinfo))?;
             }
             KucoinWebsocketMsg::BalancesMsg(msg) => {
                 let delta = msg.data.available_change;
                 let currency = msg.data.currency;
                 log::info!("BalancesMsg: {currency:?}: {delta:?}");
             }
-            KucoinWebsocketMsg::WelcomeMsg(_) => {}
+            KucoinWebsocketMsg::WelcomeMsg(_) => {
+                log::info!("Welcome to KuCoin private WS");
+            }
             KucoinWebsocketMsg::PingMsg(_) => {}
             KucoinWebsocketMsg::PongMsg(_) => {}
             msg => {

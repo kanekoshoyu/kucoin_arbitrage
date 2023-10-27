@@ -6,12 +6,11 @@ use kucoin_arbitrage::broker::orderbook::internal::task_sync_orderbook;
 use kucoin_arbitrage::broker::orderbook::kucoin::{
     task_get_initial_orderbooks, task_pub_orderbook_event,
 };
-use kucoin_arbitrage::broker::trade::kucoin::task_pub_trade_event;
 use kucoin_arbitrage::broker::symbol::filter::{symbol_with_quotes, vector_to_hash};
 use kucoin_arbitrage::broker::symbol::kucoin::{format_subscription_list, get_symbols};
+use kucoin_arbitrage::broker::trade::kucoin::task_pub_trade_event;
 use kucoin_arbitrage::event::{
-    chance::ChanceEvent, order::OrderEvent, orderbook::OrderbookEvent,
-    trade::TradeEvent,
+    chance::ChanceEvent, order::OrderEvent, orderbook::OrderbookEvent, trade::TradeEvent,
 };
 use kucoin_arbitrage::model::orderbook::FullOrderbook;
 use kucoin_arbitrage::monitor::counter::Counter;

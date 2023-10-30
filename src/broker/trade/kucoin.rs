@@ -21,11 +21,11 @@ pub async fn task_pub_trade_event(
         let ws_msg = ws.try_next().await?;
         let ws_msg = ws_msg.unwrap();
         match ws_msg {
-            KucoinWebsocketMsg::TradeReceivedMsg(_) => {
-                unimplemented!("not sure how it works yet")
+            KucoinWebsocketMsg::TradeReceivedMsg(msg) => {
+                log::info!("{msg:?}");
             }
-            KucoinWebsocketMsg::TradeOpenMsg(_) => {
-                unimplemented!("not sure how it works yet")
+            KucoinWebsocketMsg::TradeOpenMsg(msg) => {
+                log::info!("{msg:?}");
             }
             KucoinWebsocketMsg::TradeMatchMsg(msg) => {
                 let tradeinfo = msg.data.to_internal()?;
@@ -36,9 +36,6 @@ pub async fn task_pub_trade_event(
                 let tradeinfo = msg.data.to_internal()?;
                 log::info!("TradeFilledMsg[{}]", tradeinfo.order_id);
                 sender.send(TradeEvent::TradeFilled(tradeinfo))?;
-            }
-            KucoinWebsocketMsg::BalancesMsg(_) => {
-                unimplemented!("not sure how it works yet")
             }
             KucoinWebsocketMsg::WelcomeMsg(_) => {
                 log::info!("Welcome to KuCoin private WS");

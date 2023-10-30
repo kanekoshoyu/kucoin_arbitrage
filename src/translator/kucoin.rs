@@ -79,6 +79,7 @@ impl traits::ToTradeInfo for api_model::websocket::TradeReceived {
         let order_id = Uuid::parse_str(&self.client_oid)?.as_u128();
         let symbol = self.symbol.clone();
         let side = model::order::OrderSide::from_str(self.side.as_ref())?;
+        let size = self.size.clone();
         let order_type: model::order::OrderType =
             model::order::OrderType::from_str(self.order_type.as_ref())?;
         Ok(model::trade::TradeInfo {
@@ -86,6 +87,7 @@ impl traits::ToTradeInfo for api_model::websocket::TradeReceived {
             symbol,
             side,
             order_type,
+            size,
         })
     }
 }
@@ -95,6 +97,7 @@ impl traits::ToTradeInfo for api_model::websocket::TradeOpen {
         let order_id = Uuid::parse_str(&self.client_oid)?.as_u128();
         let symbol = self.symbol.clone();
         let side = model::order::OrderSide::from_str(self.side.as_ref())?;
+        let size = self.size.clone();
         let order_type: model::order::OrderType =
             model::order::OrderType::from_str(self.order_type.as_ref())?;
         Ok(model::trade::TradeInfo {
@@ -102,6 +105,7 @@ impl traits::ToTradeInfo for api_model::websocket::TradeOpen {
             symbol,
             side,
             order_type,
+            size,
         })
     }
 }
@@ -111,6 +115,7 @@ impl traits::ToTradeInfo for api_model::websocket::TradeFilled {
         let order_id = Uuid::parse_str(&self.client_oid)?.as_u128();
         let symbol = self.symbol.clone();
         let side = model::order::OrderSide::from_str(self.side.as_ref())?;
+        let size = self.size.clone();
         let order_type: model::order::OrderType =
             model::order::OrderType::from_str(self.order_type.as_ref())?;
         Ok(model::trade::TradeInfo {
@@ -118,6 +123,7 @@ impl traits::ToTradeInfo for api_model::websocket::TradeFilled {
             symbol,
             side,
             order_type,
+            size,
         })
     }
 }
@@ -127,6 +133,7 @@ impl traits::ToTradeInfo for api_model::websocket::TradeMatch {
         let order_id = Uuid::parse_str(&self.client_oid)?.as_u128();
         let symbol = self.symbol.clone();
         let side = model::order::OrderSide::from_str(self.side.as_ref())?;
+        let size = self.size.clone();
         let order_type: model::order::OrderType =
             model::order::OrderType::from_str(self.order_type.as_ref())?;
         Ok(model::trade::TradeInfo {
@@ -134,6 +141,7 @@ impl traits::ToTradeInfo for api_model::websocket::TradeMatch {
             symbol,
             side,
             order_type,
+            size,
         })
     }
 }
@@ -143,6 +151,7 @@ impl traits::ToTradeInfo for api_model::websocket::TradeCanceled {
         let order_id = Uuid::parse_str(&self.client_oid)?.as_u128();
         let symbol = self.symbol.clone();
         let side = model::order::OrderSide::from_str(self.side.as_ref())?;
+        let size = self.size.clone();
         let order_type: model::order::OrderType =
             model::order::OrderType::from_str(self.order_type.as_ref())?;
         Ok(model::trade::TradeInfo {
@@ -150,6 +159,7 @@ impl traits::ToTradeInfo for api_model::websocket::TradeCanceled {
             symbol,
             side,
             order_type,
+            size,
         })
     }
 }

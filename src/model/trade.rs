@@ -5,4 +5,5 @@ pub struct TradeInfo {
     pub symbol: String,
     pub side: order::OrderSide,
     pub order_type: order::OrderType,
+    pub size: String,
 }

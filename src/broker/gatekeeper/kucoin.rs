@@ -32,13 +32,14 @@ pub async fn task_gatekeep_chances(
                 // i is [0, 1, 2]
                 for i in 0..3 {
                     let uuid = Uuid::new_v4();
+                    // TODO check if the is any problem with the DP format with API
                     let order: LimitOrder = LimitOrder {
                         id: uuid.to_string(),
                         order_type: OrderType::Limit,
                         side: chance.actions[i].action,
                         symbol: chance.actions[i].ticker.clone(),
-                        amount: chance.actions[i].volume.to_string(),
-                        price: chance.actions[i].price.to_string(),
+                        amount: format!("{:.9}", chance.actions[i].volume),
+                        price: format!("{:.9}", chance.actions[i].price),
                     };
                     tx_order.send(OrderEvent::PlaceLimitOrder(order))?;
                     let fill_target = chance.actions[i].price.0;
@@ -49,9 +50,12 @@ pub async fn task_gatekeep_chances(
                             TradeEvent::TradeFilled(info) => {
                                 if info.order_id.eq(&uuid.as_u128()) {
                                     // TODO use actual data to deduct the amount_untraded
-                                    log::warn!("while we are currently assuming it is all filled at once, please implement accumulation");
-                                    log::info!("{info:?}");
-                                    fill_cumulative = fill_target;
+                                    let fill_size: f64 = info.size.parse()?;
+                                    fill_cumulative += fill_size;
+                                    log::info!(
+                                        "Filled [{fill_cumulative}/{fill_target}] of {:?}",
+                                        info.symbol
+                                    );
                                 }
                             }
                             other => {

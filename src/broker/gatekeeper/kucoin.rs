@@ -25,9 +25,10 @@ pub async fn task_gatekeep_chances(
             return Ok(());
         }
         let event: ChanceEvent = status.unwrap();
+        // TODO timeout mechanism
         match event {
             ChanceEvent::AllTaker(chance) => {
-                log::info!("All Taker Chance found!");
+                log::info!("All taker chance found!");
                 log::info!("{chance:?}");
                 // i is [0, 1, 2]
                 for i in 0..3 {
@@ -45,6 +46,7 @@ pub async fn task_gatekeep_chances(
                     let fill_target = chance.actions[i].price.0;
                     let mut fill_cumulative = 0.0;
                     while fill_cumulative < fill_target {
+                        log::info!("Waiting for TradeInfo from KuCoin server");
                         let trade_event = rx_trade.recv().await?;
                         match trade_event {
                             TradeEvent::TradeFilled(info) => {
@@ -57,11 +59,19 @@ pub async fn task_gatekeep_chances(
                                         info.symbol
                                     );
                                 }
+                            },
+                            TradeEvent::TradeCanceled(info) => {
+                                if info.order_id.eq(&uuid.as_u128()) {
+                                    log::warn!("Trade got canceled [{}]", info.order_id);
+                                    break
+                                }
                             }
                             other => {
                                 // print for debugging purpose
                                 if let TradeEvent::TradeMatch(info) = other {
                                     log::info!("Ignoring TradeMatch[{}]", info.order_id);
+                                } else {
+                                    log::info!("Ignoring [{other:?}]");
                                 }
                             }
                         }

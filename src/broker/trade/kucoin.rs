@@ -22,10 +22,17 @@ pub async fn task_pub_trade_event(
         let ws_msg = ws_msg.unwrap();
         match ws_msg {
             KucoinWebsocketMsg::TradeReceivedMsg(msg) => {
-                log::info!("{msg:?}");
+                let tradeinfo = msg.data.to_internal()?;
+                log::info!(
+                    "TradeReceived[{}] (not so sure when it gets received)",
+                    tradeinfo.order_id
+                );
+                // sender.send(TradeEvent::TradeReceived(tradeinfo))?;
             }
             KucoinWebsocketMsg::TradeOpenMsg(msg) => {
-                log::info!("{msg:?}");
+                let tradeinfo = msg.data.to_internal()?;
+                log::info!("TradeOpen[{}]", tradeinfo.order_id);
+                sender.send(TradeEvent::TradeOpen(tradeinfo))?;
             }
             KucoinWebsocketMsg::TradeMatchMsg(msg) => {
                 let tradeinfo = msg.data.to_internal()?;

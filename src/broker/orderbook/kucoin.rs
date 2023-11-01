@@ -92,7 +92,6 @@ pub async fn task_get_initial_orderbooks(
     for symbol in symbols {
         let api = api.clone();
         let full_orderbook_arc = full_orderbook.clone();
-        // further improve performance and the server overload issue with mixed use of select and jjoin
         taskpool_aggregate.spawn(async move {
             let data = task_get_orderbook(api, &symbol).await.unwrap();
             let mut x = full_orderbook_arc.lock().await;
@@ -100,7 +99,7 @@ pub async fn task_get_initial_orderbooks(
             symbol
         });
         // prevent server overloading
-        tokio::time::sleep(Duration::from_millis(25)).await;
+        tokio::time::sleep(Duration::from_millis(20)).await;
     }
     while let Some(res) = taskpool_aggregate.join_next().await {
         if let Err(e) = res {

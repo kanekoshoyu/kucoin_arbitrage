@@ -1,7 +1,12 @@
 # Event-Driven KuCoin Triangular Arbitrage Framework in Async Rust
-[![](https://img.shields.io/crates/v/kucoin-arbitrage)](https://crates.io/crates/kucoin-arbitrage)
-[![](https://img.shields.io/docsrs/kucoin_arbitrage)](https://docs.rs/kucoin_arbitrage)
-[![](https://img.shields.io/github/license/kanekoshoyu/kucoin_arbitrage)](https://github.com/kanekoshoyu/kucoin_arbitrage/blob/master/LICENSE)  
+[![crates](https://img.shields.io/crates/v/kucoin-arbitrage)](https://crates.io/crates/kucoin-arbitrage)
+[![docs](https://img.shields.io/docsrs/kucoin_arbitrage)](https://docs.rs/kucoin_arbitrage)
+[![license](https://img.shields.io/github/license/kanekoshoyu/kucoin_arbitrage)](https://github.com/kanekoshoyu/kucoin_arbitrage/blob/master/LICENSE)
+[![ci](https://img.shields.io/github/actions/workflow/status/kanekoshoyu/kucoin_arbitrage/rust.yml)](https://github.com/kanekoshoyu/kucoin_arbitrage/actions)
+[![issues](https://img.shields.io/github/issues/kanekoshoyu/kucoin_arbitrage)](https://github.com/kanekoshoyu/kucoin_arbitrage/issues)
+[![discussions](https://img.shields.io/github/discussions/kanekoshoyu/kucoin_arbitrage)](https://github.com/kanekoshoyu/kucoin_arbitrage/discussions)
+[![discord](https://img.shields.io/discord/1153997271294283827)](https://discord.gg/q3j5MYdwnm)  
+
 This is an async Rust project to implement zero-risk crypto trinagular arbitrage, explore technical feasiblity of generating passsive income (i.e. sleep to earn!).  
 ## How cyclic arbitrage works
 Say we hold USDT, it checks all the listed crypto (e.g. ETH) that can trade against BTC and USDT, and compare the profit by either:  

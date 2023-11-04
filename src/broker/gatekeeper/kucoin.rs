@@ -29,7 +29,10 @@ pub async fn task_gatekeep_chances(
         match event {
             ChanceEvent::AllTaker(chance) => {
                 log::info!("All taker chance found!");
-                log::info!("{chance:?}");
+                log::info!("profit: {}", chance.profit);
+                for action in &chance.actions {
+                    log::info!("{action:?}");
+                }
                 // i is [0, 1, 2]
                 for i in 0..3 {
                     let uuid = Uuid::new_v4();
@@ -59,11 +62,11 @@ pub async fn task_gatekeep_chances(
                                         info.symbol
                                     );
                                 }
-                            },
+                            }
                             TradeEvent::TradeCanceled(info) => {
                                 if info.order_id.eq(&uuid.as_u128()) {
                                     log::warn!("Trade got canceled [{}]", info.order_id);
-                                    break
+                                    break;
                                 }
                             }
                             other => {

@@ -55,8 +55,19 @@ pub async fn task_get_orderbook(api: Kucoin, symbol: &str) -> Result<OrderBook, 
         try_counter += 1;
         // OrderBookType::Full requires valid API Key
         let res = api.get_orderbook(symbol, OrderBookType::L20).await;
-        if res.is_err() {
-            log::warn!("orderbook[{symbol}] did not respond ({try_counter:?} tries)");
+
+        if let Err(e) = res {
+            log::warn!("orderbook[{symbol}] did not respond ({try_counter:?} tries) [{e:?}]");
+            let null_err_msg = "invalid type: null, expected a string";
+            if e.to_string().contains(null_err_msg) {
+                return Err(failure::err_msg(format!("null received ffrom {symbol}")))
+            }
+            // TODO there are cases when no orderbook is obtained. Check if this is due to the network condition or the orderbook itself
+            if try_counter > 100 {
+                return Err(failure::err_msg(format!(
+                    "[{try_counter:?}] has failed more than 100 times"
+                )));
+            }
             continue;
         }
         let res = res?;

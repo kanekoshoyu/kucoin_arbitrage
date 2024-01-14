@@ -6,16 +6,24 @@ use kucoin_api::model::websocket::{KucoinWebsocketMsg, WSTopic, WSType};
 use tokio::sync::broadcast::Sender;
 
 /// Task to publish order change events.
-/// Subscribe Kucoi Websocket API, then publish tradeEvent directly after conversion.
+/// Subscribe Kucoim Websocket API, then publish tradeEvent directly after conversion.
 pub async fn task_pub_trade_event(
     api: Kucoin,
     sender: Sender<TradeEvent>,
 ) -> Result<(), failure::Error> {
-    let url_private = api.get_socket_endpoint(WSType::Private).await?;
+    let res = api.get_socket_endpoint(WSType::Private).await;
+    if let Err(_) = res {
+        return Err(failure::err_msg(
+            "failed connecting private endpoint, check API key",
+        ));
+    }
+    let url_private = res.unwrap();
     let mut ws = api.websocket();
     // TODO test TradeOrdersV2
     let topics = vec![WSTopic::TradeOrders];
-    ws.subscribe(url_private.clone(), topics).await?;
+    ws.subscribe(url_private.clone(), topics)
+        .await
+        .expect("failed subscribing trade event");
     loop {
         // Awaits subscription message
         let ws_msg = ws.try_next().await?;

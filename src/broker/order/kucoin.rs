@@ -21,9 +21,7 @@ pub async fn task_place_order(
                 log::info!("{status:?}");
             }
             OrderEvent::CancelAllOrders => {
-                // TODO study the API below
-                // kucoin.cancel_all_orders(symbol, trade_type)
-                unimplemented!();
+                todo!("implement batch order cancellation with kucoin.cancel_all_orders(symbol, trade_type)");
             }
             OrderEvent::PlaceLimitOrder(order) => {
                 // get the broadcast duration

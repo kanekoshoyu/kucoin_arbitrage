@@ -1,3 +1,4 @@
+use eyre::Result;
 use std::collections::HashMap;
 use tokio::sync::Mutex;
 use tokio::time::{Duration, Instant};
@@ -14,11 +15,11 @@ pub async fn start(name: String) {
 }
 
 /// stop/reads a global timer
-pub async fn stop(name: String) -> Result<Duration, failure::Error> {
+pub async fn stop(name: String) -> Result<Duration> {
     let now = Instant::now();
     let timer = TIMERS.lock().await;
-    let stat = timer.get(&name).ok_or(failure::err_msg(format!(
-        "global timer [{name}] is not found"
-    )))?;
+    let stat = timer
+        .get(&name)
+        .ok_or(eyre::bail!("global timer [{name}] is not found"))?;
     Ok(now.duration_since(*stat))
 }

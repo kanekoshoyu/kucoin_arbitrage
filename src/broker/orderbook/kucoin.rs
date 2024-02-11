@@ -4,6 +4,7 @@ use crate::model::symbol::SymbolInfo;
 use crate::translator::traits::{ToOrderBook, ToOrderBookChange};
 use chrono::{TimeZone, Utc};
 use eyre::Result;
+use eyre::Result;
 use kucoin_api::client::Kucoin;
 use kucoin_api::futures::TryStreamExt;
 use kucoin_api::model::market::{OrderBook, OrderBookType};
@@ -60,7 +61,7 @@ pub async fn task_pub_orderbook_event(
 }
 
 /// Obtain current orderbook of a list of symbol from Kucoin REST API
-pub async fn task_get_orderbook(api: Kucoin, symbol: &str) -> Result<OrderBook, failure::Error> {
+pub async fn task_get_orderbook(api: Kucoin, symbol: &str) -> Result<OrderBook> {
     let mut try_counter = 0;
     loop {
         try_counter += 1;
@@ -71,13 +72,11 @@ pub async fn task_get_orderbook(api: Kucoin, symbol: &str) -> Result<OrderBook, 
             log::warn!("orderbook[{symbol}] did not respond ({try_counter:?} tries) [{e:?}]");
             let null_err_msg = "invalid type: null, expected a string";
             if e.to_string().contains(null_err_msg) {
-                return Err(failure::err_msg(format!("null received ffrom {symbol}")));
+                eyre::bail!("null received ffrom {symbol}");
             }
             // TODO there are cases when no orderbook is obtained. Check if this is due to the network condition or the orderbook itself
             if try_counter > 100 {
-                return Err(failure::err_msg(format!(
-                    "[{try_counter:?}] has failed more than 100 times"
-                )));
+                eyre::bail!("[{try_counter:?}] has failed more than 100 times");
             }
             continue;
         }
@@ -91,11 +90,11 @@ pub async fn task_get_orderbook(api: Kucoin, symbol: &str) -> Result<OrderBook, 
                 log::info!("obtained [{symbol}]");
                 return Ok(res.data.unwrap());
             }
-            "400003" => return Err(failure::err_msg("API key needed not but provided")),
+            "400003" => eyre::bail!("API key needed not but provided"),
             "429000" => {
                 log::warn!("[{symbol:?}] request overloaded ({try_counter:?} tries)")
             }
-            code => return Err(failure::err_msg(format!("unrecognised code [{code:?}]"))),
+            code => eypre::bail!("unrecognised code [{code:?}]"),
         }
     }
 }
@@ -125,7 +124,7 @@ pub async fn task_get_initial_orderbooks(
     }
     while let Some(res) = taskpool_aggregate.join_next().await {
         if let Err(e) = res {
-            return Err(failure::Error::from(e));
+            eyre::bail!("{e}");
         }
         log::info!("Initialized orderbook for [{:?}]", res.unwrap());
     }

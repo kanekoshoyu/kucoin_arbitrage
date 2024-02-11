@@ -39,9 +39,7 @@ pub async fn task_monitor_channel_mps<T: Clone>(
 ) -> Result<()> {
     loop {
         if let Err(e) = receiver.recv().await {
-            return Err(failure::err_msg(format!(
-                "channel got closed, other tasks might have been closed first. [{e}]"
-            )));
+            eyre::bail!("channel got closed, other tasks might have been closed first. [{e}]");
         }
         counter::increment(counter.clone()).await;
     }

@@ -162,7 +162,7 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<()> {
             format!("Monitor task pool error [{res:?}]"),
         res = taskpool_subscription.join_next() => format!("Subscription task pool error [{res:?}]"),
     };
-    Err(failure::err_msg(format!("core error: [{message}]")))
+    eyre::bail!("core error: [{message}]");
 }
 
 /// wait for any external terminating signal

@@ -87,7 +87,7 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<()> {
         res = taskpool_monitor.join_next() =>
             format!("Infrastructure task pool error [{res:?}]"),
     };
-    Err(failure::err_msg(format!("unexpected error [{message}]")))
+    eyre::bail!("unexpected error [{message}]");
 }
 
 /// wait for any external terminating signal

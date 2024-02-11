@@ -22,9 +22,7 @@ pub async fn task_sync_orderbook(
             OrderbookEvent::OrderbookChangeReceived((symbol, orderbook_change)) => {
                 let orderbook = (*full_orderbook).get_mut(&symbol);
                 if orderbook.is_none() {
-                    return Err(failure::err_msg(format!(
-                        "received {symbol} but orderbook not initialised yet."
-                    )));
+                    eyre::bail!("received {symbol} but orderbook not initialised yet.");
                 }
                 // log::info!("insertion: {orderbook_change:#?}");
                 match orderbook.unwrap().merge(orderbook_change) {

@@ -34,13 +34,13 @@ impl ToString for OrderSide {
 /// assert_eq!(buy.to_string(), "buy");
 /// ```
 impl FromStr for OrderSide {
-    type Err = failure::Error;
+    type Err = eyre::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "buy" => Ok(OrderSide::Buy),
             "sell" => Ok(OrderSide::Sell),
-            unknown => Err(failure::err_msg(format!("unknown side: {unknown}"))),
+            unknown => eyre::bail!("unknown side: {unknown}"),
         }
     }
 }
@@ -63,13 +63,13 @@ impl ToString for OrderType {
     }
 }
 impl FromStr for OrderType {
-    type Err = failure::Error;
+    type Err = eyre::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "limit" => Ok(OrderType::Limit),
             "market" => Ok(OrderType::Market),
-            unknown => Err(failure::err_msg(format!("unknown ordertype {unknown}"))),
+            unknown => Err(eyre::bail!("unknown ordertype {unknown}")),
         }
     }
 }

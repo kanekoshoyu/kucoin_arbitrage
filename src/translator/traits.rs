@@ -1,6 +1,7 @@
 use crate::model::orderbook::Orderbook;
 use crate::model::symbol::SymbolInfo;
 use crate::model::trade::TradeInfo;
+use eyre::Result;
 
 pub trait ToOrderBook {
     fn to_internal(&self) -> Orderbook;
@@ -15,5 +16,5 @@ pub trait ToSymbolInfo {
 }
 
 pub trait ToTradeInfo {
-    fn to_internal(&self) -> Result<TradeInfo, failure::Error>;
+    fn to_internal(&self) -> Result<TradeInfo>;
 }

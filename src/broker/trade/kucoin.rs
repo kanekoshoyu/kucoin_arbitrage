@@ -11,9 +11,7 @@ use tokio::sync::broadcast::Sender;
 pub async fn task_pub_trade_event(api: Kucoin, sender: Sender<TradeEvent>) -> Result<()> {
     let res = api.get_socket_endpoint(WSType::Private).await;
     if let Err(_) = res {
-        return Err(failure::err_msg(
-            "failed connecting private endpoint, check API key",
-        ));
+        eyre::bail!("failed connecting private endpoint, check API key",);
     }
     let url_private = res.unwrap();
     let mut ws = api.websocket();

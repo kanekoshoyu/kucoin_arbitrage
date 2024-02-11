@@ -48,7 +48,7 @@ pub async fn task_place_order(
                     "400100" => {
                         log::error!("Invalid order size increment {order:?}");
                     }
-                    code => return Err(failure::err_msg(format!("unrecognised code [{code:?}]"))),
+                    code => eyre::bail!("unrecognised code [{code:?}]"),
                 };
             }
             OrderEvent::PlaceBorrowOrder(_order) => {

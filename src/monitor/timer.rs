@@ -18,8 +18,6 @@ pub async fn start(name: String) {
 pub async fn stop(name: String) -> Result<Duration> {
     let now = Instant::now();
     let timer = TIMERS.lock().await;
-    let stat = timer
-        .get(&name)
-        .ok_or(eyre::bail!("global timer [{name}] is not found"))?;
+    let stat = timer.get(&name).ok_or(eyre::eyre!("stat was empty"))?;
     Ok(now.duration_since(*stat))
 }

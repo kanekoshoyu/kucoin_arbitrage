@@ -1,5 +1,5 @@
 use crate::monitor::counter;
-use eypre::Result;
+use eyre::Result;
 use std::sync::Arc;
 use tokio::sync::broadcast::Receiver;
 use tokio::sync::Mutex;

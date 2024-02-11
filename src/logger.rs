@@ -1,21 +1,56 @@
 use core::fmt::Result as FmtResult;
-use eyre::*;
-use serde::*;
+use core::str::FromStr;
+use eyre::Result;
+use serde_derive::{Deserialize, Serialize};
 use std::path::Path;
-use std::str::FromStr;
-use std::sync::Arc;
-use tracing::level_filters::LevelFilter;
 use tracing::{Event, Level, Subscriber};
 use tracing_appender::non_blocking::{NonBlocking, WorkerGuard};
 use tracing_subscriber::fmt::{format, FmtContext, FormatEvent, FormatFields};
 use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::{EnvFilter, Layer};
 
+#[derive(Default, Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum LogLevel {
+    #[default]
+    Error,
+    Warn,
+    Info,
+    Debug,
+    Trace,
+}
+
+impl From<LogLevel> for Level {
+    fn from(value: LogLevel) -> Self {
+        match value {
+            LogLevel::Error => Level::ERROR,
+            LogLevel::Warn => Level::WARN,
+            LogLevel::Info => Level::INFO,
+            LogLevel::Debug => Level::DEBUG,
+            LogLevel::Trace => Level::TRACE,
+        }
+    }
+}
+
+impl FromStr for LogLevel {
+    type Err = eyre::Error;
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s.to_ascii_lowercase().as_ref() {
+            "error" => Ok(LogLevel::Error),
+            "warn" => Ok(LogLevel::Warn),
+            "info" => Ok(LogLevel::Info),
+            "debug" => Ok(LogLevel::Debug),
+            "trace" => Ok(LogLevel::Trace),
+            _ => Err(eyre::eyre!("Invalid log level: {}", s)),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct LogFileConfig {
     pub directory: String,
     pub file_name_prefix: String,
-    pub log_level: Level,
+    pub log_level: LogLevel,
 }
 
 pub fn env_filter_level(log_level: LogLevel) -> EnvFilter {
@@ -62,7 +97,7 @@ pub fn non_blocking_make_writer_file(
 }
 
 pub fn setup_composite_logs(
-    log_level: Level,
+    log_level: LogLevel,
     log_file_config: &LogFileConfig,
 ) -> Result<WorkerGuard> {
     use tracing_subscriber::fmt;

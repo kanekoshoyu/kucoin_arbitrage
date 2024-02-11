@@ -15,11 +15,17 @@ pub async fn task_place_order(
         // println!("Received event: {event:?}");
         match event {
             OrderEvent::GetAllOrders => {
-                let status = kucoin.get_recent_orders().await?;
+                let status = kucoin
+                    .get_recent_orders()
+                    .await
+                    .map_err(|e| eyre::eyre!(e))?;
                 tracing::info!("{status:?}");
             }
             OrderEvent::CancelOrder(order) => {
-                let status = kucoin.cancel_order(order.id().as_ref()).await?;
+                let status = kucoin
+                    .cancel_order(order.id().as_ref())
+                    .await
+                    .map_err(|e| eyre::eyre!(e))?;
                 tracing::info!("{status:?}");
             }
             OrderEvent::CancelAllOrders => {
@@ -36,7 +42,7 @@ pub async fn task_place_order(
                         order.amount().as_ref(),
                         None,
                     )
-                    .await?;
+                    .await.map_err(|e| eyre::eyre!(e))?;
                 match status.code.as_str() {
                     "200000" => {
                         let uuid = Uuid::parse_str(&order.id)?;

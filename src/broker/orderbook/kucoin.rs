@@ -4,7 +4,6 @@ use crate::model::symbol::SymbolInfo;
 use crate::translator::traits::{ToOrderBook, ToOrderBookChange};
 use chrono::{TimeZone, Utc};
 use eyre::Result;
-use eyre::Result;
 use kucoin_api::client::Kucoin;
 use kucoin_api::futures::TryStreamExt;
 use kucoin_api::model::market::{OrderBook, OrderBookType};
@@ -22,11 +21,16 @@ pub async fn task_pub_orderbook_event(
     sender: Sender<OrderbookEvent>,
 ) -> Result<()> {
     let serial = 0;
-    let url_public = api.get_socket_endpoint(WSType::Public).await?;
+    let url_public = api
+        .get_socket_endpoint(WSType::Public)
+        .await
+        .map_err(|e| eyre::eyre!(e))?;
     let mut ws = api.websocket();
-    ws.subscribe(url_public.clone(), topics).await?;
+    ws.subscribe(url_public.clone(), topics)
+        .await
+        .map_err(|e| eyre::eyre!(e))?;
     loop {
-        let msg = ws.try_next().await?;
+        let msg = ws.try_next().await.map_err(|e| eyre::eyre!(e))?;
         let msg = msg.unwrap();
         match msg {
             KucoinWebsocketMsg::OrderBookMsg(msg) => {
@@ -80,7 +84,7 @@ pub async fn task_get_orderbook(api: Kucoin, symbol: &str) -> Result<OrderBook> 
             }
             continue;
         }
-        let res = res?;
+        let res = res.map_err(|e| eyre::eyre!(e))?;
         match res.code.as_str() {
             "200000" => {
                 if res.data.is_none() {
@@ -94,7 +98,7 @@ pub async fn task_get_orderbook(api: Kucoin, symbol: &str) -> Result<OrderBook> 
             "429000" => {
                 tracing::warn!("[{symbol:?}] request overloaded ({try_counter:?} tries)")
             }
-            code => eypre::bail!("unrecognised code [{code:?}]"),
+            code => eyre::bail!("unrecognised code [{code:?}]"),
         }
     }
 }

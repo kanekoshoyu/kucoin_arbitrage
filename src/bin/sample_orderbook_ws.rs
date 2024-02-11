@@ -16,7 +16,7 @@ use tokio::sync::Mutex;
 #[tokio::main]
 async fn main() -> Result<()> {
     // provide logging format
-    kucoin_arbitrage::logger::log_init()?;
+    kucoin_arbitrage::logger::log_init().map_err(|e| eyre::eyre!(e))?;
     tracing::info!("Log setup");
     let counter = Arc::new(Mutex::new(counter::Counter::new("api_input")));
 
@@ -25,7 +25,7 @@ async fn main() -> Result<()> {
     let monitor_interval = config.behaviour.monitor_interval_sec;
 
     let api = Kucoin::new(KucoinEnv::Live, Some(config.kucoin_credentials()))?;
-    let url = api.clone().get_socket_endpoint(WSType::Public).await?;
+    let url = api.clone().get_socket_endpoint(WSType::Public).await;
     tracing::info!("Credentials setup");
 
     // get all symbols concurrently

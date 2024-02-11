@@ -69,7 +69,7 @@ impl FromStr for OrderType {
         match s {
             "limit" => Ok(OrderType::Limit),
             "market" => Ok(OrderType::Market),
-            unknown => Err(eyre::bail!("unknown ordertype {unknown}")),
+            unknown => eyre::bail!("unknown ordertype {unknown}"),
         }
     }
 }

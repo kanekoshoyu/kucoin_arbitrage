@@ -22,7 +22,7 @@ pub async fn task_pub_trade_event(api: Kucoin, sender: Sender<TradeEvent>) -> Re
         .expect("failed subscribing trade event");
     loop {
         // Awaits subscription message
-        let ws_msg = ws.try_next().await?;
+        let ws_msg = ws.try_next().await.map_err(|e| eyre::eyre!(e))?;
         let ws_msg = ws_msg.unwrap();
         match ws_msg {
             KucoinWebsocketMsg::TradeReceivedMsg(msg) => {

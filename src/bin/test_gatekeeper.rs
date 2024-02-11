@@ -24,7 +24,7 @@ use tokio::task::JoinSet;
 #[tokio::main]
 async fn main() -> Result<()> {
     // Provides logging format
-    kucoin_arbitrage::logger::log_init()?;
+    kucoin_arbitrage::logger::log_init().map_err(|e| eyre::eyre!(e))?;
     tracing::info!("Log setup");
 
     // config

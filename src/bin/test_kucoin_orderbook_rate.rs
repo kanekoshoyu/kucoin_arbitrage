@@ -1,3 +1,4 @@
+use eyre::Result;
 /// Test WebSocket Message Rate
 /// Subscribe to messages, run for 10 seconds, get the rate respectively
 use kucoin_api::futures::TryStreamExt;
@@ -12,7 +13,7 @@ use tokio::sync::Mutex;
 
 /// main function
 #[tokio::main]
-async fn main() -> Result<(), failure::Error> {
+async fn main() -> Result<()> {
     // provide logging format
     kucoin_arbitrage::logger::log_init()?;
     let counter = Arc::new(Mutex::new(counter::Counter::new("api_input")));
@@ -46,7 +47,7 @@ async fn main() -> Result<(), failure::Error> {
 async fn sync_tickers(
     mut ws: KucoinWebsocket,
     counter: Arc<Mutex<counter::Counter>>,
-) -> Result<(), failure::Error> {
+) -> Result<()> {
     while let Some(msg) = ws.try_next().await? {
         match msg {
             KucoinWebsocketMsg::OrderBookMsg(_msg) => {

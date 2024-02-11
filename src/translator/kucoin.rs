@@ -6,9 +6,11 @@ use std::str::FromStr;
 
 use crate::model;
 use crate::translator::traits;
+use eyre::Result;
 use kucoin_api::model as api_model;
 use ordered_float::OrderedFloat;
 use uuid::Uuid;
+
 impl traits::ToOrderBook for api_model::market::OrderBook {
     fn to_internal(&self) -> model::orderbook::Orderbook {
         let parse_err_msg = "Failed to parse input";
@@ -75,7 +77,7 @@ impl traits::ToSymbolInfo for api_model::market::SymbolList {
 }
 
 impl traits::ToTradeInfo for api_model::websocket::TradeReceived {
-    fn to_internal(&self) -> Result<model::trade::TradeInfo, failure::Error> {
+    fn to_internal(&self) -> Result<model::trade::TradeInfo> {
         let order_id = Uuid::parse_str(&self.client_oid)?.as_u128();
         let symbol = self.symbol.clone();
         let side = model::order::OrderSide::from_str(self.side.as_ref())?;
@@ -93,7 +95,7 @@ impl traits::ToTradeInfo for api_model::websocket::TradeReceived {
 }
 
 impl traits::ToTradeInfo for api_model::websocket::TradeOpen {
-    fn to_internal(&self) -> Result<model::trade::TradeInfo, failure::Error> {
+    fn to_internal(&self) -> Result<model::trade::TradeInfo> {
         let order_id = Uuid::parse_str(&self.client_oid)?.as_u128();
         let symbol = self.symbol.clone();
         let side = model::order::OrderSide::from_str(self.side.as_ref())?;
@@ -111,7 +113,7 @@ impl traits::ToTradeInfo for api_model::websocket::TradeOpen {
 }
 
 impl traits::ToTradeInfo for api_model::websocket::TradeFilled {
-    fn to_internal(&self) -> Result<model::trade::TradeInfo, failure::Error> {
+    fn to_internal(&self) -> Result<model::trade::TradeInfo> {
         let order_id = Uuid::parse_str(&self.client_oid)?.as_u128();
         let symbol = self.symbol.clone();
         let side = model::order::OrderSide::from_str(self.side.as_ref())?;
@@ -129,7 +131,7 @@ impl traits::ToTradeInfo for api_model::websocket::TradeFilled {
 }
 
 impl traits::ToTradeInfo for api_model::websocket::TradeMatch {
-    fn to_internal(&self) -> Result<model::trade::TradeInfo, failure::Error> {
+    fn to_internal(&self) -> Result<model::trade::TradeInfo> {
         let order_id = Uuid::parse_str(&self.client_oid)?.as_u128();
         let symbol = self.symbol.clone();
         let side = model::order::OrderSide::from_str(self.side.as_ref())?;
@@ -147,7 +149,7 @@ impl traits::ToTradeInfo for api_model::websocket::TradeMatch {
 }
 
 impl traits::ToTradeInfo for api_model::websocket::TradeCanceled {
-    fn to_internal(&self) -> Result<model::trade::TradeInfo, failure::Error> {
+    fn to_internal(&self) -> Result<model::trade::TradeInfo> {
         let order_id = Uuid::parse_str(&self.client_oid)?.as_u128();
         let symbol = self.symbol.clone();
         let side = model::order::OrderSide::from_str(self.side.as_ref())?;

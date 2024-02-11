@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use eyre::Result;
 /// Test latency between order and private channel order detection
 /// Places extreme order in REST, receive extreme order in private channel
 /// Please configure the buy price to either the current market price or lower for testing purpose
@@ -17,8 +18,9 @@ use tokio::signal::unix::{signal, SignalKind};
 use tokio::sync::{broadcast, Mutex};
 use tokio::task::JoinSet;
 use uuid::Uuid;
+
 #[tokio::main]
-async fn main() -> Result<(), failure::Error> {
+async fn main() -> Result<()> {
     // Provides logging format
     kucoin_arbitrage::logger::log_init()?;
     log::info!("Log setup");
@@ -60,7 +62,7 @@ async fn main() -> Result<(), failure::Error> {
     ));
     taskpool_monitor.spawn(task_log_mps(vec![cx_order.clone(), cx_trade.clone()], 10));
 
-    let mut taskpool_infrastructure: JoinSet<Result<(), failure::Error>> = JoinSet::new();
+    let mut taskpool_infrastructure: JoinSet<Result<()>> = JoinSet::new();
     taskpool_infrastructure.spawn(task_place_order(tx_order.subscribe(), api.clone()));
     taskpool_infrastructure.spawn(task_pub_trade_event(api.clone(), tx_trade.clone()));
 
@@ -81,7 +83,7 @@ async fn main() -> Result<(), failure::Error> {
 }
 
 /// wait for any external terminating signal
-async fn task_signal_handle() -> Result<(), failure::Error> {
+async fn task_signal_handle() -> Result<()> {
     let mut sigterm = signal(SignalKind::terminate()).unwrap();
     let mut sigint = signal(SignalKind::interrupt()).unwrap();
     tokio::select! {
@@ -92,7 +94,7 @@ async fn task_signal_handle() -> Result<(), failure::Error> {
 }
 
 /// handle external signal
-async fn exit_program(signal_alias: &str) -> Result<(), failure::Error> {
+async fn exit_program(signal_alias: &str) -> Result<()> {
     log::info!("Received [{signal_alias}] signal");
     Ok(())
 }
@@ -100,7 +102,7 @@ async fn exit_program(signal_alias: &str) -> Result<(), failure::Error> {
 async fn task_place_order_periodically(
     tx_order: broadcast::Sender<OrderEvent>,
     interval_s: f64,
-) -> Result<(), failure::Error> {
+) -> Result<()> {
     // unique ID to be generated every time
     loop {
         let event = OrderEvent::PlaceLimitOrder(LimitOrder {

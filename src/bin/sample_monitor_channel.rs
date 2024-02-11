@@ -1,3 +1,4 @@
+use eyre::Result;
 /// Executes triangular arbitrage
 use kucoin_api::client::{Kucoin, KucoinEnv};
 use kucoin_arbitrage::broker::symbol::filter::symbol_with_quotes;
@@ -12,7 +13,7 @@ use tokio::sync::Mutex;
 use tokio::task::JoinSet;
 
 #[tokio::main]
-async fn main() -> Result<(), failure::Error> {
+async fn main() -> Result<()> {
     // logging format
     kucoin_arbitrage::logger::log_init()?;
     log::info!("Log setup");
@@ -29,7 +30,7 @@ async fn main() -> Result<(), failure::Error> {
     Ok(())
 }
 
-async fn core(config: kucoin_arbitrage::config::Config) -> Result<(), failure::Error> {
+async fn core(config: kucoin_arbitrage::config::Config) -> Result<()> {
     // config parameters
     let monitor_interval = config.behaviour.monitor_interval_sec;
 
@@ -90,7 +91,7 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<(), failure::E
 }
 
 /// wait for any external terminating signal
-async fn task_signal_handle() -> Result<(), failure::Error> {
+async fn task_signal_handle() -> Result<()> {
     let mut sigterm = signal(SignalKind::terminate()).unwrap();
     let mut sigint = signal(SignalKind::interrupt()).unwrap();
     tokio::select! {
@@ -101,7 +102,7 @@ async fn task_signal_handle() -> Result<(), failure::Error> {
 }
 
 /// handle external signal
-async fn exit_program(signal_alias: &str) -> Result<(), failure::Error> {
+async fn exit_program(signal_alias: &str) -> Result<()> {
     log::info!("Received [{signal_alias}] signal");
     Ok(())
 }

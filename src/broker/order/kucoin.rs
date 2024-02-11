@@ -1,13 +1,15 @@
 use crate::event::order::OrderEvent;
 use crate::model::order::Order;
+use eyre::Result;
 use kucoin_api::client::Kucoin;
 use tokio::sync::broadcast;
 use uuid::Uuid;
+
 /// Converts received OrderEvent into REST API call
 pub async fn task_place_order(
     mut receiver: broadcast::Receiver<OrderEvent>,
     kucoin: Kucoin,
-) -> Result<(), failure::Error> {
+) -> Result<()> {
     loop {
         let event = receiver.recv().await?;
         // println!("Received event: {event:?}");

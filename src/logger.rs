@@ -1,5 +1,6 @@
 use chrono::prelude::Local;
 use colored::Colorize;
+use eyre::Result;
 use fern;
 
 // TODO find a way to obtain the running binary name for
@@ -48,7 +49,7 @@ fn dispatch_file(filename: &str) -> fern::Dispatch {
         .chain(fern::log_file(filename).expect("Failed to create log file"))
 }
 
-pub fn log_init() -> Result<(), failure::Error> {
+pub fn log_init() -> Result<()> {
     // setup time loggers
     let fmt = "%Y_%m_%d_%H_%M_%S";
     let formatted_date = Local::now().format(fmt).to_string();

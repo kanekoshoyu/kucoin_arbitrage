@@ -1,4 +1,5 @@
 // Subscribes orderbook changes in WebSocket API
+use eyre::Result;
 use kucoin_api::futures::TryStreamExt;
 use kucoin_api::{
     client::{Kucoin, KucoinEnv},
@@ -13,7 +14,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 #[tokio::main]
-async fn main() -> Result<(), failure::Error> {
+async fn main() -> Result<()> {
     // provide logging format
     kucoin_arbitrage::logger::log_init()?;
     log::info!("Log setup");
@@ -56,7 +57,7 @@ async fn main() -> Result<(), failure::Error> {
 async fn sync_tickers(
     mut ws: KucoinWebsocket,
     counter: Arc<Mutex<counter::Counter>>,
-) -> Result<(), failure::Error> {
+) -> Result<()> {
     while let Some(msg) = ws.try_next().await? {
         // add matches for multi-subscribed sockets handling
         match msg {

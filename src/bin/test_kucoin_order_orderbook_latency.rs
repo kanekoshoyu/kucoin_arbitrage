@@ -1,6 +1,7 @@
 /// Test REST-to-WS Network Latency
 /// place extreme order, receive extreme order, check time difference
 use chrono::prelude::Local;
+use eyre::Result;
 use kucoin_api::futures::TryStreamExt;
 use kucoin_api::{
     client::{Kucoin, KucoinEnv},
@@ -12,7 +13,7 @@ use uuid::Uuid;
 
 /// main function
 #[tokio::main]
-async fn main() -> Result<(), failure::Error> {
+async fn main() -> Result<()> {
     // provide logging format
     kucoin_arbitrage::logger::log_init()?;
     log::info!("Testing Kucoin REST-to-WS latency");

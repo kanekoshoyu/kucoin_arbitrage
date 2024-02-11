@@ -2,6 +2,8 @@ use crate::event::orderbook::OrderbookEvent;
 use crate::model::orderbook::FullOrderbook;
 use crate::model::symbol::SymbolInfo;
 use crate::translator::traits::{ToOrderBook, ToOrderBookChange};
+use chrono::{TimeZone, Utc};
+use eyre::Result;
 use kucoin_api::client::Kucoin;
 use kucoin_api::futures::TryStreamExt;
 use kucoin_api::model::market::{OrderBook, OrderBookType};
@@ -17,7 +19,7 @@ pub async fn task_pub_orderbook_event(
     api: Kucoin,
     topics: Vec<WSTopic>,
     sender: Sender<OrderbookEvent>,
-) -> Result<(), failure::Error> {
+) -> Result<()> {
     let serial = 0;
     let url_public = api.get_socket_endpoint(WSType::Public).await?;
     let mut ws = api.websocket();
@@ -27,6 +29,15 @@ pub async fn task_pub_orderbook_event(
         let msg = msg.unwrap();
         match msg {
             KucoinWebsocketMsg::OrderBookMsg(msg) => {
+                let ts_message = msg.data.time;
+                log::info!("message(raw): {ts_message:?}");
+                let t_message = Utc.timestamp_millis_opt(ts_message as i64).unwrap();
+                let t_system = Utc::now();
+                let latency = t_system - t_message;
+                log::info!("message: {t_message:?}");
+                log::info!("system: {t_system:?}");
+                log::info!("latency: {latency:?}");
+
                 let (str, data) = msg.data.to_internal(serial);
                 let event = OrderbookEvent::OrderbookChangeReceived((str, data));
                 sender.send(event)?;
@@ -60,7 +71,7 @@ pub async fn task_get_orderbook(api: Kucoin, symbol: &str) -> Result<OrderBook, 
             log::warn!("orderbook[{symbol}] did not respond ({try_counter:?} tries) [{e:?}]");
             let null_err_msg = "invalid type: null, expected a string";
             if e.to_string().contains(null_err_msg) {
-                return Err(failure::err_msg(format!("null received ffrom {symbol}")))
+                return Err(failure::err_msg(format!("null received ffrom {symbol}")));
             }
             // TODO there are cases when no orderbook is obtained. Check if this is due to the network condition or the orderbook itself
             if try_counter > 100 {
@@ -94,7 +105,7 @@ pub async fn task_get_initial_orderbooks(
     api: Kucoin,
     symbol_infos: Vec<SymbolInfo>,
     full_orderbook: Arc<Mutex<FullOrderbook>>,
-) -> Result<(), failure::Error> {
+) -> Result<()> {
     // replace spawn with or a taskpool
     let mut taskpool_aggregate = JoinSet::new();
     // collect all initial orderbook states with REST

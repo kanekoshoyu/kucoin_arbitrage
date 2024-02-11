@@ -2,8 +2,10 @@ use crate::event::chance::ChanceEvent;
 use crate::event::order::OrderEvent;
 use crate::event::trade::TradeEvent;
 use crate::model::order::{LimitOrder, OrderType};
+use eyre::Result;
 use tokio::sync::broadcast::{Receiver, Sender};
 use uuid::Uuid;
+
 // TODO implement when all_taker_btc_usdt is done
 // TODO implement profit maximization
 
@@ -17,7 +19,7 @@ pub async fn task_gatekeep_chances(
     mut rx_chance: Receiver<ChanceEvent>,
     mut rx_trade: Receiver<TradeEvent>,
     tx_order: Sender<OrderEvent>,
-) -> Result<(), failure::Error> {
+) -> Result<()> {
     loop {
         let status = rx_chance.recv().await;
         if let Err(e) = status {

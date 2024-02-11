@@ -1,3 +1,4 @@
+use eyre::Result;
 use tokio::net::TcpStream;
 use tokio::time::{Duration, Instant};
 
@@ -10,7 +11,7 @@ async fn ping_tcp(host: &str, port: u16, timeout: Duration) -> Result<Duration, 
 }
 
 #[tokio::main]
-async fn main() -> Result<(), failure::Error> {
+async fn main() -> Result<()> {
     let target_host = "api.kucoin.com";
     let target_port = 80;
     let timeout_duration = Duration::from_secs(5); // Set your desired timeout in seconds.

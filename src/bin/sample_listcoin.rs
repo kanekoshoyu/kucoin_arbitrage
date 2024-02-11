@@ -1,9 +1,9 @@
+use eyre::Result;
 /// Lists pairs with the "BTC", "USDT" as quote
 use kucoin_api::client::{Kucoin, KucoinEnv};
 use kucoin_arbitrage::broker::symbol::{filter::symbol_with_quotes, kucoin::get_symbols};
-
 #[tokio::main]
-async fn main() -> Result<(), failure::Error> {
+async fn main() -> Result<()> {
     // provide logging format
     kucoin_arbitrage::logger::log_init()?;
     log::info!("Hello world");

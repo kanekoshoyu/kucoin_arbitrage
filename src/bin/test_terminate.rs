@@ -1,8 +1,9 @@
+use eyre::Result;
 use tokio::signal::unix::{signal, SignalKind};
 use tokio::time;
 
 #[tokio::main]
-async fn main() -> Result<(), failure::Error> {
+async fn main() -> Result<()> {
     println!("waiting for terminating signal");
     // assume it is never ending
     let ext_signal = task_signal_handle();
@@ -15,7 +16,7 @@ async fn main() -> Result<(), failure::Error> {
 }
 
 /// task to wait for any external terminating signal
-async fn task_signal_handle() -> Result<(), failure::Error> {
+async fn task_signal_handle() -> Result<()> {
     let mut sigterm = signal(SignalKind::terminate()).unwrap();
     let mut sigint = signal(SignalKind::interrupt()).unwrap();
     tokio::select! {
@@ -26,13 +27,13 @@ async fn task_signal_handle() -> Result<(), failure::Error> {
 }
 
 // Define a handler function for the SIGTERM signal
-async fn exit_program(signal_alias: &str) -> Result<(), failure::Error> {
+async fn exit_program(signal_alias: &str) -> Result<()> {
     println!("Received [{signal_alias}] signal. Cleaning up and shutting down gracefully.");
     Ok(())
 }
 
 // Define a handler function for the SIGTERM signal
-async fn program() -> Result<(), failure::Error> {
+async fn program() -> Result<()> {
     let mut counter = 0;
     let duration = time::Duration::from_secs(2);
     loop {

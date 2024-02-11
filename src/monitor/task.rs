@@ -1,14 +1,11 @@
 use crate::monitor::counter;
+use eypre::Result;
 use std::sync::Arc;
 use tokio::sync::broadcast::Receiver;
 use tokio::sync::Mutex;
 use tokio::time;
-
 /// log counters
-async fn log_mps(
-    counters: Vec<Arc<Mutex<counter::Counter>>>,
-    interval: u64,
-) -> Result<(), failure::Error> {
+async fn log_mps(counters: Vec<Arc<Mutex<counter::Counter>>>, interval: u64) -> Result<()> {
     log::info!("Broadcast channel MPS");
     for counter in counters.iter() {
         let (name, count) = {
@@ -25,7 +22,7 @@ async fn log_mps(
 pub async fn task_log_mps(
     counters: Vec<Arc<Mutex<counter::Counter>>>,
     interval: u64,
-) -> Result<(), failure::Error> {
+) -> Result<()> {
     let monitor_delay = time::Duration::from_secs(interval);
     loop {
         time::sleep(monitor_delay).await;
@@ -39,7 +36,7 @@ pub async fn task_log_mps(
 pub async fn task_monitor_channel_mps<T: Clone>(
     mut receiver: Receiver<T>,
     counter: Arc<Mutex<counter::Counter>>,
-) -> Result<(), failure::Error> {
+) -> Result<()> {
     loop {
         if let Err(e) = receiver.recv().await {
             return Err(failure::err_msg(format!(

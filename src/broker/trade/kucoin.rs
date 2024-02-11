@@ -1,5 +1,6 @@
 use crate::event::trade::TradeEvent;
 use crate::translator::traits::ToTradeInfo;
+use eyre::Result;
 use kucoin_api::client::Kucoin;
 use kucoin_api::futures::TryStreamExt;
 use kucoin_api::model::websocket::{KucoinWebsocketMsg, WSTopic, WSType};
@@ -7,10 +8,7 @@ use tokio::sync::broadcast::Sender;
 
 /// Task to publish order change events.
 /// Subscribe Kucoim Websocket API, then publish tradeEvent directly after conversion.
-pub async fn task_pub_trade_event(
-    api: Kucoin,
-    sender: Sender<TradeEvent>,
-) -> Result<(), failure::Error> {
+pub async fn task_pub_trade_event(api: Kucoin, sender: Sender<TradeEvent>) -> Result<()> {
     let res = api.get_socket_endpoint(WSType::Private).await;
     if let Err(_) = res {
         return Err(failure::err_msg(

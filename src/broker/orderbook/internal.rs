@@ -1,5 +1,6 @@
 use crate::event::orderbook::OrderbookEvent;
 use crate::model::orderbook::FullOrderbook;
+use eyre::Result;
 use std::sync::Arc;
 use tokio::sync::broadcast::{Receiver, Sender};
 use tokio::sync::Mutex;
@@ -9,7 +10,7 @@ pub async fn task_sync_orderbook(
     mut receiver: Receiver<OrderbookEvent>,
     sender: Sender<OrderbookEvent>,
     local_full_orderbook: Arc<Mutex<FullOrderbook>>,
-) -> Result<(), failure::Error> {
+) -> Result<()> {
     loop {
         let event = receiver.recv().await?;
         let mut full_orderbook = local_full_orderbook.lock().await;

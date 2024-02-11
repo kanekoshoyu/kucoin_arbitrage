@@ -1,3 +1,4 @@
+use eyre::Result;
 /// Executes triangular arbitrage
 use kucoin_api::client::{Kucoin, KucoinEnv};
 use kucoin_arbitrage::broker::gatekeeper::kucoin::task_gatekeep_chances;
@@ -23,7 +24,7 @@ use tokio::sync::Mutex;
 use tokio::task::JoinSet;
 
 #[tokio::main]
-async fn main() -> Result<(), failure::Error> {
+async fn main() -> Result<()> {
     // logging format
     kucoin_arbitrage::logger::log_init()?;
     log::info!("Log setup");
@@ -40,7 +41,7 @@ async fn main() -> Result<(), failure::Error> {
     Ok(())
 }
 
-async fn core(config: kucoin_arbitrage::config::Config) -> Result<(), failure::Error> {
+async fn core(config: kucoin_arbitrage::config::Config) -> Result<()> {
     // config parameters
     let budget = config.behaviour.usd_cyclic_arbitrage;
     let monitor_interval = config.behaviour.monitor_interval_sec;
@@ -82,7 +83,7 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<(), failure::E
     log::info!("Local empty full orderbook setup");
 
     // infrastructure tasks
-    let mut taskpool_infrastructure: JoinSet<Result<(), failure::Error>> = JoinSet::new();
+    let mut taskpool_infrastructure: JoinSet<Result<()>> = JoinSet::new();
     taskpool_infrastructure.spawn(task_sync_orderbook(
         tx_orderbook.subscribe(),
         tx_orderbook_best.clone(),
@@ -165,7 +166,7 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<(), failure::E
 }
 
 /// wait for any external terminating signal
-async fn task_signal_handle() -> Result<(), failure::Error> {
+async fn task_signal_handle() -> Result<()> {
     let mut sigterm = signal(SignalKind::terminate()).unwrap();
     let mut sigint = signal(SignalKind::interrupt()).unwrap();
     tokio::select! {
@@ -176,7 +177,7 @@ async fn task_signal_handle() -> Result<(), failure::Error> {
 }
 
 /// handle external signal
-async fn exit_program(signal_alias: &str) -> Result<(), failure::Error> {
+async fn exit_program(signal_alias: &str) -> Result<()> {
     log::info!("Received [{signal_alias}] signal");
     Ok(())
 }

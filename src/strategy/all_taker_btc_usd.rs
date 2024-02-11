@@ -3,6 +3,7 @@ use crate::model::chance::{ActionInfo, TriangularArbitrageChance};
 use crate::model::orderbook::{FullOrderbook, Orderbook};
 use crate::model::symbol::SymbolInfo;
 use crate::strings::split_symbol;
+use eyre::Result;
 use ordered_float::OrderedFloat;
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -16,7 +17,7 @@ pub async fn task_pub_chance_all_taker_btc_usd(
     local_full_orderbook: Arc<Mutex<FullOrderbook>>,
     symbol_map: Arc<Mutex<BTreeMap<String, SymbolInfo>>>,
     usd_budget: f64,
-) -> Result<(), failure::Error> {
+) -> Result<()> {
     let btc = String::from("BTC");
     let usd = String::from("USDT");
     let btc_usd = std::format!("{btc}-{usd}");

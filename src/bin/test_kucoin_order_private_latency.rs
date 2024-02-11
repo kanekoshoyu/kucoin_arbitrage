@@ -33,7 +33,7 @@ async fn main() -> Result<()> {
     tracing::info!("Credentials setup");
 
     // Gets all symbols concurrently
-    let symbol_list = get_symbols(api.clone()).await;
+    let symbol_list = get_symbols(api.clone()).await?;
     tracing::info!("Total exchange symbols: {:?}", symbol_list.len());
 
     // Filters with either btc or usdt as quote

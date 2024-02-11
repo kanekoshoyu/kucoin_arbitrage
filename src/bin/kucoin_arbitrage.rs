@@ -26,12 +26,11 @@ use tokio::task::JoinSet;
 #[tokio::main]
 async fn main() -> Result<()> {
     // logging format
-    // kucoin_arbitrage::logger::log_init()?;
     tracing::info!("Log setup");
-
-    // credentials
     let config = kucoin_arbitrage::config::from_file("config.toml")?;
-
+    // only discard worker_goard when terminating file logging
+    let _worker_guard = kucoin_arbitrage::logger::setup_logs(&config.log)?;
+    tracing::info!("Log setup");
     tokio::select! {
         _ = task_signal_handle() => tracing::error!("received external signal, terminating program"),
         res = core(config) => tracing::error!("core ended first {res:?}"),
@@ -52,7 +51,7 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<()> {
     tracing::info!("Credentials setup");
 
     // get all symbols concurrently
-    let symbol_list = get_symbols(api.clone()).await;
+    let symbol_list = get_symbols(api.clone()).await?;
     tracing::info!("Total exchange symbols: {:?}", symbol_list.len());
 
     // filter with either btc or usdt as quote
@@ -163,5 +162,5 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<()> {
             format!("Monitor task pool error [{res:?}]"),
         res = taskpool_subscription.join_next() => format!("Subscription task pool error [{res:?}]"),
     };
-    eyre::bail!("core error: [{message}]");
+    eyre::bail!("core error: [{message}]")
 }

@@ -1,25 +1,30 @@
 use crate::model::symbol::SymbolInfo;
 use crate::translator::traits::ToSymbolInfo;
+use eyre::Result;
 use kucoin_api::client::Kucoin;
 use kucoin_api::model::market::SymbolList;
 use kucoin_api::model::websocket::WSTopic;
 
 /// Uses the KuCoin API to generate a list of symbols
-pub async fn get_symbols(api: Kucoin) -> Vec<SymbolInfo> {
+pub async fn get_symbols(api: Kucoin) -> Result<Vec<SymbolInfo>> {
     // Keep retrying until obtained a symbol list
-    let data: Vec<SymbolList> = {
-        let mut res;
+    let mut tries = 0;
+    let tries_limit = 3;
+    let v_symbol_list: Vec<SymbolList> = {
         loop {
-            res = api.get_symbol_list(None).await;
-            if res.is_ok() {
-                break;
+            let res = api.get_symbol_list(None).await;
+            if let Ok(response) = res {
+                break response.data.unwrap();
             }
             tracing::warn!("failed getting symbol list, trying again");
+            tries += 1;
+            if tries >= tries_limit {
+                eyre::bail!("get symbol failed {tries} times");
+            }
         }
-        res.unwrap().data.unwrap()
     };
     let mut result: Vec<SymbolInfo> = Vec::new();
-    for symbol in data {
+    for symbol in v_symbol_list {
         // check base currency. Kucoin updates symbol instead of name when the alias updates
         if !symbol.symbol.starts_with(symbol.base_currency.as_str()) {
             tracing::warn!(
@@ -42,7 +47,7 @@ pub async fn get_symbols(api: Kucoin) -> Vec<SymbolInfo> {
         let internal_symbol_info = symbol.to_internal();
         result.push(internal_symbol_info);
     }
-    result
+    Ok(result)
 }
 
 // TODO this bridges between API and the internal model, it should be placed in broker

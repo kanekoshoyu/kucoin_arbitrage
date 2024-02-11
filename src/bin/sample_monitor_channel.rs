@@ -40,7 +40,7 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<()> {
     tracing::info!("Credentials setup");
 
     // get all symbols concurrently
-    let symbol_list = get_symbols(api.clone()).await;
+    let symbol_list = get_symbols(api.clone()).await?;
     tracing::info!("Total exchange symbols: {:?}", symbol_list.len());
 
     // filter with either btc or usdt as quote

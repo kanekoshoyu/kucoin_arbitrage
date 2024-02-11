@@ -11,3 +11,10 @@ passphrase = "YOUR_PASSPHRASE_HERE"
 monitor_interval_sec = 120
 # max amount of USD to use in a single cyclic arbitrage
 usd_cyclic_arbitrage = 20
+
+
+[log]
+file_directory = "./log"
+file_prefix = "log"
+file_log_level = "warn"
+term_log_level = "info"

@@ -52,7 +52,7 @@ impl Orderbook {
     pub fn merge(&mut self, to_merge: Orderbook) -> Result<Option<Orderbook>, String> {
         let to_merge_clone = to_merge.to_owned();
 
-        // log::info!("to_merge: {to_merge_clone:?}");
+        // tracing::info!("to_merge: {to_merge_clone:?}");
         let zero = 0.0;
 
         // clone the best ask/bid
@@ -76,7 +76,7 @@ impl Orderbook {
         for (price, volume) in to_merge.ask.into_iter() {
             if volume.eq(&zero) {
                 if self.ask.remove(&price).is_none() {
-                    // log::error!("failed to remove ask at {}, no orderbook data", &price);
+                    // tracing::error!("failed to remove ask at {}, no orderbook data", &price);
                 }
                 continue;
             }
@@ -85,7 +85,7 @@ impl Orderbook {
         for (price, volume) in to_merge.bid.into_iter() {
             if volume.eq(&zero) {
                 if self.bid.remove(&price).is_none() {
-                    // log::error!("failed to remove bid at {}, no orderbook data", &price);
+                    // tracing::error!("failed to remove bid at {}, no orderbook data", &price);
                 }
                 continue;
             }

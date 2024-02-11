@@ -25,25 +25,25 @@ use tokio::task::JoinSet;
 async fn main() -> Result<()> {
     // Provides logging format
     kucoin_arbitrage::logger::log_init()?;
-    log::info!("Log setup");
+    tracing::info!("Log setup");
 
     // config
     let config = kucoin_arbitrage::config::from_file("config.toml")?;
 
     let api = Kucoin::new(KucoinEnv::Live, Some(config.kucoin_credentials()))?;
-    log::info!("Credentials setup");
+    tracing::info!("Credentials setup");
 
     // Gets all symbols concurrently
     let symbol_list = get_symbols(api.clone()).await;
-    log::info!("Total exchange symbols: {:?}", symbol_list.len());
+    tracing::info!("Total exchange symbols: {:?}", symbol_list.len());
 
     // Filters with either btc or usdt as quote
     let symbol_infos = symbol_with_quotes(&symbol_list, "BTC", "USDT");
-    log::info!("Total symbols in scope: {:?}", symbol_infos.len());
+    tracing::info!("Total symbols in scope: {:?}", symbol_infos.len());
 
     // Changes a list of SymbolInfo into a 2D list of WSTopic per session in max 100 index
     let subs = format_subscription_list(&symbol_infos);
-    log::info!("Total orderbook WS sessions: {:?}", subs.len());
+    tracing::info!("Total orderbook WS sessions: {:?}", subs.len());
 
     // Creates broadcast channels
     let cx_chance = Arc::new(Mutex::new(Counter::new("chance")));
@@ -52,7 +52,7 @@ async fn main() -> Result<()> {
     let tx_order = broadcast::channel::<OrderEvent>(16).0;
     let cx_trade = Arc::new(Mutex::new(Counter::new("trade")));
     let tx_trade = broadcast::channel::<TradeEvent>(32).0;
-    log::info!("Broadcast channels setup");
+    tracing::info!("Broadcast channels setup");
 
     // monitor tasks
     let mut taskpool_monitor = JoinSet::new();
@@ -82,7 +82,7 @@ async fn main() -> Result<()> {
     ));
     taskpool_infrastructure.spawn(task_pub_trade_event(api.clone(), tx_trade.clone()));
 
-    log::info!("All application tasks setup");
+    tracing::info!("All application tasks setup");
     monitor::timer::start("order_placement_network".to_string()).await;
     monitor::timer::start("order_placement_broadcast".to_string()).await;
     let err_msg = tokio::select! {
@@ -90,8 +90,8 @@ async fn main() -> Result<()> {
         res = taskpool_infrastructure.join_next() => format!("taskpool_infrastructure stopped unexpectedly [{res:?}]"),
         _ = task_signal_handle() => format!("Received external signal, terminating program"),
     };
-    log::error!("{err_msg}");
-    log::info!("Exiting program, bye!");
+    tracing::error!("{err_msg}");
+    tracing::info!("Exiting program, bye!");
     Ok(())
 }
 
@@ -108,7 +108,7 @@ async fn task_signal_handle() -> Result<()> {
 
 /// handle external signal
 async fn exit_program(signal_alias: &str) -> Result<()> {
-    log::info!("Received [{signal_alias}] signal");
+    tracing::info!("Received [{signal_alias}] signal");
     Ok(())
 }
 

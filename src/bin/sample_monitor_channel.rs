@@ -16,7 +16,7 @@ use tokio::task::JoinSet;
 async fn main() -> Result<()> {
     // logging format
     kucoin_arbitrage::logger::log_init()?;
-    log::info!("Log setup");
+    tracing::info!("Log setup");
 
     // credentials
     let config = kucoin_arbitrage::config::from_file("config.toml")?;
@@ -36,19 +36,19 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<()> {
 
     // API endpoints
     let api = Kucoin::new(KucoinEnv::Live, Some(config.kucoin_credentials()))?;
-    log::info!("Credentials setup");
+    tracing::info!("Credentials setup");
 
     // get all symbols concurrently
     let symbol_list = get_symbols(api.clone()).await;
-    log::info!("Total exchange symbols: {:?}", symbol_list.len());
+    tracing::info!("Total exchange symbols: {:?}", symbol_list.len());
 
     // filter with either btc or usdt as quote
     let symbol_infos = symbol_with_quotes(&symbol_list, "BTC", "USDT");
-    log::info!("Total symbols in scope: {:?}", symbol_infos.len());
+    tracing::info!("Total symbols in scope: {:?}", symbol_infos.len());
 
     // list subscription using the filtered symbols
     let subs = format_subscription_list(&symbol_infos);
-    log::info!("Total orderbook WS sessions: {:?}", subs.len());
+    tracing::info!("Total orderbook WS sessions: {:?}", subs.len());
 
     // broadcast channels and counters
     let cx_orderbook = Arc::new(Mutex::new(counter::Counter::new("orderbook")));
@@ -57,7 +57,7 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<()> {
     let tx_orderbook_best = channel::<event::orderbook::OrderbookEvent>(512).0;
     let cx_chance = Arc::new(Mutex::new(counter::Counter::new("chance")));
     let tx_chance = channel::<event::chance::ChanceEvent>(64).0;
-    log::info!("Broadcast channels setup");
+    tracing::info!("Broadcast channels setup");
 
     // MPS monitor tasks
     let mut taskpool_monitor = JoinSet::new();
@@ -103,6 +103,6 @@ async fn task_signal_handle() -> Result<()> {
 
 /// handle external signal
 async fn exit_program(signal_alias: &str) -> Result<()> {
-    log::info!("Received [{signal_alias}] signal");
+    tracing::info!("Received [{signal_alias}] signal");
     Ok(())
 }

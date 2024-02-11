@@ -23,7 +23,7 @@ pub async fn task_pub_chance_all_taker_btc_usd(
     let btc_usd = std::format!("{btc}-{usd}");
     loop {
         let event = receiver.recv().await?;
-        // log::info!("received orderbook_update");
+        // tracing::info!("received orderbook_update");
         let alt: Option<String> = match event {
             OrderbookEvent::OrderbookChangeReceived((symbol, _delta)) => {
                 if symbol == btc_usd {
@@ -33,7 +33,7 @@ pub async fn task_pub_chance_all_taker_btc_usd(
                 Some(coin)
             }
             _ => {
-                log::error!("Unrecognised event {event:?}");
+                tracing::error!("Unrecognised event {event:?}");
                 continue;
             }
         };
@@ -45,17 +45,17 @@ pub async fn task_pub_chance_all_taker_btc_usd(
         let full_orderbook = local_full_orderbook.lock().await;
         let orderbook_btc_usd = (*full_orderbook).get(&btc_usd);
         if orderbook_btc_usd.is_none() {
-            log::warn!("trying to get from unregistered orderbook [{}]", btc_usd);
+            tracing::warn!("trying to get from unregistered orderbook [{}]", btc_usd);
             continue;
         }
         let orderbook_alt_btc = (*full_orderbook).get(&alt_btc);
         if orderbook_alt_btc.is_none() {
-            log::warn!("trying to get from unregistered orderbook {}]", alt_btc);
+            tracing::warn!("trying to get from unregistered orderbook {}]", alt_btc);
             continue;
         }
         let orderbook_alt_usd = (*full_orderbook).get(&alt_usd);
         if orderbook_alt_usd.is_none() {
-            log::warn!("trying to get from unregistered orderbook [{}]", alt_usd);
+            tracing::warn!("trying to get from unregistered orderbook [{}]", alt_usd);
             continue;
         }
 
@@ -100,7 +100,7 @@ fn triangular_chance_sequence(
     orderbook_alt_usd: &Orderbook,
     usd_amount: f64,
 ) -> Option<TriangularArbitrageChance> {
-    // log::info!("TSC: {}", info_alt_btc.base);
+    // tracing::info!("TSC: {}", info_alt_btc.base);
     // get the least ask
     let (btc_usd_ask, btc_usd_ask_volume) = orderbook_btc_usd.ask.first_key_value()?;
     let (alt_btc_ask, alt_btc_ask_volume) = orderbook_alt_btc.ask.first_key_value()?;

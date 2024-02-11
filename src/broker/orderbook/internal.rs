@@ -17,25 +17,25 @@ pub async fn task_sync_orderbook(
         match event {
             OrderbookEvent::OrderbookReceived((symbol, orderbook)) => {
                 (*full_orderbook).insert(symbol.clone(), orderbook);
-                log::info!("Initialised Orderbook for {symbol}")
+                tracing::info!("Initialised Orderbook for {symbol}")
             }
             OrderbookEvent::OrderbookChangeReceived((symbol, orderbook_change)) => {
                 let orderbook = (*full_orderbook).get_mut(&symbol);
                 if orderbook.is_none() {
                     eyre::bail!("received {symbol} but orderbook not initialised yet.");
                 }
-                // log::info!("insertion: {orderbook_change:#?}");
+                // tracing::info!("insertion: {orderbook_change:#?}");
                 match orderbook.unwrap().merge(orderbook_change) {
                     Ok(res) => {
                         if let Some(ob) = res {
-                            // log::info!("update: {ob:#?}");
+                            // tracing::info!("update: {ob:#?}");
                             sender
                                 .send(OrderbookEvent::OrderbookChangeReceived((symbol, ob)))
                                 .unwrap();
                         }
                     }
                     Err(e) => {
-                        log::error!("Merge conflict: {e}")
+                        tracing::error!("Merge conflict: {e}")
                     }
                 }
             }

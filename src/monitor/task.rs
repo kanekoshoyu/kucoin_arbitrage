@@ -6,13 +6,13 @@ use tokio::sync::Mutex;
 use tokio::time;
 /// log counters
 async fn log_mps(counters: Vec<Arc<Mutex<counter::Counter>>>, interval: u64) -> Result<()> {
-    log::info!("Broadcast channel MPS");
+    tracing::info!("Broadcast channel MPS");
     for counter in counters.iter() {
         let (name, count) = {
             let p = counter.lock().await;
             (p.name, p.data_count)
         };
-        log::info!("{name:12}: {count:5} messages ({:5}mps)", count / interval);
+        tracing::info!("{name:12}: {count:5} messages ({:5}mps)", count / interval);
         // clear the data
         counter::reset(counter.clone()).await;
     }

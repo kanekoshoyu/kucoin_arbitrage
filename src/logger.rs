@@ -9,17 +9,17 @@ use fern;
 
 fn dispatch_console() -> fern::Dispatch {
     fern::Dispatch::new()
-        .level(log::LevelFilter::Info)
+        .level(tracing::LevelFilter::Info)
         .format(move |out, message, record| {
             out.finish(format_args!(
                 "[{}][{}][{}] {}",
                 Local::now().format("%Y-%m-%d %H:%M:%S"),
                 match record.level() {
-                    log::Level::Error => "ERROR".red(),
-                    log::Level::Warn => "WARN".yellow(),
-                    log::Level::Info => "INFO".green(),
-                    log::Level::Debug => "DEBUG".cyan(),
-                    log::Level::Trace => "TRACE".blue(),
+                    tracing::Level::Error => "ERROR".red(),
+                    tracing::Level::Warn => "WARN".yellow(),
+                    tracing::Level::Info => "INFO".green(),
+                    tracing::Level::Debug => "DEBUG".cyan(),
+                    tracing::Level::Trace => "TRACE".blue(),
                 },
                 record.target(),
                 message
@@ -30,17 +30,17 @@ fn dispatch_console() -> fern::Dispatch {
 
 fn dispatch_file(filename: &str) -> fern::Dispatch {
     fern::Dispatch::new()
-        .level(log::LevelFilter::Info)
+        .level(tracing::LevelFilter::Info)
         .format(move |out, message, record| {
             out.finish(format_args!(
                 "[{}][{}][{}] {}",
                 Local::now().format("%Y-%m-%d %H:%M:%S"),
                 match record.level() {
-                    log::Level::Error => "ERROR",
-                    log::Level::Warn => "WARN",
-                    log::Level::Info => "INFO",
-                    log::Level::Debug => "DEBUG",
-                    log::Level::Trace => "TRACE",
+                    tracing::Level::Error => "ERROR",
+                    tracing::Level::Warn => "WARN",
+                    tracing::Level::Info => "INFO",
+                    tracing::Level::Debug => "DEBUG",
+                    tracing::Level::Trace => "TRACE",
                 },
                 record.target(),
                 message

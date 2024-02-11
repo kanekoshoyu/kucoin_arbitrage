@@ -31,30 +31,30 @@ pub async fn task_pub_orderbook_event(
         match msg {
             KucoinWebsocketMsg::OrderBookMsg(msg) => {
                 let ts_message = msg.data.time;
-                log::info!("message(raw): {ts_message:?}");
+                tracing::info!("message(raw): {ts_message:?}");
                 let t_message = Utc.timestamp_millis_opt(ts_message as i64).unwrap();
                 let t_system = Utc::now();
                 let latency = t_system - t_message;
-                log::info!("message: {t_message:?}");
-                log::info!("system: {t_system:?}");
-                log::info!("latency: {latency:?}");
+                tracing::info!("message: {t_message:?}");
+                tracing::info!("system: {t_system:?}");
+                tracing::info!("latency: {latency:?}");
 
                 let (str, data) = msg.data.to_internal(serial);
                 let event = OrderbookEvent::OrderbookChangeReceived((str, data));
                 sender.send(event)?;
             }
             KucoinWebsocketMsg::TickerMsg(msg) => {
-                log::info!("TickerMsg: {msg:#?}");
+                tracing::info!("TickerMsg: {msg:#?}");
             }
             KucoinWebsocketMsg::OrderBookChangeMsg(msg) => {
-                log::info!("OrderbookChange: {msg:#?}")
+                tracing::info!("OrderbookChange: {msg:#?}")
             }
             KucoinWebsocketMsg::WelcomeMsg(_) => {
-                log::info!("Welcome to KuCoin public WS")
+                tracing::info!("Welcome to KuCoin public WS")
             }
             KucoinWebsocketMsg::PongMsg(_) => {}
             other => {
-                log::error!("unregistered message {other:?}")
+                tracing::error!("unregistered message {other:?}")
             }
         };
     }
@@ -69,7 +69,7 @@ pub async fn task_get_orderbook(api: Kucoin, symbol: &str) -> Result<OrderBook> 
         let res = api.get_orderbook(symbol, OrderBookType::L20).await;
 
         if let Err(e) = res {
-            log::warn!("orderbook[{symbol}] did not respond ({try_counter:?} tries) [{e:?}]");
+            tracing::warn!("orderbook[{symbol}] did not respond ({try_counter:?} tries) [{e:?}]");
             let null_err_msg = "invalid type: null, expected a string";
             if e.to_string().contains(null_err_msg) {
                 eyre::bail!("null received ffrom {symbol}");
@@ -84,15 +84,15 @@ pub async fn task_get_orderbook(api: Kucoin, symbol: &str) -> Result<OrderBook> 
         match res.code.as_str() {
             "200000" => {
                 if res.data.is_none() {
-                    log::warn!("orderbook[{symbol}] received none ({try_counter:?} tries)");
+                    tracing::warn!("orderbook[{symbol}] received none ({try_counter:?} tries)");
                     continue;
                 }
-                log::info!("obtained [{symbol}]");
+                tracing::info!("obtained [{symbol}]");
                 return Ok(res.data.unwrap());
             }
             "400003" => eyre::bail!("API key needed not but provided"),
             "429000" => {
-                log::warn!("[{symbol:?}] request overloaded ({try_counter:?} tries)")
+                tracing::warn!("[{symbol:?}] request overloaded ({try_counter:?} tries)")
             }
             code => eypre::bail!("unrecognised code [{code:?}]"),
         }
@@ -109,7 +109,7 @@ pub async fn task_get_initial_orderbooks(
     let mut taskpool_aggregate = JoinSet::new();
     // collect all initial orderbook states with REST
     let symbols: Vec<String> = symbol_infos.into_iter().map(|info| info.symbol).collect();
-    log::info!("Total symbols: {:?}", symbols.len());
+    tracing::info!("Total symbols: {:?}", symbols.len());
     for symbol in symbols {
         let api = api.clone();
         let full_orderbook_arc = full_orderbook.clone();
@@ -126,7 +126,7 @@ pub async fn task_get_initial_orderbooks(
         if let Err(e) = res {
             eyre::bail!("{e}");
         }
-        log::info!("Initialized orderbook for [{:?}]", res.unwrap());
+        tracing::info!("Initialized orderbook for [{:?}]", res.unwrap());
     }
     Ok(())
 }

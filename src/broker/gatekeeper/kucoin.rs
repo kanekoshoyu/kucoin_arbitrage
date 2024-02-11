@@ -23,17 +23,17 @@ pub async fn task_gatekeep_chances(
     loop {
         let status = rx_chance.recv().await;
         if let Err(e) = status {
-            log::error!("gatekeep chance parsing error {e:?}");
+            tracing::error!("gatekeep chance parsing error {e:?}");
             return Ok(());
         }
         let event: ChanceEvent = status.unwrap();
         // TODO timeout mechanism
         match event {
             ChanceEvent::AllTaker(chance) => {
-                log::info!("All taker chance found!");
-                log::info!("profit: {}", chance.profit);
+                tracing::info!("All taker chance found!");
+                tracing::info!("profit: {}", chance.profit);
                 for action in &chance.actions {
-                    log::info!("{action:?}");
+                    tracing::info!("{action:?}");
                 }
                 // i is [0, 1, 2]
                 for i in 0..3 {
@@ -51,7 +51,7 @@ pub async fn task_gatekeep_chances(
                     let fill_target = chance.actions[i].price.0;
                     let mut fill_cumulative = 0.0;
                     while fill_cumulative < fill_target {
-                        log::info!("Waiting for TradeInfo from KuCoin server");
+                        tracing::info!("Waiting for TradeInfo from KuCoin server");
                         let trade_event = rx_trade.recv().await?;
                         match trade_event {
                             TradeEvent::TradeFilled(info) => {
@@ -59,7 +59,7 @@ pub async fn task_gatekeep_chances(
                                     // TODO use actual data to deduct the amount_untraded
                                     let fill_size: f64 = info.size.parse()?;
                                     fill_cumulative += fill_size;
-                                    log::info!(
+                                    tracing::info!(
                                         "Filled [{fill_cumulative}/{fill_target}] of {:?}",
                                         info.symbol
                                     );
@@ -67,22 +67,22 @@ pub async fn task_gatekeep_chances(
                             }
                             TradeEvent::TradeCanceled(info) => {
                                 if info.order_id.eq(&uuid.as_u128()) {
-                                    log::warn!("Trade got canceled [{}]", info.order_id);
+                                    tracing::warn!("Trade got canceled [{}]", info.order_id);
                                     break;
                                 }
                             }
                             other => {
                                 // print for debugging purpose
                                 if let TradeEvent::TradeMatch(info) = other {
-                                    log::info!("Ignoring TradeMatch[{}]", info.order_id);
+                                    tracing::info!("Ignoring TradeMatch[{}]", info.order_id);
                                 } else {
-                                    log::info!("Ignoring [{other:?}]");
+                                    tracing::info!("Ignoring [{other:?}]");
                                 }
                             }
                         }
                     }
                 }
-                log::info!("cycle completed!")
+                tracing::info!("cycle completed!")
             }
             ChanceEvent::MakerTakerTaker(_actions) => {}
         }

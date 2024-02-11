@@ -16,7 +16,7 @@ use uuid::Uuid;
 async fn main() -> Result<()> {
     // provide logging format
     kucoin_arbitrage::logger::log_init()?;
-    log::info!("Testing Kucoin REST-to-WS latency");
+    tracing::info!("Testing Kucoin REST-to-WS latency");
 
     // config
     let config = kucoin_arbitrage::config::from_file("config.toml")?;
@@ -45,10 +45,10 @@ async fn main() -> Result<()> {
         None,
     )
     .await?;
-    log::info!("Order placed {dt_order_placed}");
+    tracing::info!("Order placed {dt_order_placed}");
     ws.subscribe(url, subs).await?;
 
-    log::info!("Async polling");
+    tracing::info!("Async polling");
     let serial = 0;
     while let Some(msg) = ws.try_next().await? {
         match msg {
@@ -65,12 +65,12 @@ async fn main() -> Result<()> {
                     .is_some()
                 {
                     // price
-                    log::info!("data: {:#?}", data);
+                    tracing::info!("data: {:#?}", data);
                     // volume might not be equal, as they are cumulative with other previous orders
 
                     let dt_order_reported = Local::now();
                     let delta = dt_order_reported - dt_order_placed;
-                    log::info!("REST-to-WS: {}ms", delta.num_milliseconds());
+                    tracing::info!("REST-to-WS: {}ms", delta.num_milliseconds());
                     // I generally get around 2.4s to 3.0s
                     return Ok(());
                 }

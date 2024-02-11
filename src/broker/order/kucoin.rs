@@ -16,11 +16,11 @@ pub async fn task_place_order(
         match event {
             OrderEvent::GetAllOrders => {
                 let status = kucoin.get_recent_orders().await?;
-                log::info!("{status:?}");
+                tracing::info!("{status:?}");
             }
             OrderEvent::CancelOrder(order) => {
                 let status = kucoin.cancel_order(order.id().as_ref()).await?;
-                log::info!("{status:?}");
+                tracing::info!("{status:?}");
             }
             OrderEvent::CancelAllOrders => {
                 todo!("implement batch order cancellation with kucoin.cancel_all_orders(symbol, trade_type)");
@@ -40,13 +40,15 @@ pub async fn task_place_order(
                 match status.code.as_str() {
                     "200000" => {
                         let uuid = Uuid::parse_str(&order.id)?;
-                        log::info!("Limit order placement successful [{}]", uuid.as_u128());
+                        tracing::info!("Limit order placement successful [{}]", uuid.as_u128());
                     }
                     "200004" => {
-                        log::error!("Insufficient fund, check order placement status {order:?}");
+                        tracing::error!(
+                            "Insufficient fund, check order placement status {order:?}"
+                        );
                     }
                     "400100" => {
-                        log::error!("Invalid order size increment {order:?}");
+                        tracing::error!("Invalid order size increment {order:?}");
                     }
                     code => eyre::bail!("unrecognised code [{code:?}]"),
                 };

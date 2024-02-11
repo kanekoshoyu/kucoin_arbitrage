@@ -27,7 +27,7 @@ pub async fn task_pub_trade_event(api: Kucoin, sender: Sender<TradeEvent>) -> Re
         match ws_msg {
             KucoinWebsocketMsg::TradeReceivedMsg(msg) => {
                 let tradeinfo = msg.data.to_internal()?;
-                log::info!(
+                tracing::info!(
                     "TradeReceived[{}] (not so sure when it gets received)",
                     tradeinfo.order_id
                 );
@@ -35,26 +35,26 @@ pub async fn task_pub_trade_event(api: Kucoin, sender: Sender<TradeEvent>) -> Re
             }
             KucoinWebsocketMsg::TradeOpenMsg(msg) => {
                 let tradeinfo = msg.data.to_internal()?;
-                log::info!("TradeOpen[{}]", tradeinfo.order_id);
+                tracing::info!("TradeOpen[{}]", tradeinfo.order_id);
                 sender.send(TradeEvent::TradeOpen(tradeinfo))?;
             }
             KucoinWebsocketMsg::TradeMatchMsg(msg) => {
                 let tradeinfo = msg.data.to_internal()?;
-                log::info!("TradeMatch[{}]", tradeinfo.order_id);
+                tracing::info!("TradeMatch[{}]", tradeinfo.order_id);
                 sender.send(TradeEvent::TradeMatch(tradeinfo))?;
             }
             KucoinWebsocketMsg::TradeFilledMsg(msg) => {
                 let tradeinfo = msg.data.to_internal()?;
-                log::info!("TradeFilledMsg[{}]", tradeinfo.order_id);
+                tracing::info!("TradeFilledMsg[{}]", tradeinfo.order_id);
                 sender.send(TradeEvent::TradeFilled(tradeinfo))?;
             }
             KucoinWebsocketMsg::WelcomeMsg(_) => {
-                log::info!("Welcome to KuCoin private WS");
+                tracing::info!("Welcome to KuCoin private WS");
             }
             KucoinWebsocketMsg::PingMsg(_) => {}
             KucoinWebsocketMsg::PongMsg(_) => {}
             msg => {
-                log::info!("Unregistered message in private channel [{msg:#?}]");
+                tracing::info!("Unregistered message in private channel [{msg:#?}]");
             }
         }
     }

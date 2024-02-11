@@ -14,7 +14,7 @@ pub async fn get_symbols(api: Kucoin) -> Vec<SymbolInfo> {
             if res.is_ok() {
                 break;
             }
-            log::warn!("failed getting symbol list, trying again");
+            tracing::warn!("failed getting symbol list, trying again");
         }
         res.unwrap().data.unwrap()
     };
@@ -22,7 +22,7 @@ pub async fn get_symbols(api: Kucoin) -> Vec<SymbolInfo> {
     for symbol in data {
         // check base currency. Kucoin updates symbol instead of name when the alias updates
         if !symbol.symbol.starts_with(symbol.base_currency.as_str()) {
-            log::warn!(
+            tracing::warn!(
                 "name and base doesnt match (symbol: {:10}, name: {:10}, base: {:5})",
                 symbol.symbol,
                 symbol.name,
@@ -32,7 +32,7 @@ pub async fn get_symbols(api: Kucoin) -> Vec<SymbolInfo> {
         }
         // check quote currency
         if symbol.quote_currency != symbol.fee_currency {
-            log::warn!(
+            tracing::warn!(
                 "quote isn't fee \nquote: {:?}\nfee: {:?}",
                 symbol.quote_currency,
                 symbol.fee_currency

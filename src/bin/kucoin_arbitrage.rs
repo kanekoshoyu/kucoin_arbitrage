@@ -27,14 +27,14 @@ use tokio::task::JoinSet;
 async fn main() -> Result<()> {
     // logging format
     kucoin_arbitrage::logger::log_init()?;
-    log::info!("Log setup");
+    tracing::info!("Log setup");
 
     // credentials
     let config = kucoin_arbitrage::config::from_file("config.toml")?;
 
     tokio::select! {
-        _ = task_signal_handle() => log::error!("received external signal, terminating program"),
-        res = core(config) => log::error!("core ended first {res:?}"),
+        _ = task_signal_handle() => tracing::error!("received external signal, terminating program"),
+        res = core(config) => tracing::error!("core ended first {res:?}"),
     };
 
     println!("Good bye!");
@@ -48,20 +48,20 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<()> {
 
     // API endpoints
     let api = Kucoin::new(KucoinEnv::Live, Some(config.kucoin_credentials()))?;
-    log::info!("Credentials setup");
+    tracing::info!("Credentials setup");
 
     // get all symbols concurrently
     let symbol_list = get_symbols(api.clone()).await;
-    log::info!("Total exchange symbols: {:?}", symbol_list.len());
+    tracing::info!("Total exchange symbols: {:?}", symbol_list.len());
 
     // filter with either btc or usdt as quote
     let symbol_infos = symbol_with_quotes(&symbol_list, "BTC", "USDT");
     let hash_symbols = Arc::new(Mutex::new(vector_to_hash(&symbol_infos)));
-    log::info!("Total symbols in scope: {:?}", symbol_infos.len());
+    tracing::info!("Total symbols in scope: {:?}", symbol_infos.len());
 
     // list subscription using the filtered symbols
     let subs = format_subscription_list(&symbol_infos);
-    log::info!("Total orderbook WS sessions: {:?}", subs.len());
+    tracing::info!("Total orderbook WS sessions: {:?}", subs.len());
 
     // create broadcast channels
 
@@ -76,11 +76,11 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<()> {
     let tx_order = channel::<OrderEvent>(16).0;
     let cx_trade = Arc::new(Mutex::new(Counter::new("trade")));
     let tx_trade = channel::<TradeEvent>(128).0;
-    log::info!("Broadcast channels setup");
+    tracing::info!("Broadcast channels setup");
 
     // local orderbook
     let full_orderbook = Arc::new(Mutex::new(FullOrderbook::new()));
-    log::info!("Local empty full orderbook setup");
+    tracing::info!("Local empty full orderbook setup");
 
     // infrastructure tasks
     let mut taskpool_infrastructure: JoinSet<Result<()>> = JoinSet::new();
@@ -138,7 +138,7 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<()> {
 
     // Initial orderbook states from REST
     task_get_initial_orderbooks(api.clone(), symbol_infos, full_orderbook).await?;
-    log::info!("Aggregated all the symbols");
+    tracing::info!("Aggregated all the symbols");
 
     // websocket subscription tasks
     let mut taskpool_subscription = JoinSet::new();
@@ -151,7 +151,7 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<()> {
             sub.to_vec(),
             tx_orderbook.clone(),
         ));
-        log::info!("{i:?}-th session of WS subscription setup");
+        tracing::info!("{i:?}-th session of WS subscription setup");
     }
 
     // terminate if any taskpool failed
@@ -178,6 +178,6 @@ async fn task_signal_handle() -> Result<()> {
 
 /// handle external signal
 async fn exit_program(signal_alias: &str) -> Result<()> {
-    log::info!("Received [{signal_alias}] signal");
+    tracing::info!("Received [{signal_alias}] signal");
     Ok(())
 }

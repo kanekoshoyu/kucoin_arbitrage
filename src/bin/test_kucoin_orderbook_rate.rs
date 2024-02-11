@@ -17,7 +17,7 @@ async fn main() -> Result<()> {
     // provide logging format
     kucoin_arbitrage::logger::log_init()?;
     let counter = Arc::new(Mutex::new(counter::Counter::new("api_input")));
-    log::info!("Testing Kucoin WS Message Rate");
+    tracing::info!("Testing Kucoin WS Message Rate");
 
     // config
     let config = kucoin_arbitrage::config::from_file("config.toml")?;
@@ -35,7 +35,7 @@ async fn main() -> Result<()> {
     let subs = vec![WSTopic::OrderBook(symbols.to_vec())];
     ws.subscribe(url, subs).await?;
 
-    log::info!("Async polling");
+    tracing::info!("Async polling");
     tokio::spawn(sync_tickers(ws, counter.clone()));
     let _res = tokio::join!(kucoin_arbitrage::monitor::task::task_log_mps(
         vec![counter.clone()],

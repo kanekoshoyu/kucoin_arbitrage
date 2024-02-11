@@ -6,7 +6,7 @@ use kucoin_arbitrage::broker::symbol::{filter::symbol_with_quotes, kucoin::get_s
 async fn main() -> Result<()> {
     // provide logging format
     kucoin_arbitrage::logger::log_init()?;
-    log::info!("Hello world");
+    tracing::info!("Hello world");
     let config = kucoin_arbitrage::config::from_file("config.toml")?;
     let api = Kucoin::new(KucoinEnv::Live, Some(config.kucoin_credentials()))?;
 
@@ -15,9 +15,9 @@ async fn main() -> Result<()> {
     let res = symbol_with_quotes(&symbol_list, "BTC", "USDT");
 
     for r in res.clone().into_iter() {
-        log::info!("{r:?}");
+        tracing::info!("{r:?}");
     }
-    log::info!("size: {:?}", res.len());
+    tracing::info!("size: {:?}", res.len());
 
     Ok(())
 }

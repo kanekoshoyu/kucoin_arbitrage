@@ -31,7 +31,7 @@ where
         // Format values from the event's's metadata:
         let metadata = event.metadata();
         let level = *metadata.level();
-        let datetime = chrono::Utc::now().timestamp() as u64;
+        let datetime = chrono::Utc::now().format("%Y/%m/%d %H:%M:%S");
         let target = metadata.target();
         let thread = std::thread::current();
         let thread = thread.name().unwrap_or("unnamed");

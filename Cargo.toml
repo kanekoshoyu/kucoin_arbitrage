@@ -13,15 +13,10 @@ license = "MIT"
 futures = "0.3.28"
 tokio = { version = "1.33.0", features = ["full"] }
 tokio-signal = "0.2.9"
-# log
+# log tracing
 tracing = "0.1.40"
 tracing-appender = "0.2.3"
-tracing-log = "0.2.0"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
-log = "0.4.20"
-fern = "0.6.2"
-env_logger = "0.10.0"
-colored = "2.0.4"
 # config
 toml = "0.8.2"
 serde = "1.0.188"

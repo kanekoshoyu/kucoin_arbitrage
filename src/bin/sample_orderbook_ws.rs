@@ -16,7 +16,7 @@ use tokio::sync::Mutex;
 #[tokio::main]
 async fn main() -> Result<()> {
     // provide logging format
-    kucoin_arbitrage::logger::log_init().map_err(|e| eyre::eyre!(e))?;
+    // kucoin_arbitrage::logger::log_init()?;
     tracing::info!("Log setup");
     let counter = Arc::new(Mutex::new(counter::Counter::new("api_input")));
 
@@ -24,8 +24,13 @@ async fn main() -> Result<()> {
     let config = kucoin_arbitrage::config::from_file("config.toml")?;
     let monitor_interval = config.behaviour.monitor_interval_sec;
 
-    let api = Kucoin::new(KucoinEnv::Live, Some(config.kucoin_credentials()))?;
-    let url = api.clone().get_socket_endpoint(WSType::Public).await;
+    let api = Kucoin::new(KucoinEnv::Live, Some(config.kucoin_credentials()))
+        .map_err(|e| eyre::eyre!(e))?;
+    let url = api
+        .clone()
+        .get_socket_endpoint(WSType::Public)
+        .await
+        .map_err(|e| eyre::eyre!(e))?;
     tracing::info!("Credentials setup");
 
     // get all symbols concurrently
@@ -43,7 +48,9 @@ async fn main() -> Result<()> {
     // setup subscription and tasks per session
     for (i, sub) in subs.iter().enumerate() {
         let mut ws = api.websocket();
-        ws.subscribe(url.clone(), sub.clone()).await?;
+        ws.subscribe(url.clone(), sub.clone())
+            .await
+            .map_err(|e| eyre::eyre!(e))?;
         tokio::spawn(sync_tickers(ws, counter.clone()));
         tracing::info!("{i:?}-th session of WS subscription setup");
     }
@@ -58,7 +65,7 @@ async fn sync_tickers(
     mut ws: KucoinWebsocket,
     counter: Arc<Mutex<counter::Counter>>,
 ) -> Result<()> {
-    while let Some(msg) = ws.try_next().await? {
+    while let Some(msg) = ws.try_next().await.map_err(|e| eyre::eyre!(e))? {
         // add matches for multi-subscribed sockets handling
         match msg {
             KucoinWebsocketMsg::PongMsg(_) => {

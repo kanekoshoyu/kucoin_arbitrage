@@ -15,7 +15,7 @@ use tokio::sync::Mutex;
 #[tokio::main]
 async fn main() -> Result<()> {
     // provide logging format
-    kucoin_arbitrage::logger::log_init()?;
+    // kucoin_arbitrage::logger::log_init()?;
     let counter = Arc::new(Mutex::new(counter::Counter::new("api_input")));
     tracing::info!("Testing Kucoin WS Message Rate");
 
@@ -24,8 +24,12 @@ async fn main() -> Result<()> {
     let monitor_interval: u32 = config.behaviour.monitor_interval_sec;
 
     // Initialize the Kucoin API struct
-    let api = Kucoin::new(KucoinEnv::Live, Some(config.kucoin_credentials()))?;
-    let url = api.get_socket_endpoint(WSType::Public).await?;
+    let api = Kucoin::new(KucoinEnv::Live, Some(config.kucoin_credentials()))
+        .map_err(|e| eyre::eyre!(e))?;
+    let url = api
+        .get_socket_endpoint(WSType::Public)
+        .await
+        .map_err(|e| eyre::eyre!(e))?;
     let mut ws = api.websocket();
     let symbols = [
         "ETH-BTC".to_string(),
@@ -33,7 +37,7 @@ async fn main() -> Result<()> {
         "ETH-USDT".to_string(),
     ];
     let subs = vec![WSTopic::OrderBook(symbols.to_vec())];
-    ws.subscribe(url, subs).await?;
+    ws.subscribe(url, subs).await.map_err(|e| eyre::eyre!(e))?;
 
     tracing::info!("Async polling");
     tokio::spawn(sync_tickers(ws, counter.clone()));
@@ -48,7 +52,7 @@ async fn sync_tickers(
     mut ws: KucoinWebsocket,
     counter: Arc<Mutex<counter::Counter>>,
 ) -> Result<()> {
-    while let Some(msg) = ws.try_next().await? {
+    while let Some(msg) = ws.try_next().await.map_err(|e| eyre::eyre!(e))? {
         match msg {
             KucoinWebsocketMsg::OrderBookMsg(_msg) => {
                 // TODO make counter more generic

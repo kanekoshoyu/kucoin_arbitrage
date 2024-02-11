@@ -15,15 +15,19 @@ use uuid::Uuid;
 #[tokio::main]
 async fn main() -> Result<()> {
     // provide logging format
-    kucoin_arbitrage::logger::log_init()?;
+    // kucoin_arbitrage::logger::log_init()?;
     tracing::info!("Testing Kucoin REST-to-WS latency");
 
     // config
     let config = kucoin_arbitrage::config::from_file("config.toml")?;
 
     // Initialize the Kucoin API struct
-    let api = Kucoin::new(KucoinEnv::Live, Some(config.kucoin_credentials()))?;
-    let url = api.get_socket_endpoint(WSType::Public).await?;
+    let api = Kucoin::new(KucoinEnv::Live, Some(config.kucoin_credentials()))
+        .map_err(|e| eyre::eyre!(e))?;
+    let url = api
+        .get_socket_endpoint(WSType::Public)
+        .await
+        .map_err(|e| eyre::eyre!(e))?;
     let mut ws = api.websocket();
 
     let subs = vec![WSTopic::OrderBook(vec!["BTC-USDT".to_string()])];
@@ -44,13 +48,14 @@ async fn main() -> Result<()> {
         test_volume.to_string().as_ref(),
         None,
     )
-    .await?;
+    .await
+    .map_err(|e| eyre::eyre!(e))?;
     tracing::info!("Order placed {dt_order_placed}");
-    ws.subscribe(url, subs).await?;
+    ws.subscribe(url, subs).await.map_err(|e| eyre::eyre!(e))?;
 
     tracing::info!("Async polling");
     let serial = 0;
-    while let Some(msg) = ws.try_next().await? {
+    while let Some(msg) = ws.try_next().await.map_err(|e| eyre::eyre!(e))? {
         match msg {
             KucoinWebsocketMsg::OrderBookMsg(msg) => {
                 let (symbol, data) = msg.data.to_internal(serial);

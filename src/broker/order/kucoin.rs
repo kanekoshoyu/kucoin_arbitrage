@@ -42,7 +42,8 @@ pub async fn task_place_order(
                         order.amount().as_ref(),
                         None,
                     )
-                    .await.map_err(|e| eyre::eyre!(e))?;
+                    .await
+                    .map_err(|e| eyre::eyre!(e))?;
                 match status.code.as_str() {
                     "200000" => {
                         let uuid = Uuid::parse_str(&order.id)?;

@@ -15,7 +15,7 @@ use tokio::task::JoinSet;
 #[tokio::main]
 async fn main() -> Result<()> {
     // logging format
-    kucoin_arbitrage::logger::log_init().map_err(|e| eyre::eyre!(e))?;
+    // kucoin_arbitrage::logger::log_init()?;
     tracing::info!("Log setup");
 
     // credentials
@@ -35,7 +35,8 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<()> {
     let monitor_interval = config.behaviour.monitor_interval_sec;
 
     // API endpoints
-    let api = Kucoin::new(KucoinEnv::Live, Some(config.kucoin_credentials()))?;
+    let api = Kucoin::new(KucoinEnv::Live, Some(config.kucoin_credentials()))
+        .map_err(|e| eyre::eyre!(e))?;
     tracing::info!("Credentials setup");
 
     // get all symbols concurrently

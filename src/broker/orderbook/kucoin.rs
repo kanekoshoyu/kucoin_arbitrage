@@ -126,11 +126,10 @@ pub async fn task_get_initial_orderbooks(
         // prevent server overloading
         tokio::time::sleep(Duration::from_millis(20)).await;
     }
-    while let Some(res) = taskpool_aggregate.join_next().await {
-        if let Err(e) = res {
-            eyre::bail!("{e}");
-        }
-        tracing::info!("Initialized orderbook for [{:?}]", res.unwrap());
-    }
+    let task_name = taskpool_aggregate
+        .join_next()
+        .await
+        .ok_or(eyre::eyre!("empty taskpool"))??;
+    tracing::info!("Initialized orderbook for [{:?}]", task_name);
     Ok(())
 }

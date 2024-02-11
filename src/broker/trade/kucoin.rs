@@ -9,11 +9,10 @@ use tokio::sync::broadcast::Sender;
 /// Task to publish order change events.
 /// Subscribe Kucoim Websocket API, then publish tradeEvent directly after conversion.
 pub async fn task_pub_trade_event(api: Kucoin, sender: Sender<TradeEvent>) -> Result<()> {
-    let res = api.get_socket_endpoint(WSType::Private).await;
-    if let Err(_) = res {
-        eyre::bail!("failed connecting private endpoint, check API key",);
-    }
-    let url_private = res.unwrap();
+    let url_private = api
+        .get_socket_endpoint(WSType::Private)
+        .await
+        .map_err(|e| eyre::eyre!("failed connecting private endpoint, check API key ({e})"))?;
     let mut ws = api.websocket();
     // TODO test TradeOrdersV2
     let topics = vec![WSTopic::TradeOrders];

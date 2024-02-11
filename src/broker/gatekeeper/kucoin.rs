@@ -21,11 +21,10 @@ pub async fn task_gatekeep_chances(
     tx_order: Sender<OrderEvent>,
 ) -> Result<()> {
     loop {
-        let status = rx_chance.recv().await;
-        if let Err(e) = status {
-            tracing::error!("gatekeep chance parsing error {e:?}");
-            return Ok(());
-        }
+        let status = rx_chance
+            .recv()
+            .await
+            .map(|e| eyre::bail!("gatekeep chance parsing error {e:?}"))?;
         let event: ChanceEvent = status.unwrap();
         // TODO timeout mechanism
         match event {

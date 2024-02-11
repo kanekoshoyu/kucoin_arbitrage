@@ -62,11 +62,7 @@ impl Orderbook {
         let (max_bid, max_bid_volume) = (best_bid.0.to_owned(), best_bid.1.to_owned());
         if self.sequence > to_merge.sequence {
             // This happen in the beginning when older orderbook in websocket is received after REST
-            return Err(std::format!(
-                "[{}] -> [{}]",
-                to_merge.sequence,
-                self.sequence
-            ));
+            return Err(format!("[{}] -> [{}]", to_merge.sequence, self.sequence));
         }
         // make sure that to_merge's PVMaps are already filtered such that
         // it is all behind the starting sequence

@@ -20,23 +20,18 @@ pub async fn task_sync_orderbook(
                 tracing::info!("Initialised Orderbook for {symbol}")
             }
             OrderbookEvent::OrderbookChangeReceived((symbol, orderbook_change)) => {
-                let orderbook = (*full_orderbook).get_mut(&symbol);
-                if orderbook.is_none() {
-                    eyre::bail!("received {symbol} but orderbook not initialised yet.");
-                }
+                let orderbook = (*full_orderbook).get_mut(&symbol).ok_or(eyre::eyre!(
+                    "received {symbol} but orderbook not initialised yet."
+                ))?;
                 // tracing::info!("insertion: {orderbook_change:#?}");
-                match orderbook.unwrap().merge(orderbook_change) {
-                    Ok(res) => {
-                        if let Some(ob) = res {
-                            // tracing::info!("update: {ob:#?}");
-                            sender
-                                .send(OrderbookEvent::OrderbookChangeReceived((symbol, ob)))
-                                .unwrap();
-                        }
+                match orderbook.merge(orderbook_change) {
+                    Ok(Some(ob)) => {
+                        sender.send(OrderbookEvent::OrderbookChangeReceived((symbol, ob)))?;
                     }
                     Err(e) => {
                         tracing::error!("Merge conflict: {e}")
                     }
+                    _ => {} // no update in best price
                 }
             }
         }

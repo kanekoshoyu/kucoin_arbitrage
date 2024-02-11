@@ -38,9 +38,10 @@ pub async fn task_monitor_channel_mps<T: Clone>(
     counter: Arc<Mutex<counter::Counter>>,
 ) -> Result<()> {
     loop {
-        if let Err(e) = receiver.recv().await {
-            eyre::bail!("channel got closed, other tasks might have been closed first. [{e}]");
-        }
+        receiver
+            .recv()
+            .await
+            .map_err(|e| eyre::eyre!("channel closed by other channels ({e})"))?;
         counter::increment(counter.clone()).await;
     }
 }

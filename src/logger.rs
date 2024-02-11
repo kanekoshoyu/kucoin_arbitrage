@@ -76,7 +76,7 @@ where
         let datetime = chrono::Utc::now().timestamp() as u64;
         let target = metadata.target();
         let thread = std::thread::current();
-        let thread = thread.name().unwrap_or_else(|| "unnamed");
+        let thread = thread.name().unwrap_or("unnamed");
         let line = metadata.line().unwrap_or_default();
         write!(
             writer,

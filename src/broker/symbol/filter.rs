@@ -34,14 +34,17 @@ pub fn symbol_with_quotes(symbols: &Vec<SymbolInfo>, btc: &str, usd: &str) -> Ve
 
     let mut result = Vec::new();
     for (_, entry) in base_map {
-        if let (Some(btc_symbol), Some(usd_symbol)) = entry {
-            result.push(btc_symbol);
-            result.push(usd_symbol);
-        } else if let Some(usd_symbol) = entry.1 {
-            // special case for btc-usd
-            if usd_symbol.base == btc {
-                result.insert(0, usd_symbol);
+        match entry {
+            (Some(btc_symbol), Some(usd_symbol)) => {
+                result.push(btc_symbol);
+                result.push(usd_symbol);
             }
+            (Some(usd_symbol), None) => {
+                if usd_symbol.base == btc {
+                    result.insert(0, usd_symbol);
+                }
+            }
+            _ => {}
         }
     }
     result

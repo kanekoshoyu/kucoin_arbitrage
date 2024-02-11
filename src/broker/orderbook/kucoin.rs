@@ -84,15 +84,15 @@ pub async fn task_get_orderbook(api: Kucoin, symbol: &str) -> Result<OrderBook> 
             }
             continue;
         }
-        let res = res.map_err(|e| eyre::eyre!(e))?;
-        match res.code.as_str() {
+        let response = res.map_err(|e| eyre::eyre!(e))?;
+        match response.code.as_str() {
             "200000" => {
-                if res.data.is_none() {
+                if response.data.is_none() {
                     tracing::warn!("orderbook[{symbol}] received none ({try_counter:?} tries)");
                     continue;
                 }
                 tracing::info!("obtained [{symbol}]");
-                return Ok(res.data.unwrap());
+                return Ok(response.data.unwrap());
             }
             "400003" => eyre::bail!("API key needed not but provided"),
             "429000" => {

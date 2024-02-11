@@ -6,8 +6,8 @@ use kucoin_arbitrage::broker::symbol::kucoin::{format_subscription_list, get_sym
 use kucoin_arbitrage::event;
 use kucoin_arbitrage::monitor::counter;
 use kucoin_arbitrage::monitor::task::{task_log_mps, task_monitor_channel_mps};
+use kucoin_arbitrage::system_event::task_signal_handle;
 use std::sync::Arc;
-use tokio::signal::unix::{signal, SignalKind};
 use tokio::sync::broadcast::channel;
 use tokio::sync::Mutex;
 use tokio::task::JoinSet;
@@ -89,21 +89,4 @@ async fn core(config: kucoin_arbitrage::config::Config) -> Result<()> {
             format!("Infrastructure task pool error [{res:?}]"),
     };
     eyre::bail!("unexpected error [{message}]");
-}
-
-/// wait for any external terminating signal
-async fn task_signal_handle() -> Result<()> {
-    let mut sigterm = signal(SignalKind::terminate()).unwrap();
-    let mut sigint = signal(SignalKind::interrupt()).unwrap();
-    tokio::select! {
-        _ = sigterm.recv() => exit_program("SIGTERM").await?,
-        _ = sigint.recv() => exit_program("SIGINT").await?,
-    };
-    Ok(())
-}
-
-/// handle external signal
-async fn exit_program(signal_alias: &str) -> Result<()> {
-    tracing::info!("Received [{signal_alias}] signal");
-    Ok(())
 }

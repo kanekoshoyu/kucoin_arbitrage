@@ -15,9 +15,9 @@ use kucoin_arbitrage::event::trade::TradeEvent;
 use kucoin_arbitrage::model::chance::{ActionInfo, TriangularArbitrageChance};
 use kucoin_arbitrage::monitor::counter::Counter;
 use kucoin_arbitrage::monitor::task::{task_log_mps, task_monitor_channel_mps};
+use kucoin_arbitrage::system_event::task_signal_handle;
 use kucoin_arbitrage::{broker::symbol::filter::symbol_with_quotes, monitor};
 use ordered_float::OrderedFloat;
-use tokio::signal::unix::{signal, SignalKind};
 use tokio::sync::{broadcast, Mutex};
 use tokio::task::JoinSet;
 
@@ -93,23 +93,6 @@ async fn main() -> Result<()> {
     };
     tracing::error!("{err_msg}");
     tracing::info!("Exiting program, bye!");
-    Ok(())
-}
-
-/// wait for any external terminating signal
-async fn task_signal_handle() -> Result<()> {
-    let mut sigterm = signal(SignalKind::terminate()).unwrap();
-    let mut sigint = signal(SignalKind::interrupt()).unwrap();
-    tokio::select! {
-        _ = sigterm.recv() => exit_program("SIGTERM").await?,
-        _ = sigint.recv() => exit_program("SIGINT").await?,
-    };
-    Ok(())
-}
-
-/// handle external signal
-async fn exit_program(signal_alias: &str) -> Result<()> {
-    tracing::info!("Received [{signal_alias}] signal");
     Ok(())
 }
 

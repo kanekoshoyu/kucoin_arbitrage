@@ -25,8 +25,8 @@ serde_derive = "1.0.188"
 lazy_static = "1.4.0"
 eyre = "0.6.12"
 # exchange
-# kucoin_api = "1.4.10"
-kucoin_api = { path = "../kucoin_api" }
+kucoin_api = "1.4.10"
+# kucoin_api = { path = "../kucoin_api" }
 chrono = "0.4.31"
 # number
 ordered-float = "3.6.0"

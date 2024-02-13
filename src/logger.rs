@@ -1,39 +1,79 @@
-use chrono::prelude::Local;
+use crate::config::LogConfig;
+use core::fmt::Result as FmtResult;
+use eyre::Result;
+use std::path::Path;
+use tracing::{Event, Subscriber};
+use tracing_appender::non_blocking::{NonBlocking, WorkerGuard};
+use tracing_subscriber::fmt;
+use tracing_subscriber::fmt::{format, FmtContext, FormatEvent, FormatFields};
+use tracing_subscriber::prelude::__tracing_subscriber_SubscriberExt;
+use tracing_subscriber::registry::LookupSpan;
+use tracing_subscriber::Registry;
+use tracing_subscriber::{EnvFilter, Layer};
 
-pub fn log_init() {
-    // setup time loggers
-    let fmt = "%Y_%m_%d_%H_%M_%S";
-    let now = Local::now();
-    let formatted_date = now.format(fmt).to_string();
+pub fn env_filter_level(level: impl Into<tracing::Level>) -> EnvFilter {
+    EnvFilter::from_default_env().add_directive(level.into().into())
+}
 
-    // Output file
-    let dir = "log";
-    let filename = String::from(dir) + "/" + &formatted_date + ".log";
-    let _ = std::fs::create_dir(dir);
+// custom formatter for file log
+struct MyFormatter;
+impl<S, N> FormatEvent<S, N> for MyFormatter
+where
+    S: Subscriber + for<'a> LookupSpan<'a>,
+    N: for<'a> FormatFields<'a> + 'static,
+{
+    fn format_event(
+        &self,
+        ctx: &FmtContext<'_, S, N>,
+        mut writer: format::Writer<'_>,
+        event: &Event<'_>,
+    ) -> FmtResult {
+        // Format values from the event's's metadata:
+        let metadata = event.metadata();
+        let level = *metadata.level();
+        let datetime = chrono::Utc::now().format("%Y/%m/%d %H:%M:%S");
+        let target = metadata.target();
+        let thread = std::thread::current();
+        let thread = thread.name().unwrap_or("unnamed");
+        let line = metadata.line().unwrap_or_default();
+        write!(
+            writer,
+            "\n[{datetime}][{level}][{thread}][{target}][{line}]"
+        )
+        .unwrap();
+        ctx.format_fields(writer, event)?;
+        Ok(())
+    }
+}
+/// daily rolling log file
+pub fn non_blocking_make_writer_file(
+    directory: impl AsRef<Path>,
+    file_name_prefix: impl AsRef<Path>,
+) -> (NonBlocking, WorkerGuard) {
+    let file_appender = tracing_appender::rolling::daily(directory, file_name_prefix);
+    tracing_appender::non_blocking(file_appender)
+}
 
-    // Terminal logger
-    let console_logger = fern::Dispatch::new()
-        .format(move |out, message, record| {
-            out.finish(format_args!(
-                "{}[{}][{}] {}",
-                Local::now().format("[%Y-%m-%d %H:%M:%S]"),
-                record.level(),
-                record.target(),
-                message
-            ))
-        })
-        .level(log::LevelFilter::Info)
-        .chain(std::io::stdout());
+pub fn setup_logs(config: &LogConfig) -> Result<WorkerGuard> {
+    let (nb, wg) = non_blocking_make_writer_file(&config.file_directory, &config.file_prefix);
+    // file layer with custom formatter
+    let file_layer = fmt::layer()
+        .with_writer(nb)
+        .event_format(MyFormatter)
+        .with_ansi(false)
+        .with_filter(env_filter_level(config.file_log_level));
+    // terminal layer
+    let stdout_layer = fmt::layer()
+        .with_writer(std::io::stdout)
+        .with_thread_names(true)
+        .with_line_number(true)
+        .without_time()
+        .with_filter(env_filter_level(config.term_log_level));
 
-    // File logger
-    let file_logger = fern::Dispatch::new()
-        .format(|out, message, _| out.finish(format_args!("{}", message)))
-        .level(log::LevelFilter::Info)
-        .chain(fern::log_file(filename).unwrap());
+    // Combine layers into a single subscriber and set global default
+    let subscriber = Registry::default().with(stdout_layer).with(file_layer);
+    tracing::subscriber::set_global_default(subscriber)
+        .expect("Failed to set global default subscriber");
 
-    // TODO add color to the terminal upon the release of fern 0.7
-    console_logger
-        .chain(file_logger)
-        .apply()
-        .expect("failed to initialize logger");
+    Ok(wg)
 }

@@ -4,7 +4,7 @@ pub mod gatekeeper;
 pub mod order;
 /// Public orderbook sync
 pub mod orderbook;
-/// Private order change sync
-pub mod orderchange;
 /// Symbol listing
 pub mod symbol;
+/// Private trade sync
+pub mod trade;

@@ -1,10 +1,10 @@
 use crate::event::chance::ChanceEvent;
 use crate::event::order::OrderEvent;
-use crate::event::orderchange::OrderChangeEvent;
+use crate::event::trade::TradeEvent;
 use crate::model::order::{LimitOrder, OrderType};
-use crate::strings::generate_uid;
-use std::time::SystemTime;
+use eyre::Result;
 use tokio::sync::broadcast::{Receiver, Sender};
+use uuid::Uuid;
 
 // TODO implement when all_taker_btc_usdt is done
 // TODO implement profit maximization
@@ -16,49 +16,72 @@ use tokio::sync::broadcast::{Receiver, Sender};
 /// - 45 orders per 3 seconds
 /// - 200 active order at once
 pub async fn task_gatekeep_chances(
-    mut receiver_chance: Receiver<ChanceEvent>,
-    mut receiver_order_change: Receiver<OrderChangeEvent>,
-    sender: Sender<OrderEvent>,
-) -> Result<(), failure::Error> {
+    mut rx_chance: Receiver<ChanceEvent>,
+    mut rx_trade: Receiver<TradeEvent>,
+    tx_order: Sender<OrderEvent>,
+) -> Result<()> {
     loop {
-        let status = receiver_chance.recv().await;
-        if let Err(e) = status {
-            log::error!("gatekeep chance parsing error {e:?}");
-            return Ok(());
-        }
+        let status = rx_chance
+            .recv()
+            .await
+            .map(|e| eyre::bail!("gatekeep chance parsing error {e:?}"))?;
         let event: ChanceEvent = status.unwrap();
+        // TODO timeout mechanism
         match event {
             ChanceEvent::AllTaker(chance) => {
-                log::info!("All Taker Chance found!\n{chance:?}");
+                tracing::info!("All taker chance found!");
+                tracing::info!("profit: {}", chance.profit);
+                for action in &chance.actions {
+                    tracing::info!("{action:?}");
+                }
                 // i is [0, 1, 2]
                 for i in 0..3 {
+                    let uuid = Uuid::new_v4();
+                    // TODO check if the is any problem with the DP format with API
                     let order: LimitOrder = LimitOrder {
-                        id: generate_uid(40),
+                        id: uuid.to_string(),
                         order_type: OrderType::Limit,
                         side: chance.actions[i].action,
                         symbol: chance.actions[i].ticker.clone(),
-                        amount: chance.actions[i].volume.to_string(),
-                        price: chance.actions[i].price.to_string(),
+                        amount: format!("{:.9}", chance.actions[i].volume),
+                        price: format!("{:.9}", chance.actions[i].price),
                     };
-                    // Logging time
-                    let time_sent = SystemTime::now();
-                    log::info!("time_sent: {time_sent:?}");
-
-                    sender.send(OrderEvent::PlaceOrder(order))?;
-
-                    let mut amount_untraded = chance.actions[i].price.0;
-                    while amount_untraded > 0.0 {
-                        let order_change_status = receiver_order_change.recv().await?;
-                        if let OrderChangeEvent::OrderFilled((amount, currency)) =
-                            order_change_status
-                        {
-                            log::info!("{amount}{currency} filled, proceeding to next step");
-                            amount_untraded = 0.0;
+                    tx_order.send(OrderEvent::PlaceLimitOrder(order))?;
+                    let fill_target = chance.actions[i].price.0;
+                    let mut fill_cumulative = 0.0;
+                    while fill_cumulative < fill_target {
+                        tracing::info!("Waiting for TradeInfo from KuCoin server");
+                        let trade_event = rx_trade.recv().await?;
+                        match trade_event {
+                            TradeEvent::TradeFilled(info) => {
+                                if info.order_id.eq(&uuid.as_u128()) {
+                                    // TODO use actual data to deduct the amount_untraded
+                                    let fill_size: f64 = info.size.parse()?;
+                                    fill_cumulative += fill_size;
+                                    tracing::info!(
+                                        "Filled [{fill_cumulative}/{fill_target}] of {:?}",
+                                        info.symbol
+                                    );
+                                }
+                            }
+                            TradeEvent::TradeCanceled(info) => {
+                                if info.order_id.eq(&uuid.as_u128()) {
+                                    tracing::warn!("Trade got canceled [{}]", info.order_id);
+                                    break;
+                                }
+                            }
+                            other => {
+                                // print for debugging purpose
+                                if let TradeEvent::TradeMatch(info) = other {
+                                    tracing::info!("Ignoring TradeMatch[{}]", info.order_id);
+                                } else {
+                                    tracing::info!("Ignoring [{other:?}]");
+                                }
+                            }
                         }
                     }
-
-                    // wait until it receives a signal from Kucoin that the order has been complete
                 }
+                tracing::info!("cycle completed!")
             }
             ChanceEvent::MakerTakerTaker(_actions) => {}
         }

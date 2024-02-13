@@ -1,28 +1,33 @@
 /// Test REST-to-WS Network Latency
 /// place extreme order, receive extreme order, check time difference
 use chrono::prelude::Local;
+use eyre::Result;
 use kucoin_api::futures::TryStreamExt;
 use kucoin_api::{
     client::{Kucoin, KucoinEnv},
     model::websocket::{KucoinWebsocketMsg, WSTopic, WSType},
 };
 use kucoin_arbitrage::model::order::OrderSide;
-use kucoin_arbitrage::strings::generate_uid;
-use kucoin_arbitrage::translator::traits::OrderBookChangeTranslator;
+use kucoin_arbitrage::translator::traits::ToOrderBookChange;
+use uuid::Uuid;
 
 /// main function
 #[tokio::main]
-async fn main() -> Result<(), failure::Error> {
+async fn main() -> Result<()> {
     // provide logging format
-    kucoin_arbitrage::logger::log_init();
-    log::info!("Testing Kucoin REST-to-WS latency");
+    // kucoin_arbitrage::logger::log_init()?;
+    tracing::info!("Testing Kucoin REST-to-WS latency");
 
     // config
     let config = kucoin_arbitrage::config::from_file("config.toml")?;
 
     // Initialize the Kucoin API struct
-    let api = Kucoin::new(KucoinEnv::Live, Some(config.kucoin_credentials()))?;
-    let url = api.get_socket_endpoint(WSType::Public).await?;
+    let api = Kucoin::new(KucoinEnv::Live, Some(config.kucoin_credentials()))
+        .map_err(|e| eyre::eyre!(e))?;
+    let url = api
+        .get_socket_endpoint(WSType::Public)
+        .await
+        .map_err(|e| eyre::eyre!(e))?;
     let mut ws = api.websocket();
 
     let subs = vec![WSTopic::OrderBook(vec!["BTC-USDT".to_string()])];
@@ -36,20 +41,21 @@ async fn main() -> Result<(), failure::Error> {
     api.cancel_all_orders(None, None).await.unwrap();
     // TODO set a valid limit order
     api.post_limit_order(
-        generate_uid(40).as_str(),
+        Uuid::new_v4().to_string().as_ref(),
         test_symbol,
         OrderSide::Buy.as_ref(),
-        test_price.to_string().as_str(),
-        test_volume.to_string().as_str(),
+        test_price.to_string().as_ref(),
+        test_volume.to_string().as_ref(),
         None,
     )
-    .await?;
-    log::info!("Order placed {dt_order_placed}");
-    ws.subscribe(url, subs).await?;
+    .await
+    .map_err(|e| eyre::eyre!(e))?;
+    tracing::info!("Order placed {dt_order_placed}");
+    ws.subscribe(url, subs).await.map_err(|e| eyre::eyre!(e))?;
 
-    log::info!("Async polling");
+    tracing::info!("Async polling");
     let serial = 0;
-    while let Some(msg) = ws.try_next().await? {
+    while let Some(msg) = ws.try_next().await.map_err(|e| eyre::eyre!(e))? {
         match msg {
             KucoinWebsocketMsg::OrderBookMsg(msg) => {
                 let (symbol, data) = msg.data.to_internal(serial);
@@ -64,12 +70,12 @@ async fn main() -> Result<(), failure::Error> {
                     .is_some()
                 {
                     // price
-                    log::info!("data: {:#?}", data);
+                    tracing::info!("data: {:#?}", data);
                     // volume might not be equal, as they are cumulative with other previous orders
 
                     let dt_order_reported = Local::now();
                     let delta = dt_order_reported - dt_order_placed;
-                    log::info!("REST-to-WS: {}ms", delta.num_milliseconds());
+                    tracing::info!("REST-to-WS: {}ms", delta.num_milliseconds());
                     // I generally get around 2.4s to 3.0s
                     return Ok(());
                 }

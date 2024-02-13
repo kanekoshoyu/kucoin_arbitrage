@@ -13,22 +13,23 @@ license = "MIT"
 futures = "0.3.28"
 tokio = { version = "1.33.0", features = ["full"] }
 tokio-signal = "0.2.9"
-# log
-log = "0.4.20"
-fern = "0.6.2"
-env_logger = "0.10.0"
+# log tracing
+tracing = "0.1.40"
+tracing-appender = "0.2.3"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 # config
 toml = "0.8.2"
 serde = "1.0.188"
 serde_derive = "1.0.188"
 # debug
 lazy_static = "1.4.0"
-failure = "0.1.8"
+eyre = "0.6.12"
 # exchange
-kucoin_api = "1.4.10"
+# kucoin_api = "1.4.10"
+kucoin_api = { path = "../kucoin_api" }
 chrono = "0.4.31"
 # number
 ordered-float = "3.6.0"
 num-traits = "0.2.15"
-# uid
-rand = "0.8.5"
+# uuid
+uuid = { version = "1.5.0", features = ["v4", "fast-rng", "macro-diagnostics"] }

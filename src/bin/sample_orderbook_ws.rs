@@ -1,4 +1,5 @@
 // Subscribes orderbook changes in WebSocket API
+use eyre::Result;
 use kucoin_api::futures::TryStreamExt;
 use kucoin_api::{
     client::{Kucoin, KucoinEnv},
@@ -13,38 +14,45 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 #[tokio::main]
-async fn main() -> Result<(), failure::Error> {
+async fn main() -> Result<()> {
     // provide logging format
-    kucoin_arbitrage::logger::log_init();
-    log::info!("Log setup");
+    // kucoin_arbitrage::logger::log_init()?;
+    tracing::info!("Log setup");
     let counter = Arc::new(Mutex::new(counter::Counter::new("api_input")));
 
     // config
     let config = kucoin_arbitrage::config::from_file("config.toml")?;
     let monitor_interval = config.behaviour.monitor_interval_sec;
 
-    let api = Kucoin::new(KucoinEnv::Live, Some(config.kucoin_credentials()))?;
-    let url = api.clone().get_socket_endpoint(WSType::Public).await?;
-    log::info!("Credentials setup");
+    let api = Kucoin::new(KucoinEnv::Live, Some(config.kucoin_credentials()))
+        .map_err(|e| eyre::eyre!(e))?;
+    let url = api
+        .clone()
+        .get_socket_endpoint(WSType::Public)
+        .await
+        .map_err(|e| eyre::eyre!(e))?;
+    tracing::info!("Credentials setup");
 
     // get all symbols concurrently
-    let symbol_list = get_symbols(api.clone()).await;
-    log::info!("Total exchange symbols: {:?}", symbol_list.len());
+    let symbol_list = get_symbols(api.clone()).await?;
+    tracing::info!("Total exchange symbols: {:?}", symbol_list.len());
 
     // filter with either btc or usdt as quote
     let symbol_infos = symbol_with_quotes(&symbol_list, "BTC", "USDT");
-    log::info!("Total symbols in scope: {:?}", symbol_infos.len());
+    tracing::info!("Total symbols in scope: {:?}", symbol_infos.len());
 
     // change a list of SymbolInfo into a 2D list of WSTopic per session in max 100 index
     let subs = format_subscription_list(&symbol_infos);
-    log::info!("Total orderbook WS sessions: {:?}", subs.len());
+    tracing::info!("Total orderbook WS sessions: {:?}", subs.len());
 
     // setup subscription and tasks per session
     for (i, sub) in subs.iter().enumerate() {
         let mut ws = api.websocket();
-        ws.subscribe(url.clone(), sub.clone()).await?;
+        ws.subscribe(url.clone(), sub.clone())
+            .await
+            .map_err(|e| eyre::eyre!(e))?;
         tokio::spawn(sync_tickers(ws, counter.clone()));
-        log::info!("{i:?}-th session of WS subscription setup");
+        tracing::info!("{i:?}-th session of WS subscription setup");
     }
     let _res = tokio::join!(kucoin_arbitrage::monitor::task::task_log_mps(
         vec![counter.clone(),],
@@ -56,15 +64,15 @@ async fn main() -> Result<(), failure::Error> {
 async fn sync_tickers(
     mut ws: KucoinWebsocket,
     counter: Arc<Mutex<counter::Counter>>,
-) -> Result<(), failure::Error> {
-    while let Some(msg) = ws.try_next().await? {
+) -> Result<()> {
+    while let Some(msg) = ws.try_next().await.map_err(|e| eyre::eyre!(e))? {
         // add matches for multi-subscribed sockets handling
         match msg {
             KucoinWebsocketMsg::PongMsg(_) => {
-                log::info!("Connection maintained")
+                tracing::info!("Connection maintained")
             }
             KucoinWebsocketMsg::WelcomeMsg(_) => {
-                log::info!("Connection setup")
+                tracing::info!("Connection setup")
             }
             KucoinWebsocketMsg::OrderBookMsg(msg) => {
                 let _ = msg.data;

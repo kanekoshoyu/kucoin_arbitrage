@@ -1,13 +1,20 @@
 use crate::model::orderbook::Orderbook;
 use crate::model::symbol::SymbolInfo;
-pub trait OrderBookTranslator {
+use crate::model::trade::TradeInfo;
+use eyre::Result;
+
+pub trait ToOrderBook {
     fn to_internal(&self) -> Orderbook;
 }
 
-pub trait OrderBookChangeTranslator {
+pub trait ToOrderBookChange {
     fn to_internal(&self, serial: u64) -> (String, Orderbook);
 }
 
-pub trait SymbolInfoTranslator {
+pub trait ToSymbolInfo {
     fn to_internal(&self) -> SymbolInfo;
+}
+
+pub trait ToTradeInfo {
+    fn to_internal(&self) -> Result<TradeInfo>;
 }

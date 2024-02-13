@@ -16,5 +16,7 @@ pub mod monitor;
 pub mod strategy;
 /// String functions
 pub mod strings;
+/// Unix OS events
+pub mod system_event;
 /// Traits/impl to convert between API crate models and internal models
 pub mod translator;

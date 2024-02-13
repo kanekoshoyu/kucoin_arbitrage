@@ -35,13 +35,13 @@ pub async fn task_pub_orderbook_event(
         match msg {
             KucoinWebsocketMsg::OrderBookMsg(msg) => {
                 let ts_message = msg.data.time;
+                tracing::info!("message(raw): {ts_message:?}");
                 let t_message = Utc.timestamp_millis_opt(ts_message as i64).unwrap();
                 let t_system = Utc::now();
                 let latency = t_system - t_message;
-                // tracing::info!("message(raw): {ts_message:?}");
-                // tracing::info!("message: {t_message:?}");
-                // tracing::info!("system: {t_system:?}");
-                // tracing::info!("latency: {latency:?}");
+                tracing::info!("message: {t_message:?}");
+                tracing::info!("system: {t_system:?}");
+                tracing::info!("latency: {latency:?}");
 
                 let (str, data) = msg.data.to_internal(serial);
                 let event = OrderbookEvent::OrderbookChangeReceived((str, data));

@@ -1,5 +1,7 @@
 use eyre::Result;
 use kucoin_arbitrage::system_event::task_signal_handle;
+use std::collections::{HashMap, HashSet};
+use std::fmt::Debug;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -10,13 +12,11 @@ async fn main() -> Result<()> {
     };
     Ok(())
 }
-use std::{
-    collections::{HashMap, HashSet},
-    fmt::Debug,
-};
+
+////////////////////////////// struct
 
 #[derive(Clone, Copy, Hash, PartialEq, PartialOrd, Eq, Ord)]
-struct Pair {
+pub struct Pair {
     base: u64,
     quote: u64,
 }
@@ -27,27 +27,35 @@ impl Debug for Pair {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Eq, Ord)]
-enum Action {
+pub enum Action {
     Buy,
     Sell,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Eq, Ord)]
-struct Trade {
+pub struct Trade {
     pair: Pair,
     action: Action,
 }
+
+// a cycle is a chain of trade
+pub type TradeCycle = Vec<Trade>;
+// all cycles can be used to look up for trade cycles with the asset ID
+pub type AllCycles = HashMap<u64, Vec<TradeCycle>>;
+
+////////////////////////////// fn
+
+/// update paths and 
 fn dfs(
     current: u64,
     start: u64,
     graph: &HashMap<u64, Vec<Pair>>,
-    path: &mut Vec<Trade>,
+    path: &mut TradeCycle,
     visited: &mut HashSet<u64>,
-    all_paths: &mut Vec<Vec<Trade>>,
+    global_paths: &mut Vec<TradeCycle>,
     must_start_with_buy: bool,
 ) {
     visited.insert(current);
-
     if let Some(pairs) = graph.get(&current) {
         for pair in pairs {
             let (next_node, action) = if current == pair.base {
@@ -64,27 +72,26 @@ fn dfs(
                         pair: pair.clone(),
                         action,
                     });
-                    all_paths.push(cycle);
+                    global_paths.push(cycle);
                 } else if !visited.contains(&next_node) {
                     path.push(Trade {
                         pair: pair.clone(),
                         action,
                     });
-                    dfs(next_node, start, graph, path, visited, all_paths, false); // After the first trade, no need to enforce Buy as start.
+                    dfs(next_node, start, graph, path, visited, global_paths, false); // After the first trade, no need to enforce Buy as start.
                     path.pop();
                 }
             }
         }
     }
-
     visited.remove(&current);
 }
 
-fn find_trading_paths(graph: &HashMap<u64, Vec<Pair>>, start: u64) -> Vec<Vec<Trade>> {
-    let mut all_paths = Vec::new();
+/// generate all the cyclic paths from the Graph
+fn find_trading_paths(graph: &HashMap<u64, Vec<Pair>>, start: u64) -> Vec<TradeCycle> {
+    let mut global_paths = Vec::new();
     let mut visited = HashSet::new();
     let mut path = Vec::new();
-
     // Start DFS with the flag to ensure the first trade is a Buy.
     dfs(
         start,
@@ -92,11 +99,10 @@ fn find_trading_paths(graph: &HashMap<u64, Vec<Pair>>, start: u64) -> Vec<Vec<Tr
         graph,
         &mut path,
         &mut visited,
-        &mut all_paths,
+        &mut global_paths,
         true,
     );
-
-    all_paths
+    global_paths
 }
 
 async fn program() {
@@ -119,8 +125,8 @@ async fn program() {
     }
 
     let start_node = 1u64;
-    let trading_paths = find_trading_paths(&graph, start_node);
-    for (index, path) in trading_paths.iter().enumerate() {
+    let global_paths = find_trading_paths(&graph, start_node);
+    for (index, path) in global_paths.iter().enumerate() {
         println!("Path {}: {:?}", index + 1, path);
     }
 }

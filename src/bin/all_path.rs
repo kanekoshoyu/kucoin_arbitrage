@@ -2,6 +2,9 @@ use eyre::Result;
 use kucoin_arbitrage::system_event::task_signal_handle;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
+// TODO suggest a data structure which we can use to store all the paths and search those paths efficiently
+// TODO use interned string to store the asset symbol as u64
+// TODO directly write a function from the actual data to verify them.
 
 #[tokio::main]
 async fn main() -> Result<()> {

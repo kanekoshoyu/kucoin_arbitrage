@@ -33,3 +33,5 @@ ordered-float = "3.6.0"
 num-traits = "0.2.15"
 # uuid
 uuid = { version = "1.5.0", features = ["v4", "fast-rng", "macro-diagnostics"] }
+# intern string
+interning = "0.2.2"

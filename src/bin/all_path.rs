@@ -1,19 +1,18 @@
 use eyre::Result;
-use interning::InternedString;
+use interning::{InternedString, InternedStringHash};
+use kucoin_api::client::{Kucoin, KucoinEnv};
 use kucoin_api::model::market::SymbolList;
 use kucoin_arbitrage::system_event::task_signal_handle;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
-// TODO suggest a data structure which we can use to store all the paths and search those paths efficiently
-// TODO use interned string to store the asset symbol as u64
-// TODO directly write a function from the actual data to verify them.
 
 #[tokio::main]
 async fn main() -> Result<()> {
     println!("exit upon terminating signal");
+    let config = kucoin_arbitrage::config::from_file("config.toml")?;
     tokio::select! {
         _ = task_signal_handle() => eyre::bail!("end"),
-        _ = program() => Ok(()),
+        _ = core(config) => Ok(()),
     }
 }
 
@@ -27,6 +26,13 @@ pub struct Pair {
 impl Debug for Pair {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}-{}", self.base, self.quote)
+    }
+}
+impl std::fmt::Display for Pair {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let base = hash_to_string(self.base);
+        let quote = hash_to_string(self.quote);
+        write!(f, "{}-{}", base, quote)
     }
 }
 impl From<SymbolList> for Pair {
@@ -52,7 +58,7 @@ pub struct TradeAction {
 }
 impl Debug for TradeAction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}({:?})", self.action, self.pair)
+        write!(f, "{:?}({})", self.action, self.pair)
     }
 }
 impl TradeAction {
@@ -88,6 +94,12 @@ impl TradeCycle {
     pub fn pop(&mut self) -> Option<TradeAction> {
         self.actions.pop()
     }
+    pub fn len(&self) -> usize {
+        self.actions.len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.actions.is_empty()
+    }
 }
 impl Debug for TradeCycle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -100,6 +112,13 @@ pub type AllCycles = HashMap<u64, Vec<TradeCycle>>;
 
 ////////////////////////////// fn
 
+pub fn hash_to_string(id: u64) -> String {
+    let to_hash = |id: u64| InternedStringHash::from_bytes(id.to_be_bytes());
+    unsafe { InternedString::from_hash(to_hash(id)) }.to_string()
+}
+
+// TODO this searches AVA only
+// pairs in, cycles out
 #[derive(Clone, Default)]
 struct CycleFinder {
     start: u64,
@@ -112,81 +131,101 @@ impl CycleFinder {
         CycleFinder::default()
     }
     /// search function
-    pub fn dfs(&mut self, current: u64, graph: &HashMap<u64, Vec<Pair>>, start_with_buy: bool) {
-        self.visited.insert(current);
-        if let Some(pairs) = graph.get(&current) {
-            for pair in pairs {
-                let (next_node, action) = if current == pair.base {
-                    (pair.quote, Action::Sell)
-                } else {
-                    (pair.base, Action::Buy)
-                };
+    fn dfs(&mut self, current: u64, graph: &HashMap<u64, Vec<Pair>>, start_with_buy: bool) {
+        if !self.visited.insert(current) {
+            // skip if current id was contained before
+            return;
+        }
+        let pairs = graph.get(&current).expect("no pair found");
+        
+        tracing::info!("dfs({})", hash_to_string(current));
+        for pair in pairs {
+            let next_node = if current == pair.base {
+                pair.quote
+            } else {
+                pair.base
+            };
+            let action = if current == pair.base {
+                Action::Sell
+            } else {
+                Action::Buy
+            };
 
-                // Enforce "Buy before Sell" rule: If path is empty, start only with Buy. Otherwise, proceed as per the action.
-                if !start_with_buy || action == Action::Buy {
-                    if next_node == self.start
-                        && self
-                            .cycle
-                            .actions
-                            .iter()
-                            .any(|trade| trade.action == Action::Buy)
-                    {
-                        let mut cycle = self.cycle.clone();
-                        cycle.push(TradeAction {
-                            pair: pair.clone(),
-                            action,
-                        });
-                        self.found_cycles.push(cycle);
-                    } else if !self.visited.contains(&next_node) {
-                        self.cycle.push(TradeAction {
-                            pair: pair.clone(),
-                            action,
-                        });
-                        self.dfs(next_node, graph, false); // After the first trade, no need to enforce Buy as start.
-                        self.cycle.pop();
-                    }
+            // Enforce "Buy before Sell" rule: If path is empty, start only with Buy. Otherwise, proceed as per the action.
+            if !start_with_buy || action == Action::Buy {
+                if next_node == self.start
+                    && self
+                        .cycle
+                        .actions
+                        .iter()
+                        .any(|trade| trade.action == Action::Buy)
+                {
+                    let mut cycle = self.cycle.clone();
+                    cycle.push(TradeAction {
+                        pair: *pair,
+                        action,
+                    });
+                    self.found_cycles.push(cycle);
+                } else if !self.visited.contains(&next_node) {
+                    self.cycle.push(TradeAction {
+                        pair: *pair,
+                        action,
+                    });
+                    self.dfs(next_node, graph, false); // After the first trade, no need to enforce Buy as start.
+                    self.cycle.pop();
                 }
             }
         }
-        self.visited.remove(&current);
     }
     /// generate all the cyclic paths from the Graph
-    fn find_cycles(
+    pub fn find_cycles(
         &mut self,
         pairs: impl IntoIterator<Item = Pair>,
         start: u64,
     ) -> Vec<TradeCycle> {
-        // Constructing the graph from Pair structs
+        // populate graph from pairs
         let mut graph: HashMap<u64, Vec<Pair>> = HashMap::new();
         for pair in pairs {
-            graph
-                .entry(pair.base)
-                .or_insert_with(Vec::new)
-                .push(pair.clone());
-            graph.entry(pair.quote).or_insert_with(Vec::new).push(pair);
+            graph.entry(pair.base).or_default().push(pair);
+            graph.entry(pair.quote).or_default().push(pair);
         }
         self.start = start;
-        // Start DFS with the flag to ensure the first trade is a Buy.
+        self.visited.clear();
+        self.found_cycles.clear();
+        // Start DFS with the flag to ensure the first trade is a Buy
         self.dfs(start, &graph, true);
-        self.found_cycles.clone()
+        std::mem::take(&mut self.found_cycles)
     }
 }
 
-async fn program() -> Result<()> {
+async fn core(config: kucoin_arbitrage::config::Config) -> Result<()> {
+    let _worker_guard = kucoin_arbitrage::logger::setup_logs(&config.log)?;
     // kucoin api endpoints
     let api = Kucoin::new(KucoinEnv::Live, Some(config.kucoin_credentials()))
         .map_err(|e| eyre::eyre!(e))?;
-    tracing::info!("Credentials setup");
-    let symbol_list = api.get_symbol_list(None).await;
-    let symbol_list = symbol_list.data.expect("empty symbol list");
-    let pairs = symbol_list.iter().map(Pair::from).collect();
 
-    let start_node = 1u64;
+    tracing::info!("credentials setup");
+    let symbol_list = api.get_symbol_list(None).await;
+    let symbol_list = symbol_list.expect("failed receiving data from exchange");
+    let symbol_list = symbol_list.data.expect("empty symbol list");
+    let pairs: Vec<Pair> = symbol_list.into_iter().map(Pair::from).collect();
+    tracing::info!("{}pairs found", pairs.len());
+    // usd as starting node
+    let start_node = InternedString::from_str("USDT");
+    let start_node = start_node.hash().hash();
     let mut finder = CycleFinder::new();
-    let found_cycles = finder.find_cycles(pairs, start_node);
-    for (index, path) in found_cycles.iter().enumerate() {
-        println!("Path {}: {:?}", index + 1, path);
+    let found_cycles: Vec<TradeCycle> = finder.find_cycles(pairs, start_node);
+    let cycle_count = |x: &TradeCycle| x.len() == 3;
+    let found_cycles: Vec<TradeCycle> = found_cycles.into_iter().filter(cycle_count).collect();
+    if found_cycles.is_empty() {
+        tracing::info!("no cycles found");
+    } else {
+        for (index, path) in found_cycles.iter().enumerate() {
+            tracing::info!("Path {}: {:?}", index + 1, path);
+        }
     }
+
+    Ok(())
 }
 
 #[cfg(test)]

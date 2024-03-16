@@ -4,6 +4,7 @@ use eyre::Result;
 use std::path::Path;
 use tracing::{Event, Subscriber};
 use tracing_appender::non_blocking::{NonBlocking, WorkerGuard};
+use tracing_appender::rolling;
 use tracing_subscriber::fmt;
 use tracing_subscriber::fmt::{format, FmtContext, FormatEvent, FormatFields};
 use tracing_subscriber::prelude::__tracing_subscriber_SubscriberExt;
@@ -45,12 +46,14 @@ where
         Ok(())
     }
 }
+
 /// daily rolling log file
 pub fn non_blocking_make_writer_file(
     directory: impl AsRef<Path>,
     file_name_prefix: impl AsRef<Path>,
 ) -> (NonBlocking, WorkerGuard) {
-    let file_appender = tracing_appender::rolling::daily(directory, file_name_prefix);
+    let mode = rolling::Rotation::MINUTELY;
+    let file_appender = rolling::RollingFileAppender::new(mode, directory, file_name_prefix);
     tracing_appender::non_blocking(file_appender)
 }
 

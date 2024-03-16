@@ -8,12 +8,11 @@ use std::fmt::Debug;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    println!("waiting for terminating signal");
+    println!("exit upon terminating signal");
     tokio::select! {
-        _ = task_signal_handle() => println!("end"),
-        _ = program() => println!("error"),
-    };
-    Ok(())
+        _ = task_signal_handle() => eyre::bail!("end"),
+        _ = program() => Ok(()),
+    }
 }
 
 ////////////////////////////// struct
@@ -29,33 +28,62 @@ impl Debug for Pair {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(Clone, Copy, Hash, Debug, PartialEq, PartialOrd, Eq, Ord)]
 pub enum Action {
     Buy,
     Sell,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Eq, Ord)]
-pub struct Trade {
+#[derive(Clone, Copy, Hash, PartialEq, PartialOrd, Eq, Ord)]
+pub struct TradeAction {
     pair: Pair,
     action: Action,
 }
+impl Debug for TradeAction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}[{:?}]", self.action, self.pair)
+    }
+}
 
-// a cycle is a chain of trade
-pub type TradeCycle = Vec<Trade>;
+#[derive(Clone, Hash, PartialEq, PartialOrd, Eq, Ord, Default)]
+pub struct TradeCycle {
+    actions: Vec<TradeAction>,
+}
+impl From<Vec<TradeAction>> for TradeCycle {
+    fn from(actions: Vec<TradeAction>) -> Self {
+        TradeCycle { actions }
+    }
+}
+impl TradeCycle {
+    pub fn new() -> Self {
+        TradeCycle::default()
+    }
+    pub fn push(&mut self, trade_action: TradeAction) {
+        self.actions.push(trade_action)
+    }
+    pub fn pop(&mut self) -> Option<TradeAction> {
+        self.actions.pop()
+    }
+}
+impl Debug for TradeCycle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Cycle{:?}", self.actions)
+    }
+}
+
 // all cycles can be used to look up for trade cycles with the asset ID
 pub type AllCycles = HashMap<u64, Vec<TradeCycle>>;
 
 ////////////////////////////// fn
 
-/// update paths and 
+/// update paths and
 fn dfs(
     current: u64,
     start: u64,
     graph: &HashMap<u64, Vec<Pair>>,
-    path: &mut TradeCycle,
+    cycle: &mut TradeCycle,
     visited: &mut HashSet<u64>,
-    global_paths: &mut Vec<TradeCycle>,
+    found_cycles: &mut Vec<TradeCycle>,
     must_start_with_buy: bool,
 ) {
     visited.insert(current);
@@ -69,20 +97,25 @@ fn dfs(
 
             // Enforce "Buy before Sell" rule: If path is empty, start only with Buy. Otherwise, proceed as per the action.
             if !must_start_with_buy || action == Action::Buy {
-                if next_node == start && path.iter().any(|trade| trade.action == Action::Buy) {
-                    let mut cycle = path.clone();
-                    cycle.push(Trade {
+                if next_node == start
+                    && cycle
+                        .actions
+                        .iter()
+                        .any(|trade| trade.action == Action::Buy)
+                {
+                    let mut cycle = cycle.clone();
+                    cycle.push(TradeAction {
                         pair: pair.clone(),
                         action,
                     });
-                    global_paths.push(cycle);
+                    found_cycles.push(cycle);
                 } else if !visited.contains(&next_node) {
-                    path.push(Trade {
+                    cycle.push(TradeAction {
                         pair: pair.clone(),
                         action,
                     });
-                    dfs(next_node, start, graph, path, visited, global_paths, false); // After the first trade, no need to enforce Buy as start.
-                    path.pop();
+                    dfs(next_node, start, graph, cycle, visited, found_cycles, false); // After the first trade, no need to enforce Buy as start.
+                    cycle.pop();
                 }
             }
         }
@@ -92,9 +125,9 @@ fn dfs(
 
 /// generate all the cyclic paths from the Graph
 fn find_trading_paths(graph: &HashMap<u64, Vec<Pair>>, start: u64) -> Vec<TradeCycle> {
-    let mut global_paths = Vec::new();
+    let mut found_cycles = Vec::new();
     let mut visited = HashSet::new();
-    let mut path = Vec::new();
+    let mut path = TradeCycle::new();
     // Start DFS with the flag to ensure the first trade is a Buy.
     dfs(
         start,
@@ -102,10 +135,10 @@ fn find_trading_paths(graph: &HashMap<u64, Vec<Pair>>, start: u64) -> Vec<TradeC
         graph,
         &mut path,
         &mut visited,
-        &mut global_paths,
+        &mut found_cycles,
         true,
     );
-    global_paths
+    found_cycles
 }
 
 async fn program() {
@@ -128,8 +161,8 @@ async fn program() {
     }
 
     let start_node = 1u64;
-    let global_paths = find_trading_paths(&graph, start_node);
-    for (index, path) in global_paths.iter().enumerate() {
+    let found_cycles = find_trading_paths(&graph, start_node);
+    for (index, path) in found_cycles.iter().enumerate() {
         println!("Path {}: {:?}", index + 1, path);
     }
 }
@@ -162,30 +195,30 @@ mod tests {
         // Define the expected paths using the Trade struct.
         // Note: The expected paths should match the actual trading paths you expect based on your graph setup.
         let expected_paths = vec![
-            vec![
-                Trade {
+            TradeCycle::from(vec![
+                TradeAction {
                     pair: Pair { base: 3, quote: 1 },
                     action: Action::Buy,
                 },
-                Trade {
+                TradeAction {
                     pair: Pair { base: 2, quote: 3 },
                     action: Action::Buy,
                 },
-                Trade {
+                TradeAction {
                     pair: Pair { base: 1, quote: 2 },
                     action: Action::Buy,
                 },
-            ],
-            vec![
-                Trade {
+            ]),
+            TradeCycle::from(vec![
+                TradeAction {
                     pair: Pair { base: 3, quote: 1 },
                     action: Action::Buy,
                 },
-                Trade {
+                TradeAction {
                     pair: Pair { base: 3, quote: 1 },
                     action: Action::Sell,
                 },
-            ],
+            ]),
         ];
 
         // Check if the trading paths found match the expected paths.
